@@ -1,0 +1,73 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { Button } from '../ui/Button';
+import { Home, Library, Users, FolderKanban, LogOut, Shield, Compass, MessageCircle, UserCog } from 'lucide-react';
+import classNames from 'classnames';
+import { ThemeToggle } from '../ui/ThemeToggle';
+import { NotificationBell } from '../ui/NotificationBell';
+const baseNavItems = [
+    { to: '/dashboard', label: 'Inicio', icon: Home },
+    { to: '/explore', label: 'Explorar', icon: Compass },
+    { to: '/chats', label: 'Chats', icon: MessageCircle },
+    { to: '/groups', label: 'Grupos', icon: Users },
+    { to: '/projects', label: 'Proyectos', icon: FolderKanban },
+    { to: '/library', label: 'Biblioteca', icon: Library }
+];
+const roleLabels = {
+    admin: 'Administrador',
+    instructor: 'Instructor',
+    apprentice: 'Aprendiz'
+};
+export const DashboardLayout = ({ children, title, subtitle, fluid = false, contentClassName }) => {
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const profileMenuRef = useRef(null);
+    const navigation = useMemo(() => {
+        if (!user)
+            return baseNavItems;
+        if (user.role === 'admin') {
+            return [
+                ...baseNavItems,
+                { to: '/admin', label: 'Moderacion', icon: Shield },
+                { to: '/admin/usuarios', label: 'Usuarios', icon: UserCog }
+            ];
+        }
+        return baseNavItems;
+    }, [user]);
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!profileMenuRef.current)
+                return;
+            if (!profileMenuRef.current.contains(event.target)) {
+                setIsProfileMenuOpen(false);
+            }
+        };
+        const handleEscape = (event) => {
+            if (event.key === 'Escape') {
+                setIsProfileMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEscape);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, []);
+    const handleNavigateProfile = () => {
+        setIsProfileMenuOpen(false);
+        navigate('/profile');
+    };
+    const handleLogout = () => {
+        setIsProfileMenuOpen(false);
+        void logout();
+    };
+    return (_jsx("div", { className: "flex min-h-screen bg-[var(--color-background)]", children: _jsxs("div", { className: "flex min-h-screen flex-1 flex-col", children: [_jsxs("header", { className: "sticky top-0 z-40 grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-white/10 bg-transparent px-3 py-2.5 backdrop-blur-xl transition-[padding] duration-150 dark:border-white/5 md:px-5", children: [_jsxs("div", { className: "flex items-center gap-1.5", children: [_jsx("img", { src: "https://avatars.dicebear.com/api/initials/FL.svg", alt: "Florte logo", className: "h-5 w-5 rounded-2xl bg-white/30 p-0.5 shadow-[0_6px_14px_rgba(18,55,29,0.16)] md:h-6 md:w-6" }), _jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text)] md:text-xs", children: "Florte" })] }), _jsx("nav", { className: "flex justify-center", children: _jsx("div", { className: "flex items-center gap-1 overflow-x-auto rounded-full px-2.5 py-1.5 sm:gap-1.5 sm:px-3", children: navigation.map(({ to, label, icon: Icon }) => (_jsxs(NavLink, { to: to, className: ({ isActive }) => classNames('flex items-center gap-1 rounded-2xl px-2 py-1 text-[10px] font-semibold transition-all sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[11px]', isActive
+                                        ? 'bg-white text-sena-green shadow-[0_8px_16px_rgba(57,169,0,0.25)]'
+                                        : 'text-[var(--color-muted)] hover:bg-white/60 hover:text-sena-green dark:hover:bg-white/15'), children: [_jsx("span", { className: "flex h-6 w-6 items-center justify-center rounded-2xl bg-white/40 text-sena-green shadow-[0_6px_12px_rgba(18,55,29,0.16)] sm:h-7 sm:w-7", children: _jsx(Icon, { className: "h-3 w-3 sm:h-3.5 sm:w-3.5" }) }), _jsx("span", { children: label })] }, `nav-${to}`))) }) }), _jsxs("div", { className: "flex items-center justify-end gap-3", children: [_jsx(NotificationBell, {}), _jsx(ThemeToggle, {}), _jsxs("div", { className: "relative hidden lg:block", ref: profileMenuRef, children: [_jsxs("button", { type: "button", onClick: () => setIsProfileMenuOpen((prev) => !prev), className: "flex items-center justify-between gap-2.5 rounded-2xl border border-white/15 bg-white/10 px-2.5 py-1.5 text-left transition hover:border-sena-green/30 hover:bg-white/20 shadow-[0_8px_18px_rgba(18,55,29,0.14)] backdrop-blur", children: [_jsx("div", { className: "flex flex-1 flex-col items-start justify-center", children: _jsxs("p", { className: "text-xs font-semibold text-[var(--color-text)] leading-tight md:text-sm", children: [user?.firstName, " ", user?.lastName] }) }), _jsx("img", { src: user?.avatarUrl ?? 'https://avatars.dicebear.com/api/initials/SENA.svg', alt: user?.firstName, className: "h-7 w-7 rounded-full object-cover shadow-[0_6px_14px_rgba(18,55,29,0.14)] md:h-8 md:w-8" })] }), isProfileMenuOpen && (_jsxs("div", { className: "absolute right-0 top-[calc(100%+0.5rem)] min-w-[180px] rounded-2xl border border-white/20 bg-white/15 p-2 text-sm text-[var(--color-text)] shadow-[0_18px_32px_rgba(18,55,29,0.2)] backdrop-blur-xl dark:border-white/10 dark:bg-white/10", children: [_jsx("button", { type: "button", className: "flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-white/30 hover:text-sena-green dark:hover:bg-white/10", onClick: handleNavigateProfile, children: "Perfil" }), _jsxs("button", { type: "button", className: "mt-1 flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-red-400 transition hover:bg-red-50/60 hover:text-red-500 dark:hover:bg-white/10", onClick: handleLogout, children: [_jsx("span", { children: "Cerrar sesion" }), _jsx(LogOut, { className: "h-4 w-4" })] })] }))] })] })] }), _jsx("main", { className: "flex-1 overflow-hidden", children: _jsxs("div", { className: classNames('h-full w-full overflow-y-auto py-4', fluid
+                            ? 'mx-0 px-4 sm:px-6 lg:px-10 xl:px-16'
+                            : 'mx-auto max-w-5xl px-4 sm:px-6', contentClassName), children: [(title || subtitle) && (_jsxs("div", { className: "mb-3 space-y-1", children: [title && _jsx("h2", { className: "text-lg font-semibold text-[var(--color-text)] sm:text-xl", children: title }), subtitle && _jsx("p", { className: "text-xs text-[var(--color-muted)] sm:text-sm", children: subtitle })] })), children] }) }), _jsxs("footer", { className: "flex flex-col items-center gap-3 border-t border-white/15 bg-white/20 px-6 py-5 text-xs text-[var(--color-muted)] backdrop-blur-xl dark:border-white/10 dark:bg-white/10 lg:hidden", children: [_jsxs("button", { type: "button", onClick: () => navigate('/profile'), className: "flex w-full items-center justify-between gap-3 rounded-2xl border border-white/20 bg-white/20 px-3 py-2 text-left transition hover:border-sena-green/40 hover:bg-white/30 shadow-[0_12px_24px_rgba(18,55,29,0.18)]", children: [_jsxs("div", { className: "flex flex-col", children: [_jsxs("p", { className: "text-sm font-semibold text-[var(--color-text)] leading-tight md:text-base", children: [user?.firstName, " ", user?.lastName] }), user && (_jsx("span", { className: "mt-2 inline-flex items-center gap-1 rounded-full bg-[var(--color-accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sena-green", children: roleLabels[user.role] }))] }), _jsx("img", { src: user?.avatarUrl ?? 'https://avatars.dicebear.com/api/initials/SENA.svg', alt: user?.firstName, className: "h-9 w-9 rounded-full object-cover" })] }), _jsxs(Button, { variant: "ghost", className: "w-full justify-center gap-2 text-sm text-red-400 hover:text-red-500", onClick: handleLogout, children: [_jsx(LogOut, { className: "h-4 w-4" }), " Cerrar sesion"] })] })] }) }));
+};
