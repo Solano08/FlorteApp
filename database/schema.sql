@@ -1,6 +1,3 @@
--- Schema for FlorteApp social learning platform
--- Run these statements on a MySQL 8+ instance before starting the server.
-
 CREATE DATABASE IF NOT EXISTS florte_app CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE florte_app;
 
@@ -192,7 +189,7 @@ CREATE TABLE IF NOT EXISTS feed_shares (
 INSERT INTO users (id, first_name, last_name, email, password_hash, role, is_active, created_at, updated_at)
 VALUES (
     'f1c252c8-0f5d-4d3b-92d8-027286b7d4ac',
-    'Laura',
+    'Lauras',
     'Administrador',
     'admin.testing@florteapp.com',
     '$2a$12$NhHh6fP.O4zAJH4Py6Hf8ujmCXV7drcPcS7h.0Qr2Hlb3fptSK/.i',
