@@ -22,8 +22,14 @@ const mapUserToAuth = (user: User): AuthUser => ({
   lastName: user.lastName,
   email: user.email,
   avatarUrl: user.avatarUrl ?? null,
+  coverImageUrl: user.coverImageUrl ?? null,
   headline: user.headline ?? null,
   bio: user.bio ?? null,
+  instagramUrl: user.instagramUrl ?? null,
+  githubUrl: user.githubUrl ?? null,
+  facebookUrl: user.facebookUrl ?? null,
+  contactEmail: user.contactEmail ?? null,
+  xUrl: user.xUrl ?? null,
   role: user.role,
   isActive: user.isActive
 });
@@ -230,3 +236,4 @@ export const authService = {
     await passwordResetRepository.delete(record.id);
   }
 };
+

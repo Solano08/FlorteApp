@@ -9,7 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { TextArea } from '../../components/ui/TextArea';
 import { Button } from '../../components/ui/Button';
-import { Library, BookOpen, Layers, Bookmark } from 'lucide-react';
+import { Library, BookOpen, Layers } from 'lucide-react';
 
 const resourceSchema = z.object({
   title: z.string().min(3, 'El título es obligatorio'),

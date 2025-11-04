@@ -1,14 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card } from '../../components/ui/Card';
 import { TextArea } from '../../components/ui/TextArea';
 import { Button } from '../../components/ui/Button';
+import classNames from 'classnames';
 import { chatService } from '../../services/chatService';
 import { groupService } from '../../services/groupService';
 import { projectService } from '../../services/projectService';
 import { libraryService } from '../../services/libraryService';
+import { feedService } from '../../services/feedService';
 import {
   Bookmark,
   Heart,
@@ -25,6 +27,7 @@ import {
 import { Input } from '../../components/ui/Input';
 import { Chat } from '../../types/chat';
 import { useAuth } from '../../hooks/useAuth';
+import { FeedComment, FeedPostAggregate, ReactionType } from '../../types/feed';
 
 interface ChatWindowProps {
   chat: Chat;
@@ -42,35 +45,6 @@ const stories = [
   { id: '6', name: 'AI Hub', avatar: 'https://i.pravatar.cc/100?img=52', isLive: true }
 ];
 
-const feedPosts = [
-  {
-    id: 'post-1',
-    author: 'Laboratorio de Innovacion',
-    role: 'Comunidad - Diseno UX',
-    avatar: 'https://i.pravatar.cc/100?img=48',
-    timeAgo: 'hace 2 horas',
-    description:
-      'Estamos prototipando una app para facilitar la organizacin de proyectos colaborativos entre aprendices. Dejanos tu feedback!',
-    image: 'https://images.unsplash.com/photo-1523475472560-d2df97ec485c?auto=format&fit=crop&w=900&q=60',
-    likes: 168,
-    comments: 42,
-    tags: ['#UX', '#Prototipos', '#Colaboracion']
-  },
-  {
-    id: 'post-2',
-    author: 'Talento Verde',
-    role: 'Proyecto sostenible',
-    avatar: 'https://i.pravatar.cc/100?img=36',
-    timeAgo: 'hace 4 horas',
-    description:
-      'Presentamos los avances del piloto de huertas urbanas monitorizadas con sensores IoT desarrollados por aprendices.',
-    image: 'https://images.unsplash.com/photo-1516750105099-4a769162f838?auto=format&fit=crop&w=900&q=60',
-    likes: 245,
-    comments: 63,
-    tags: ['#TalentoVerde', '#IoT', '#SmartCities']
-  }
-];
-
 const composerIcons = [
   { icon: Image, label: 'Imagen' },
   { icon: Video, label: 'Video' },
@@ -80,9 +54,21 @@ const composerIcons = [
 
 export const HomePage = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [openChatIds, setOpenChatIds] = useState<string[]>([]);
   const [showStoryModal, setShowStoryModal] = useState(false);
+  const [composerContent, setComposerContent] = useState('');
+  const [composerMediaUrl, setComposerMediaUrl] = useState('');
+  const [composerTags, setComposerTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  const [commentsCache, setCommentsCache] = useState<Record<string, FeedComment[]>>({});
+  const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [shareTarget, setShareTarget] = useState<FeedPostAggregate | null>(null);
+  const [shareMessage, setShareMessage] = useState('');
+  const mediaUrlInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: chats = [] } = useQuery({
     queryKey: ['chats'],
@@ -104,8 +90,21 @@ export const HomePage = () => {
     queryFn: libraryService.listResources
   });
 
+  const feedQueryKey = ['feed', 'posts'] as const;
+  const { data: feedPosts = [], isFetching: isLoadingFeed } = useQuery({
+    queryKey: feedQueryKey,
+    queryFn: () => feedService.listPosts()
+  });
+
   const friendSuggestions = groups.slice(0, 3);
   const learningHighlights = projects.slice(0, 3);
+
+  const updatePostInCache = (postId: string, updater: (post: FeedPostAggregate) => FeedPostAggregate) => {
+    queryClient.setQueryData<FeedPostAggregate[]>(feedQueryKey, (existing) => {
+      if (!existing) return existing;
+      return existing.map((post) => (post.id === postId ? updater(post) : post));
+    });
+  };
 
   const handleOpenChat = (chatId: string) => {
     setOpenChatIds((prev) => {
@@ -118,6 +117,207 @@ export const HomePage = () => {
 
   const handleCloseChat = (chatId: string) => {
     setOpenChatIds((prev) => prev.filter((id) => id !== chatId));
+  };
+
+  const createPostMutation = useMutation({
+    mutationFn: (payload: { content: string; mediaUrl?: string | null; tags?: string[] }) =>
+      feedService.createPost(payload),
+    onSuccess: (post) => {
+      queryClient.setQueryData<FeedPostAggregate[]>(feedQueryKey, (existing) =>
+        existing ? [post, ...existing] : [post]
+      );
+      setComposerContent('');
+      setComposerMediaUrl('');
+      setComposerTags([]);
+      setTagInput('');
+    }
+  });
+
+  const reactionMutation = useMutation({
+    mutationFn: ({ postId, reactionType }: { postId: string; reactionType: ReactionType }) =>
+      feedService.react(postId, reactionType),
+    onSuccess: (metrics, { postId }) => {
+      updatePostInCache(postId, (post) => ({
+        ...post,
+        reactionCount: metrics.reactionCount,
+        commentCount: metrics.commentCount,
+        shareCount: metrics.shareCount,
+        viewerReaction: metrics.viewerReaction,
+        isSaved: metrics.isSaved
+      }));
+    }
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (postId: string) => feedService.toggleSave(postId),
+    onSuccess: (metrics, postId) => {
+      updatePostInCache(postId, (post) => ({
+        ...post,
+        reactionCount: metrics.reactionCount,
+        commentCount: metrics.commentCount,
+        shareCount: metrics.shareCount,
+        viewerReaction: metrics.viewerReaction,
+        isSaved: metrics.isSaved
+      }));
+    }
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: ({ postId, content }: { postId: string; content: string }) => feedService.comment(postId, content),
+    onSuccess: (data, { postId }) => {
+      updatePostInCache(postId, (post) => {
+        const merged = [...post.latestComments.filter((comment) => comment.id !== data.comment.id), data.comment];
+        merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        return {
+          ...post,
+          reactionCount: data.reactionCount,
+          commentCount: data.commentCount,
+          shareCount: data.shareCount,
+          viewerReaction: data.viewerReaction,
+          isSaved: data.isSaved,
+          latestComments: merged.slice(-3)
+        };
+      });
+      setCommentsCache((prev) => {
+        const existing = prev[postId] ?? [];
+        const updated = [...existing.filter((comment) => comment.id !== data.comment.id), data.comment];
+        updated.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        return { ...prev, [postId]: updated };
+      });
+      setCommentInputs((prev) => ({ ...prev, [postId]: '' }));
+    }
+  });
+
+  const shareMutation = useMutation({
+    mutationFn: ({ postId, message }: { postId: string; message?: string }) => feedService.share(postId, message),
+    onSuccess: (result, { postId }) => {
+      updatePostInCache(postId, (post) => ({
+        ...post,
+        reactionCount: result.reactionCount,
+        commentCount: result.commentCount,
+        shareCount: result.shareCount,
+        viewerReaction: result.viewerReaction,
+        isSaved: result.isSaved
+      }));
+      setShareTarget(null);
+      setShareMessage('');
+    }
+  });
+
+  const handleComposerSubmit = () => {
+    const trimmedContent = composerContent.trim();
+    if (!trimmedContent || createPostMutation.isPending) return;
+    createPostMutation.mutate({
+      content: trimmedContent,
+      mediaUrl: composerMediaUrl.trim() ? composerMediaUrl.trim() : undefined,
+      tags: composerTags
+    });
+  };
+
+  const handleTagCommit = () => {
+    const normalized = tagInput.trim().replace(/\s+/g, '');
+    if (!normalized || composerTags.length >= 5) {
+      setTagInput('');
+      return;
+    }
+    const formatted = normalized.startsWith('#') ? normalized : `#${normalized}`;
+    if (composerTags.includes(formatted)) {
+      setTagInput('');
+      return;
+    }
+    setComposerTags((prev) => [...prev, formatted]);
+    setTagInput('');
+  };
+
+  const handleTagKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      handleTagCommit();
+    } else if (event.key === 'Backspace' && tagInput === '' && composerTags.length > 0) {
+      event.preventDefault();
+      setComposerTags((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    setComposerTags((prev) => prev.filter((item) => item !== tag));
+  };
+
+  const handleToggleComments = async (postId: string) => {
+    const nextState = !expandedComments[postId];
+    setExpandedComments((prev) => ({ ...prev, [postId]: nextState }));
+    if (nextState && !commentsCache[postId]) {
+      setLoadingComments((prev) => ({ ...prev, [postId]: true }));
+      try {
+        const comments = await feedService.listComments(postId);
+        comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        setCommentsCache((prev) => ({ ...prev, [postId]: comments }));
+      } catch {
+        // noop - UI can remain with latest comments
+      } finally {
+        setLoadingComments((prev) => ({ ...prev, [postId]: false }));
+      }
+    }
+  };
+
+  const handleCommentInputChange = (postId: string, value: string) => {
+    setCommentInputs((prev) => ({ ...prev, [postId]: value }));
+  };
+
+  const handleSubmitComment = (postId: string) => {
+    const content = (commentInputs[postId] ?? '').trim();
+    if (!content) return;
+    commentMutation.mutate({ postId, content });
+  };
+
+  const handleShareSubmit = () => {
+    if (!shareTarget || shareMutation.isPending) return;
+    shareMutation.mutate({
+      postId: shareTarget.id,
+      message: shareMessage.trim() ? shareMessage.trim() : undefined
+    });
+  };
+
+  const isPublishing = createPostMutation.isPending;
+  const isSharing = shareMutation.isPending;
+
+  const handleComposerToolClick = (label: string) => {
+    if (label === 'Imagen' || label === 'Video' || label === 'Adjuntar') {
+      mediaUrlInputRef.current?.focus();
+      return;
+    }
+    if (label === 'Reacciones') {
+      setComposerContent((prev) => (prev ? `${prev} 😊` : '😊'));
+    }
+  };
+
+  const handleOpenShare = (post: FeedPostAggregate) => {
+    setShareTarget(post);
+    setShareMessage('');
+  };
+
+  const handleCloseShareModal = () => {
+    if (shareMutation.isPending) return;
+    setShareTarget(null);
+    setShareMessage('');
+  };
+
+  const formatTimeAgo = (timestamp: string) => {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const diffMs = Date.now() - date.getTime();
+    const diffMinutes = Math.max(Math.floor(diffMs / 60000), 0);
+    if (diffMinutes < 1) return 'Justo ahora';
+    if (diffMinutes < 60) return `hace ${diffMinutes} min`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `hace ${diffHours} h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `hace ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`;
+    return date.toLocaleDateString('es-CO', {
+      day: '2-digit',
+      month: 'short'
+    });
   };
 
   const storiesWithAvatars = useMemo(() => {
@@ -249,21 +449,86 @@ export const HomePage = () => {
                 className="h-10 w-10 rounded-full object-cover shadow-[0_10px_18px_rgba(18,55,29,0.14)]"
               />
               <div className="flex-1 space-y-3">
-                <TextArea placeholder="Comparte un nuevo avance, recurso o proyecto..." rows={3} />
+                <TextArea
+                  placeholder="Comparte un nuevo avance, recurso o proyecto..."
+                  rows={3}
+                  value={composerContent}
+                  onChange={(event) => setComposerContent(event.target.value)}
+                  disabled={isPublishing}
+                />
+
+                {composerTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {composerTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/20 px-3 py-1 text-xs text-[var(--color-text)] transition hover:border-sena-green/60 hover:bg-white/30"
+                        onClick={() => handleRemoveTag(tag)}
+                        disabled={isPublishing}
+                      >
+                        <span>{tag}</span>
+                        <X className="h-3 w-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 rounded-2xl border border-white/25 bg-white/15 px-3 py-2 text-xs text-[var(--color-text)] focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
+                  <input
+                    ref={mediaUrlInputRef}
+                    type="url"
+                    value={composerMediaUrl}
+                    onChange={(event) => setComposerMediaUrl(event.target.value)}
+                    placeholder="Enlace multimedia (opcional)"
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-muted)]"
+                    disabled={isPublishing}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 rounded-2xl border border-dashed border-white/25 bg-white/10 px-3 py-2 text-xs text-[var(--color-text)] focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
+                  <input
+                    type="text"
+                    value={tagInput}
+                    onChange={(event) => setTagInput(event.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    placeholder={composerTags.length >= 5 ? 'Limite de 5 etiquetas alcanzado' : 'Agrega etiquetas y presiona Enter'}
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-muted)]"
+                    disabled={composerTags.length >= 5 || isPublishing}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTagCommit}
+                    className="text-xs font-semibold text-sena-green transition hover:text-sena-green/80 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={composerTags.length >= 5 || !tagInput.trim() || isPublishing}
+                  >
+                    Agregar
+                  </button>
+                </div>
+
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex gap-2">
                     {composerIcons.map(({ icon: Icon, label }) => (
                       <button
                         key={label}
                         type="button"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/35 text-sena-green transition hover:shadow-[0_0_18px_rgba(57,169,0,0.35)]"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/35 text-sena-green transition hover:shadow-[0_0_18px_rgba(57,169,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
                         aria-label={label}
+                        onClick={() => handleComposerToolClick(label)}
+                        disabled={isPublishing}
                       >
                         <Icon className="h-4 w-4" />
                       </button>
                     ))}
                   </div>
-                  <Button size="sm" leftIcon={<Sparkles className="h-4 w-4" />} className="px-3 py-2 text-xs">
+                  <Button
+                    size="sm"
+                    leftIcon={<Sparkles className="h-4 w-4" />}
+                    className="px-3 py-2 text-xs"
+                    loading={isPublishing}
+                    disabled={isPublishing || !composerContent.trim()}
+                    onClick={handleComposerSubmit}
+                  >
                     Publicar
                   </Button>
                 </div>
@@ -271,48 +536,202 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          {feedPosts.map((post) => (
-            <Card key={post.id} className="space-y-3 bg-white/30 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.16)] dark:bg-white/10">
-              <div className="flex items-start gap-3">
-                <img src={post.avatar} alt={post.author} className="h-11 w-11 rounded-full object-cover" />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[var(--color-text)]">{post.author}</p>
-                  <p className="text-xs text-[var(--color-muted)] truncate">
-                    {post.role}  {post.timeAgo}
-                  </p>
-                </div>
-              </div>
-              <p className="text-sm text-[var(--color-text)]">{post.description}</p>
-              <div className="overflow-hidden rounded-3xl">
-                <img src={post.image} alt={post.author} className="h-full w-full object-cover" />
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--color-muted)] sm:text-sm">
-                <div className="flex items-center gap-1 text-[var(--color-text)]">
-                  <Heart className="h-4 w-4 text-rose-500" />
-                  {post.likes} reacciones
-                </div>
-                <div className="flex items-center gap-2">
-                  <span>{post.comments} comentarios</span>
-                  <span className="hidden sm:inline"></span>
-                  <span className="text-sena-green">{post.tags.join(' ')}</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between sm:gap-3">
-                <Button variant="ghost" className="justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm">
-                  <Heart className="h-4 w-4" /> Reaccionar
-                </Button>
-                <Button variant="ghost" className="justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm">
-                  <MessageCircle className="h-4 w-4" /> Comentar
-                </Button>
-                <Button variant="ghost" className="justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm">
-                  <Share2 className="h-4 w-4" /> Compartir
-                </Button>
-                <Button variant="ghost" className="justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm">
-                  <Bookmark className="h-4 w-4" /> Guardar
-                </Button>
-              </div>
+          {isLoadingFeed && (
+            <Card className="bg-white/25 p-4 text-sm text-[var(--color-muted)] backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+              Cargando publicaciones...
             </Card>
-          ))}
+          )}
+
+          {!isLoadingFeed && feedPosts.length === 0 && (
+            <Card className="bg-white/25 p-4 text-sm text-[var(--color-muted)] backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+              Aun no hay publicaciones en tu comunidad. Comparte la primera para iniciar la conversacion.
+            </Card>
+          )}
+
+          {feedPosts.map((post) => {
+            const comments = commentsCache[post.id] ?? post.latestComments;
+            const isCommentsOpen = !!expandedComments[post.id];
+            const isReacting =
+              reactionMutation.isPending && reactionMutation.variables?.postId === post.id;
+            const isSavingPost = saveMutation.isPending && saveMutation.variables === post.id;
+            const isCommenting =
+              commentMutation.isPending && commentMutation.variables?.postId === post.id;
+            const viewerHasReaction = Boolean(post.viewerReaction);
+            const formattedTime = formatTimeAgo(post.createdAt);
+            const authorAvatar =
+              post.author.avatarUrl ??
+              `https://avatars.dicebear.com/api/initials/${encodeURIComponent(post.author.fullName)}.svg`;
+            const reactionLabel = post.reactionCount === 1 ? 'reaccion' : 'reacciones';
+            const commentLabel = post.commentCount === 1 ? 'comentario' : 'comentarios';
+            const shareLabel = post.shareCount === 1 ? 'compartido' : 'compartidos';
+
+            return (
+              <Card
+                key={post.id}
+                className="space-y-4 bg-white/30 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.16)] dark:bg-white/10"
+              >
+                <div className="flex items-start gap-3">
+                  <img src={authorAvatar} alt={post.author.fullName} className="h-11 w-11 rounded-full object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[var(--color-text)]">{post.author.fullName}</p>
+                    {post.author.headline && (
+                      <p className="text-xs text-[var(--color-muted)] truncate">{post.author.headline}</p>
+                    )}
+                    <p className="text-[11px] text-[var(--color-muted)]">{formattedTime}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hidden px-2 py-1 text-xs text-[var(--color-muted)] hover:text-sena-green sm:inline-flex"
+                    onClick={() => handleOpenShare(post)}
+                  >
+                    Compartir
+                  </Button>
+                </div>
+
+                {post.content && (
+                  <p className="whitespace-pre-line text-sm text-[var(--color-text)]">{post.content}</p>
+                )}
+
+                {post.mediaUrl && (
+                  <div className="overflow-hidden rounded-3xl border border-white/15">
+                    <img src={post.mediaUrl} alt="Contenido compartido" className="w-full object-cover" />
+                  </div>
+                )}
+
+                {post.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {post.tags.map((tag) => (
+                      <span
+                        key={`${post.id}-${tag}`}
+                        className="rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold text-sena-green"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--color-muted)] sm:text-sm">
+                  <div className="flex items-center gap-2 text-[var(--color-text)]">
+                    <Heart
+                      className={classNames('h-4 w-4', viewerHasReaction ? 'text-sena-green' : 'text-rose-500')}
+                    />
+                    <span>
+                      {post.reactionCount} {reactionLabel}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span>
+                      {post.commentCount} {commentLabel}
+                    </span>
+                    <span>
+                      {post.shareCount} {shareLabel}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between sm:gap-3">
+                  <Button
+                    variant="ghost"
+                    className={classNames(
+                      'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
+                      viewerHasReaction && 'text-sena-green'
+                    )}
+                    onClick={() => reactionMutation.mutate({ postId: post.id, reactionType: 'like' })}
+                    disabled={isReacting}
+                    loading={isReacting}
+                  >
+                    <Heart className="h-4 w-4" /> {viewerHasReaction ? 'Reaccionaste' : 'Reaccionar'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className={classNames(
+                      'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
+                      isCommentsOpen && 'text-sena-green'
+                    )}
+                    onClick={() => handleToggleComments(post.id)}
+                  >
+                    <MessageCircle className="h-4 w-4" /> Comentar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm"
+                    onClick={() => handleOpenShare(post)}
+                  >
+                    <Share2 className="h-4 w-4" /> Compartir
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className={classNames(
+                      'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
+                      post.isSaved && 'text-sena-green'
+                    )}
+                    onClick={() => saveMutation.mutate(post.id)}
+                    disabled={isSavingPost}
+                    loading={isSavingPost}
+                  >
+                    <Bookmark className="h-4 w-4" /> {post.isSaved ? 'Guardado' : 'Guardar'}
+                  </Button>
+                </div>
+
+                {isCommentsOpen && (
+                  <div className="space-y-3 rounded-2xl border border-white/15 bg-white/12 px-3 py-3">
+                    {loadingComments[post.id] ? (
+                      <p className="text-xs text-[var(--color-muted)]">Cargando comentarios...</p>
+                    ) : comments.length === 0 ? (
+                      <p className="text-xs text-[var(--color-muted)]">
+                        Aun no hay comentarios. Se el primero en opinar.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {comments.map((comment) => {
+                          const commentAvatar =
+                            comment.author.avatarUrl ??
+                            `https://avatars.dicebear.com/api/initials/${encodeURIComponent(comment.author.fullName)}.svg`;
+                          return (
+                            <div key={comment.id} className="flex items-start gap-2">
+                              <img
+                                src={commentAvatar}
+                                alt={comment.author.fullName}
+                                className="h-8 w-8 rounded-full object-cover"
+                              />
+                              <div className="flex-1 rounded-2xl bg-white/18 px-3 py-2 text-xs text-[var(--color-text)]">
+                                <p className="font-semibold">{comment.author.fullName}</p>
+                                <p className="mt-1 leading-relaxed">{comment.content}</p>
+                                <p className="mt-1 text-[10px] text-[var(--color-muted)]">
+                                  {formatTimeAgo(comment.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        rows={2}
+                        value={commentInputs[post.id] ?? ''}
+                        onChange={(event) => handleCommentInputChange(post.id, event.target.value)}
+                        placeholder="Escribe un comentario..."
+                        className="flex-1 resize-none rounded-2xl border border-white/20 bg-white/15 px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                        disabled={isCommenting}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleSubmitComment(post.id)}
+                        disabled={isCommenting || !(commentInputs[post.id] ?? '').trim()}
+                        loading={isCommenting}
+                      >
+                        Enviar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </section>
 
 
@@ -473,7 +892,83 @@ export const HomePage = () => {
             </motion.div>
           </motion.div>
         )}
-        </AnimatePresence>
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {shareTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-sm"
+            onClick={handleCloseShareModal}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              className="w-full max-w-xl rounded-3xl border border-white/25 bg-white/20 p-6 shadow-[0_32px_70px_rgba(18,55,29,0.25)] backdrop-blur-2xl dark:border-white/15 dark:bg-slate-900/80"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-[var(--color-text)]">Compartir publicacion</h3>
+                  <p className="text-sm text-[var(--color-muted)]">
+                    Agrega un mensaje personal para tu comunidad.
+                  </p>
+                </div>
+                <Button variant="ghost" onClick={handleCloseShareModal}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <div className="rounded-2xl border border-white/20 bg-white/12 px-4 py-4 text-sm text-[var(--color-text)]">
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={
+                        shareTarget.author.avatarUrl ??
+                        `https://avatars.dicebear.com/api/initials/${encodeURIComponent(shareTarget.author.fullName)}.svg`
+                      }
+                      alt={shareTarget.author.fullName}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold">{shareTarget.author.fullName}</p>
+                      <p className="text-xs text-[var(--color-muted)]">{formatTimeAgo(shareTarget.createdAt)}</p>
+                    </div>
+                  </div>
+                  {shareTarget.content && (
+                    <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">{shareTarget.content}</p>
+                  )}
+                  {shareTarget.mediaUrl && (
+                    <div className="mt-3 overflow-hidden rounded-2xl border border-white/15">
+                      <img src={shareTarget.mediaUrl} alt="Vista previa" className="w-full object-cover" />
+                    </div>
+                  )}
+                </div>
+
+                <TextArea
+                  rows={4}
+                  placeholder="Agrega un mensaje para tus contactos (opcional)"
+                  value={shareMessage}
+                  onChange={(event) => setShareMessage(event.target.value)}
+                  disabled={isSharing}
+                />
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" onClick={handleCloseShareModal} disabled={isSharing}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleShareSubmit} loading={isSharing} disabled={isSharing}>
+                    Compartir
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       </div>
     </DashboardLayout>
   );

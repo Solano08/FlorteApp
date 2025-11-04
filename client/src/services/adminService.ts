@@ -20,5 +20,28 @@ export const adminService = {
       isActive
     });
     return data.user;
+  },
+
+  async updateUser(
+    userId: string,
+    payload: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      role?: UserRole;
+      isActive?: boolean;
+      password?: string;
+      headline?: string | null;
+      bio?: string | null;
+      avatarUrl?: string | null;
+      instagramUrl?: string | null;
+      githubUrl?: string | null;
+      facebookUrl?: string | null;
+      contactEmail?: string | null;
+      xUrl?: string | null;
+    }
+  ): Promise<Profile> {
+    const { data } = await apiClient.put<{ success: boolean; user: Profile }>(`/admin/users/${userId}`, payload);
+    return data.user;
   }
 };

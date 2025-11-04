@@ -7,8 +7,14 @@ export interface User {
   email: string;
   passwordHash: string;
   avatarUrl?: string | null;
+  coverImageUrl?: string | null;
   headline?: string | null;
   bio?: string | null;
+  instagramUrl?: string | null;
+  githubUrl?: string | null;
+  facebookUrl?: string | null;
+  contactEmail?: string | null;
+  xUrl?: string | null;
   role: UserRole;
   isActive: boolean;
   createdAt: Date;
@@ -31,6 +37,12 @@ export interface UpdateProfileInput {
   headline?: string | null;
   bio?: string | null;
   avatarUrl?: string | null;
+  coverImageUrl?: string | null;
+  instagramUrl?: string | null;
+  githubUrl?: string | null;
+  facebookUrl?: string | null;
+  contactEmail?: string | null;
+  xUrl?: string | null;
 }
 
 export interface PublicProfile {
@@ -39,8 +51,14 @@ export interface PublicProfile {
   lastName: string;
   email: string;
   avatarUrl?: string | null;
+  coverImageUrl?: string | null;
   headline?: string | null;
   bio?: string | null;
+  instagramUrl?: string | null;
+  githubUrl?: string | null;
+  facebookUrl?: string | null;
+  contactEmail?: string | null;
+  xUrl?: string | null;
   role: UserRole;
   isActive: boolean;
   createdAt: Date;
@@ -65,4 +83,6 @@ export interface UpdateUserInput {
   passwordHash?: string;
   role?: UserRole;
   isActive?: boolean;
+  coverImageUrl?: string | null;
 }
+

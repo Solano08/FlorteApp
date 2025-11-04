@@ -9,10 +9,13 @@ import {
   MessageCirclePlus,
   Send,
   Smile,
-  MessageCircle,
   Users as UsersIcon,
   User as UserIcon,
-  Paperclip
+  Paperclip,
+  Search,
+  Phone,
+  Video,
+  Info
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -96,6 +99,35 @@ const formatLastActivity = (iso: string) => {
 
 const getChatName = (name: string | null | undefined, isGroup: boolean) =>
   name?.trim() && name.trim().length > 0 ? name.trim() : isGroup ? 'Grupo sin titulo' : 'Chat privado';
+
+const avatarGradientPalette = [
+  'from-sena-green/90 to-emerald-400/80',
+  'from-blue-500/90 to-cyan-400/80',
+  'from-amber-500/90 to-orange-400/80',
+  'from-purple-500/90 to-indigo-400/80'
+];
+
+const getAvatarGradient = (seed: string) => {
+  if (!seed) {
+    return `bg-gradient-to-br ${avatarGradientPalette[0]}`;
+  }
+
+  let hash = 0;
+  for (const char of seed) {
+    hash = (hash + char.charCodeAt(0) * 17) % 2048;
+  }
+
+  return `bg-gradient-to-br ${avatarGradientPalette[hash % avatarGradientPalette.length]}`;
+};
+
+const getInitialsFromLabel = (label: string | null | undefined) => {
+  const cleaned = label?.trim();
+  if (!cleaned) return 'FL';
+
+  const parts = cleaned.split(/\s+/).slice(0, 2);
+  const initials = parts.map((part) => part.charAt(0).toUpperCase()).join('');
+  return initials || cleaned.slice(0, 2).toUpperCase();
+};
 
 export const ChatsPage = () => {
   const queryClient = useQueryClient();
@@ -226,311 +258,374 @@ export const ChatsPage = () => {
     );
   };
 
+  const activeChatName = activeChat ? getChatName(activeChat.name, activeChat.isGroup) : '';
+  const activeChatInitials = activeChat ? getInitialsFromLabel(activeChatName) : '';
+  const activeChatGradient = activeChat ? getAvatarGradient(activeChat.id) : '';
+
   return (
     <DashboardLayout title="Chats" subtitle="Mantente en contacto con tus equipos y grupos de estudio.">
-      <div className="grid min-h-[70vh] gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-        <Card padded={false} className="flex flex-col overflow-hidden">
-          <div className="border-b border-white/10 bg-white/5 px-4 py-3 dark:border-white/5 dark:bg-white/5">
-            <div className="flex items-center justify-between">
+      <div className="grid min-h-[75vh] gap-5 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)]">
+        <Card
+          padded={false}
+          className="relative flex max-h-[80vh] flex-col overflow-hidden rounded-[32px] border-white/25 bg-white/20 shadow-[0_40px_90px_rgba(15,38,25,0.24)]"
+        >
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.45),_transparent_60%)] opacity-70 dark:opacity-25" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/12 to-white/18 dark:from-white/8 dark:via-white/5 dark:to-white/10" />
+
+          <div className="relative z-10 flex h-full flex-col">
+            <header className="flex items-center justify-between gap-3 border-b border-white/20 px-6 py-5">
               <div>
-                <h2 className="text-sm font-semibold text-[var(--color-text)]">Conversaciones</h2>
-                <p className="text-[11px] text-[var(--color-muted)]">Chats privados y grupos activos.</p>
+                <h2 className="text-sm font-semibold text-[var(--color-text)]">Centro de mensajes</h2>
+                <p className="text-[11px] text-[var(--color-muted)]">
+                  Organiza tus chats privados y grupos colaborativos.
+                </p>
               </div>
               <Button
                 size="sm"
                 variant="secondary"
-                className="px-2.5 text-[11px]"
+                className="px-3 text-[11px] shadow-[0_12px_24px_rgba(18,55,29,0.18)]"
                 onClick={() => setShowNewChat((prev) => !prev)}
               >
                 <MessageCirclePlus className="h-4 w-4" />
                 Nuevo chat
               </Button>
-            </div>
-          </div>
+            </header>
 
-          <div className="space-y-3 px-4 py-3">
-            <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 text-[11px] text-[var(--color-muted)]">
-              {filterTabs.map((tab) => (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => setActiveFilter(tab.value)}
-                  className={classNames(
-                    'flex-1 rounded-full px-2.5 py-1 transition-all',
-                    activeFilter === tab.value
-                      ? 'bg-white text-sena-green shadow-[0_8px_16px_rgba(57,169,0,0.20)]'
-                      : 'hover:text-[var(--color-text)]'
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <Input
-              label="Buscar chat"
-              placeholder="Nombre o identificador"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="py-1.5 text-xs"
-            />
-
-            {showNewChat && (
-              <form
-                className="space-y-3 rounded-xl border border-dashed border-white/20 bg-white/5 p-3 text-xs"
-                onSubmit={handleCreateChat}
-              >
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                  Tipo de chat
-                  <div className="flex items-center gap-1 rounded-full bg-white/10 p-1">
-                    <label
-                      className={classNames(
-                        'flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 transition',
-                        chatType === 'direct' ? 'bg-white text-sena-green' : 'text-[var(--color-muted)]'
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        value="direct"
-                        className="hidden"
-                        {...register('chatType')}
-                        checked={chatType === 'direct'}
-                      />
-                      Privado
-                    </label>
-                    <label
-                      className={classNames(
-                        'flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 transition',
-                        chatType === 'group' ? 'bg-white text-sena-green' : 'text-[var(--color-muted)]'
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        value="group"
-                        className="hidden"
-                        {...register('chatType')}
-                        checked={chatType === 'group'}
-                      />
-                      Grupo
-                    </label>
-                  </div>
-                </div>
-
-                {chatType === 'group' && (
-                  <div className="flex flex-col gap-1 text-xs font-medium text-[var(--color-text)]">
-                    <span>Nombre del grupo</span>
-                    <input
-                      type="text"
-                      placeholder="Proyecto de innovacion"
-                      className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
-                      {...register('name')}
-                    />
-                    {errors.name && <span className="text-[11px] text-rose-400">{errors.name.message}</span>}
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-1 text-xs font-medium text-[var(--color-text)]">
-                  <span>{chatType === 'group' ? 'Integrantes' : 'Destinatario'}</span>
-                  <textarea
-                    rows={chatType === 'group' ? 3 : 2}
-                    placeholder={chatType === 'group' ? 'ID1, ID2, ID3...' : 'ID del destinatario'}
-                    className="resize-none rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
-                    {...register('memberIds')}
-                  />
-                  {errors.memberIds && (
-                    <span className="text-[11px] text-rose-400">{errors.memberIds.message}</span>
-                  )}
-                  <span className="text-[10px] text-[var(--color-muted)]">
-                    Separa cada identificador con una coma.
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="px-2.5 text-[11px]"
-                    onClick={() => {
-                      reset(initialCreateChatValues);
-                      setShowNewChat(false);
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    className="px-3 text-[11px]"
-                    loading={createChatMutation.isPending}
-                  >
-                    Crear chat
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-2 pb-4">
-            {isLoadingChats ? (
-              <div className="mt-8 text-center text-xs text-[var(--color-muted)]">Cargando conversaciones...</div>
-            ) : filteredChats.length === 0 ? (
-              <div className="mt-8 rounded-xl border border-dashed border-white/20 bg-white/5 p-4 text-center text-xs text-[var(--color-muted)]">
-                No hay conversaciones en esta vista.
+            <div className="space-y-4 border-b border-white/15 px-6 py-4">
+              <div className="flex items-center gap-2 rounded-[22px] border border-white/25 bg-white/18 px-3 py-2 shadow-[0_16px_28px_rgba(18,55,29,0.18)] focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
+                <Search className="h-4 w-4 text-[var(--color-muted)]" />
+                <input
+                  type="text"
+                  placeholder="Buscar personas, grupos o ID"
+                  className="flex-1 bg-transparent text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                />
               </div>
-            ) : (
-              <ul className="space-y-2">
-                {filteredChats.map((chat) => {
-                  const isActive = chat.id === selectedChatId;
-                  const lastActivity = formatLastActivity(chat.lastMessageAt ?? chat.createdAt);
 
-                  return (
-                    <li key={chat.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedChatId(chat.id)}
+              <div className="flex items-center gap-1 rounded-full bg-white/15 p-1 text-[11px] text-[var(--color-muted)]">
+                {filterTabs.map((tab) => (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => setActiveFilter(tab.value)}
+                    className={classNames(
+                      'flex-1 rounded-full px-3 py-1 transition-all',
+                      activeFilter === tab.value
+                        ? 'bg-white text-sena-green shadow-[0_10px_22px_rgba(57,169,0,0.20)]'
+                        : 'hover:text-[var(--color-text)]'
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {showNewChat && (
+                <form
+                  className="space-y-4 rounded-[24px] border border-white/25 bg-white/22 px-4 py-4 text-xs text-[var(--color-text)] shadow-[0_24px_56px_rgba(18,55,29,0.2)] backdrop-blur-lg"
+                  onSubmit={handleCreateChat}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                    <span>Tipo de chat</span>
+                    <div className="flex items-center gap-1 rounded-full bg-white/15 p-1">
+                      <label
                         className={classNames(
-                          'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-all',
-                          isActive
-                            ? 'bg-white/20 text-sena-green shadow-[0_10px_20px_rgba(57,169,0,0.16)]'
-                            : 'text-[var(--color-text)] hover:bg-white/10'
+                          'flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 transition',
+                          chatType === 'direct'
+                            ? 'bg-white text-sena-green shadow-[0_10px_20px_rgba(57,169,0,0.18)]'
+                            : 'text-[var(--color-muted)]'
                         )}
                       >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 shadow-[0_6px_12px_rgba(18,55,29,0.14)]">
-                          {chat.isGroup ? (
-                            <UsersIcon className="h-4 w-4 text-sena-green" />
-                          ) : (
-                            <UserIcon className="h-4 w-4 text-sena-green" />
+                        <input
+                          type="radio"
+                          value="direct"
+                          className="hidden"
+                          {...register('chatType')}
+                          checked={chatType === 'direct'}
+                        />
+                        <UserIcon className="h-3.5 w-3.5" />
+                        Privado
+                      </label>
+                      <label
+                        className={classNames(
+                          'flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 transition',
+                          chatType === 'group'
+                            ? 'bg-white text-sena-green shadow-[0_10px_20px_rgba(57,169,0,0.18)]'
+                            : 'text-[var(--color-muted)]'
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          value="group"
+                          className="hidden"
+                          {...register('chatType')}
+                          checked={chatType === 'group'}
+                        />
+                        <UsersIcon className="h-3.5 w-3.5" />
+                        Grupo
+                      </label>
+                    </div>
+                  </div>
+
+                  {chatType === 'group' && (
+                    <div className="flex flex-col gap-2 text-xs font-medium">
+                      <span>Nombre del grupo</span>
+                      <input
+                        type="text"
+                        placeholder="Proyecto de innovacion"
+                        className="rounded-xl border border-white/25 bg-white/18 px-3 py-2 text-xs outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                        {...register('name')}
+                      />
+                      {errors.name && <span className="text-[11px] text-rose-400">{errors.name.message}</span>}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-2 text-xs font-medium">
+                    <span>{chatType === 'group' ? 'Integrantes' : 'Destinatario'}</span>
+                    <textarea
+                      rows={chatType === 'group' ? 3 : 2}
+                      placeholder={chatType === 'group' ? 'ID1, ID2, ID3...' : 'ID del destinatario'}
+                      className="resize-none rounded-xl border border-white/25 bg-white/18 px-3 py-2 text-xs outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                      {...register('memberIds')}
+                    />
+                    {errors.memberIds && <span className="text-[11px] text-rose-400">{errors.memberIds.message}</span>}
+                    <span className="text-[10px] text-[var(--color-muted)]">Separa cada identificador con una coma.</span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="px-2.5 text-[11px]"
+                      onClick={() => {
+                        reset(initialCreateChatValues);
+                        setShowNewChat(false);
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" size="sm" className="px-3 text-[11px]" loading={createChatMutation.isPending}>
+                      Crear chat
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              {isLoadingChats ? (
+                <div className="mt-8 text-center text-xs text-[var(--color-muted)]">Cargando conversaciones...</div>
+              ) : filteredChats.length === 0 ? (
+                <div className="mt-8 rounded-2xl border border-dashed border-white/25 bg-white/12 px-4 py-6 text-center text-xs text-[var(--color-muted)]">
+                  No hay conversaciones en esta vista.
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {filteredChats.map((chat) => {
+                    const isActive = chat.id === selectedChatId;
+                    const lastActivity = formatLastActivity(chat.lastMessageAt ?? chat.createdAt);
+                    const chatLabel = getChatName(chat.name, chat.isGroup);
+                    const initials = getInitialsFromLabel(chatLabel);
+                    const gradient = getAvatarGradient(chat.id);
+
+                    return (
+                      <li key={chat.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedChatId(chat.id)}
+                          className={classNames(
+                            'group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all',
+                            isActive
+                              ? 'bg-white/35 text-sena-green shadow-[0_18px_32px_rgba(57,169,0,0.20)]'
+                              : 'text-[var(--color-text)] hover:bg-white/15'
                           )}
-                        </span>
-                        <div className="flex flex-1 flex-col">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="truncate text-sm font-semibold">{getChatName(chat.name, chat.isGroup)}</p>
-                            <span className="whitespace-nowrap text-[10px] text-[var(--color-muted)]">
-                              {lastActivity}
-                            </span>
+                        >
+                          <span
+                            className={classNames(
+                              'flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-white shadow-[0_10px_20px_rgba(18,55,29,0.22)]',
+                              gradient
+                            )}
+                          >
+                            {initials}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="truncate text-sm font-semibold">{chatLabel}</p>
+                              <span className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
+                                {lastActivity}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-[var(--color-muted)]">
+                              {chat.isGroup ? 'Grupo colaborativo' : 'Mensaje directo'}
+                            </p>
                           </div>
-                          <p className="mt-1 text-[11px] text-[var(--color-muted)]">
-                            {chat.isGroup ? 'Grupo colaborativo' : 'Mensaje directo'}
-                          </p>
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
         </Card>
 
-        <Card padded={false} className="flex flex-col overflow-hidden">
-          {activeChat ? (
-            <>
-              <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-5 py-4 text-sm text-[var(--color-text)] dark:border-white/5 dark:bg-white/5">
-                <div>
-                  <h3 className="text-base font-semibold">{getChatName(activeChat.name, activeChat.isGroup)}</h3>
-                  <p className="text-[11px] text-[var(--color-muted)]">
-                    {activeChat.isGroup ? 'Chat grupal' : 'Chat privado'} - Ultima actividad{' '}
-                    {formatLastActivity(activeChat.lastMessageAt ?? activeChat.createdAt)}
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-[11px] text-[var(--color-muted)]">
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  {messages.length} mensajes
-                </span>
-              </div>
+        <Card
+          padded={false}
+          className="relative flex min-h-[75vh] flex-col overflow-hidden rounded-[36px] border-white/25 bg-white/25 shadow-[0_44px_110px_rgba(15,38,25,0.32)]"
+        >
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.55),_transparent_55%)] opacity-75 dark:opacity-30" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/20 via-white/10 to-white/18 dark:from-white/8 dark:via-white/5 dark:to-white/10" />
 
-              <div
-                ref={messageListRef}
-                className="flex-1 space-y-3 overflow-y-auto px-5 py-4"
-              >
-                {isFetchingMessages ? (
-                  <div className="text-center text-xs text-[var(--color-muted)]">Sincronizando mensajes...</div>
-                ) : messages.length === 0 ? (
-                  <div className="mt-6 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-center text-sm text-[var(--color-muted)]">
-                    Aun no hay mensajes en este chat. Escribe el primero!
+          <div className="relative z-10 flex h-full flex-col">
+            {activeChat ? (
+              <>
+                <header className="flex items-center justify-between gap-4 border-b border-white/15 px-6 py-5">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={classNames(
+                        'flex h-12 w-12 items-center justify-center rounded-full text-base font-semibold text-white shadow-[0_16px_30px_rgba(18,55,29,0.25)]',
+                        activeChatGradient
+                      )}
+                    >
+                      {activeChatInitials}
+                    </span>
+                    <div>
+                      <h3 className="text-base font-semibold text-[var(--color-text)]">{activeChatName}</h3>
+                      <p className="text-[11px] text-[var(--color-muted)]">
+                        {activeChat.isGroup ? 'Chat grupal' : 'Chat privado'} - Ultima actividad{' '}
+                        {formatLastActivity(activeChat.lastMessageAt ?? activeChat.createdAt)}
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  messages.map((entry) => {
-                    const isOwn = authUser?.id === entry.senderId;
-                    const timestamp = new Date(entry.createdAt).toLocaleTimeString('es-CO', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    });
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/12 text-[var(--color-text)] transition hover:text-sena-green"
+                      aria-label="Llamada de voz"
+                    >
+                      <Phone className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/12 text-[var(--color-text)] transition hover:text-sena-green"
+                      aria-label="Videollamada"
+                    >
+                      <Video className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/12 text-[var(--color-text)] transition hover:text-sena-green"
+                      aria-label="Detalles del chat"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </div>
+                </header>
 
-                    return (
-                      <div
-                        key={entry.id}
-                        className={classNames('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}
-                      >
+                <div ref={messageListRef} className="flex-1 space-y-3 overflow-y-auto px-6 py-5">
+                  {isFetchingMessages ? (
+                    <div className="text-center text-xs text-[var(--color-muted)]">Sincronizando mensajes...</div>
+                  ) : messages.length === 0 ? (
+                    <div className="mt-6 rounded-3xl border border-dashed border-white/20 bg-white/12 px-5 py-8 text-center text-sm text-[var(--color-muted)]">
+                      Aun no hay mensajes en este chat. Escribe el primero!
+                    </div>
+                  ) : (
+                    messages.map((entry) => {
+                      const isOwn = authUser?.id === entry.senderId;
+                      const timestamp = new Date(entry.createdAt).toLocaleTimeString('es-CO', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+
+                      return (
                         <div
-                          className={classNames(
-                            'max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-[0_8px_16px_rgba(18,55,29,0.12)]',
-                            isOwn
-                              ? 'bg-sena-green/90 text-white'
-                              : 'bg-white/15 text-[var(--color-text)] dark:bg-white/10'
-                          )}
+                          key={entry.id}
+                          className={classNames('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}
                         >
-                          <p className="text-[11px] font-semibold opacity-80">
-                            {isOwn ? 'Tu' : entry.senderId}
-                          </p>
-                          <p className="mt-1 leading-relaxed">{entry.content}</p>
-                          <p className={classNames('mt-2 text-[10px]', isOwn ? 'text-white/70' : 'text-[var(--color-muted)]')}>
-                            {timestamp}
-                          </p>
+                          <div
+                            className={classNames(
+                              'max-w-[72%] rounded-3xl px-4 py-3 text-sm shadow-[0_14px_26px_rgba(18,55,29,0.18)] transition-colors',
+                              isOwn
+                                ? 'bg-sena-green/95 text-white'
+                                : 'bg-white/18 text-[var(--color-text)] dark:bg-white/12'
+                            )}
+                          >
+                            <p
+                              className={classNames(
+                                'text-[11px] font-semibold uppercase tracking-wide',
+                                isOwn ? 'text-white/80' : 'text-[var(--color-muted)]'
+                              )}
+                            >
+                              {isOwn ? 'Tu' : entry.senderId}
+                            </p>
+                            <p className="mt-1 leading-relaxed">{entry.content}</p>
+                            <p
+                              className={classNames(
+                                'mt-2 text-[10px]',
+                                isOwn ? 'text-white/70' : 'text-[var(--color-muted)]'
+                              )}
+                            >
+                              {timestamp}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              <form
-                className="border-t border-white/10 bg-white/5 px-5 py-3 dark:border-white/5 dark:bg-white/5"
-                onSubmit={handleSendMessage}
-              >
-                <div className="flex items-end gap-3">
-                  <button
-                    type="button"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-[var(--color-muted)] transition hover:text-sena-green"
-                    aria-label="Adjuntar archivo"
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </button>
-                  <div className="flex-1 rounded-2xl border border-white/15 bg-white/10 px-3 py-2 shadow-[0_10px_20px_rgba(18,55,29,0.12)] focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
-                    <textarea
-                      rows={2}
-                      placeholder="Escribe un mensaje..."
-                      className="w-full resize-none bg-transparent text-sm text-[var(--color-text)] outline-none"
-                      value={message}
-                      onChange={(event) => setMessage(event.target.value)}
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={!message.trim()}
-                    loading={sendMessageMutation.isPending}
-                    className="px-3 text-[11px]"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                  <button
-                    type="button"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-[var(--color-muted)] transition hover:text-sena-green"
-                    aria-label="Insertar emoji"
-                  >
-                    <Smile className="h-4 w-4" />
-                  </button>
+                      );
+                    })
+                  )}
                 </div>
-              </form>
-            </>
-          ) : (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center text-sm text-[var(--color-muted)]">
-              <MessageCirclePlus className="h-8 w-8 text-sena-green/70" />
-              <p>Selecciona una conversacion para comenzar a chatear o crea un nuevo chat.</p>
-            </div>
-          )}
+
+                <form className="border-t border-white/15 bg-white/10 px-6 py-4" onSubmit={handleSendMessage}>
+                  <div className="flex items-end gap-3">
+                    <button
+                      type="button"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-white/12 text-[var(--color-muted)] transition hover:text-sena-green"
+                      aria-label="Adjuntar archivo"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                    <div className="flex-1 rounded-[26px] border border-white/20 bg-white/15 px-4 py-2.5 shadow-[0_16px_32px_rgba(18,55,29,0.18)] focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
+                      <textarea
+                        rows={2}
+                        placeholder="Escribe un mensaje..."
+                        className="w-full resize-none bg-transparent text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                        value={message}
+                        onChange={(event) => setMessage(event.target.value)}
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={!message.trim()}
+                      loading={sendMessageMutation.isPending}
+                      className="h-11 w-11 rounded-xl px-0 text-[11px]"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                    <button
+                      type="button"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-white/12 text-[var(--color-muted)] transition hover:text-sena-green"
+                      aria-label="Insertar emoji"
+                    >
+                      <Smile className="h-5 w-5" />
+                    </button>
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center text-sm text-[var(--color-muted)]">
+                <MessageCirclePlus className="h-10 w-10 text-sena-green/80" />
+                <div className="space-y-1">
+                  <p>Selecciona una conversacion para comenzar a chatear.</p>
+                  <p>Crea un nuevo chat para coordinar tus equipos y proyectos.</p>
+                </div>
+                <Button size="sm" variant="secondary" onClick={() => setShowNewChat(true)}>
+                  Crear mi primer chat
+                </Button>
+              </div>
+            )}
+          </div>
         </Card>
       </div>
     </DashboardLayout>

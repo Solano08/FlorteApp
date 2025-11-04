@@ -51,4 +51,3 @@ export const AvatarUploader = ({ imageUrl, onSelect, loading }: AvatarUploaderPr
   );
 };
 
-

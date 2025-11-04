@@ -19,5 +19,30 @@ export const profileService = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return data.profile;
+  },
+
+  async removeAvatar(): Promise<Profile> {
+    const formData = new FormData();
+    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data.profile;
+  },
+
+  async updateCover(file: File): Promise<Profile> {
+    const formData = new FormData();
+    formData.append('cover', file);
+    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/cover', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data.profile;
+  },
+
+  async removeCover(): Promise<Profile> {
+    const formData = new FormData();
+    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/cover', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data.profile;
   }
 };

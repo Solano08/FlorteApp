@@ -11,8 +11,14 @@ export interface AuthUser {
   lastName: string;
   email: string;
   avatarUrl?: string | null;
+  coverImageUrl?: string | null;
   headline?: string | null;
   bio?: string | null;
+  instagramUrl?: string | null;
+  githubUrl?: string | null;
+  facebookUrl?: string | null;
+  contactEmail?: string | null;
+  xUrl?: string | null;
   role: UserRole;
   isActive: boolean;
 }

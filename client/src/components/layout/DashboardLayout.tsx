@@ -1,8 +1,8 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../ui/Button';
-import { Home, Library, Users, FolderKanban, LogOut, Shield, Compass, MessageCircle, UserCog } from 'lucide-react';
+import { Home, Library, Users, FolderKanban, LogOut, Shield, Compass, MessageCircle } from 'lucide-react';
 import classNames from 'classnames';
 import { UserRole } from '../../types/auth';
 import { ThemeToggle } from '../ui/ThemeToggle';
@@ -54,8 +54,7 @@ export const DashboardLayout = ({
     if (user.role === 'admin') {
       return [
         ...baseNavItems,
-        { to: '/admin', label: 'Moderacion', icon: Shield },
-        { to: '/admin/usuarios', label: 'Usuarios', icon: UserCog }
+        { to: '/admin', label: 'Moderacion', icon: Shield }
       ];
     }
     return baseNavItems;
@@ -151,7 +150,7 @@ export const DashboardLayout = ({
                 />
               </button>
               {isProfileMenuOpen && (
-                <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[180px] rounded-2xl border border-white/20 bg-white/15 p-2 text-sm text-[var(--color-text)] shadow-[0_18px_32px_rgba(18,55,29,0.2)] backdrop-blur-xl dark:border-white/10 dark:bg-white/10">
+                <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] rounded-2xl border border-white/25 bg-white/30 p-2.5 text-sm text-[var(--color-text)] shadow-[0_26px_52px_rgba(18,55,29,0.28)] backdrop-blur-2xl dark:border-white/15 dark:bg-slate-900/85">
                   <button
                     type="button"
                     className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-white/30 hover:text-sena-green dark:hover:bg-white/10"
@@ -215,16 +214,16 @@ export const DashboardLayout = ({
               className="h-9 w-9 rounded-full object-cover"
             />
           </button>
-            <Button variant="ghost" className="w-full justify-center gap-2 text-sm text-red-400 hover:text-red-500" onClick={handleLogout}>
-              <LogOut className="h-4 w-4" /> Cerrar sesion
-            </Button>
-          </footer>
+          <Button
+            variant="ghost"
+            className="w-full justify-center gap-2 text-sm text-red-400 hover:text-red-500"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" /> Cerrar sesion
+          </Button>
+        </footer>
       </div>
     </div>
   );
 };
-
-
-
-
 

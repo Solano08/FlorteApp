@@ -18,8 +18,14 @@ const mapUser = (row: RowDataPacket): User => ({
   email: row.email,
   passwordHash: row.password_hash,
   avatarUrl: row.avatar_url,
+  coverImageUrl: row.cover_image_url,
   headline: row.headline,
   bio: row.bio,
+  instagramUrl: row.instagram_url,
+  githubUrl: row.github_url,
+  facebookUrl: row.facebook_url,
+  contactEmail: row.contact_email,
+  xUrl: row.x_url,
   role: row.role as UserRole,
   isActive: row.is_active === 1,
   createdAt: row.created_at,
@@ -96,6 +102,30 @@ export const userRepository = {
       fields.push('avatar_url = :avatarUrl');
       params.avatarUrl = input.avatarUrl;
     }
+    if (input.coverImageUrl !== undefined) {
+      fields.push('cover_image_url = :coverImageUrl');
+      params.coverImageUrl = input.coverImageUrl;
+    }
+    if (input.instagramUrl !== undefined) {
+      fields.push('instagram_url = :instagramUrl');
+      params.instagramUrl = input.instagramUrl;
+    }
+    if (input.githubUrl !== undefined) {
+      fields.push('github_url = :githubUrl');
+      params.githubUrl = input.githubUrl;
+    }
+    if (input.facebookUrl !== undefined) {
+      fields.push('facebook_url = :facebookUrl');
+      params.facebookUrl = input.facebookUrl;
+    }
+    if (input.contactEmail !== undefined) {
+      fields.push('contact_email = :contactEmail');
+      params.contactEmail = input.contactEmail;
+    }
+    if (input.xUrl !== undefined) {
+      fields.push('x_url = :xUrl');
+      params.xUrl = input.xUrl;
+    }
 
     if (fields.length === 0) {
       const user = await this.findById(input.userId);
@@ -118,7 +148,7 @@ export const userRepository = {
 
     const updated = await this.findById(input.userId);
     if (!updated) {
-      throw new Error('Usuario no encontrado después de actualizar');
+      throw new Error('Usuario no encontrado despues de actualizar');
     }
     return updated;
   },
@@ -149,6 +179,10 @@ export const userRepository = {
     if (input.passwordHash !== undefined) {
       fields.push('password_hash = :passwordHash');
       params.passwordHash = input.passwordHash;
+    }
+    if (input.coverImageUrl !== undefined) {
+      fields.push('cover_image_url = :coverImageUrl');
+      params.coverImageUrl = input.coverImageUrl;
     }
     if (input.role !== undefined) {
       fields.push('role = :role');
@@ -198,7 +232,7 @@ export const userRepository = {
     }
 
     const updated = await this.findById(input.userId);
-    if (!updated) throw new Error('Usuario no encontrado después de actualizar el rol');
+    if (!updated) throw new Error('Usuario no encontrado despues de actualizar el rol');
     return updated;
   },
 
@@ -215,7 +249,8 @@ export const userRepository = {
     }
 
     const updated = await this.findById(input.userId);
-    if (!updated) throw new Error('Usuario no encontrado después de actualizar el estado');
+    if (!updated) throw new Error('Usuario no encontrado despues de actualizar el estado');
     return updated;
   }
 };
+

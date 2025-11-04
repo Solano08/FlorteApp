@@ -7,12 +7,18 @@ USE florte_app;
 CREATE TABLE IF NOT EXISTS users (
     id CHAR(36) NOT NULL PRIMARY KEY,
     first_name VARCHAR(80) NOT NULL,
-    last_name VARCHAR(80) NOT NULL,
-    email VARCHAR(160) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    avatar_url VARCHAR(255),
-    headline VARCHAR(160),
+      last_name VARCHAR(80) NOT NULL,
+      email VARCHAR(160) NOT NULL UNIQUE,
+      password_hash VARCHAR(255) NOT NULL,
+      avatar_url VARCHAR(255),
+      cover_image_url VARCHAR(255),
+      headline VARCHAR(160),
     bio TEXT,
+    instagram_url VARCHAR(255),
+    github_url VARCHAR(255),
+    facebook_url VARCHAR(255),
+    contact_email VARCHAR(160),
+    x_url VARCHAR(255),
     role ENUM('admin','instructor','apprentice') NOT NULL DEFAULT 'apprentice',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -129,6 +135,56 @@ CREATE TABLE IF NOT EXISTS notifications (
     link VARCHAR(255),
     is_read TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS feed_posts (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    author_id CHAR(36) NOT NULL,
+    content TEXT NOT NULL,
+    media_url VARCHAR(255),
+    tags JSON,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS feed_post_reactions (
+    post_id CHAR(36) NOT NULL,
+    user_id CHAR(36) NOT NULL,
+    reaction_type ENUM('like','celebrate','love','insightful','support') NOT NULL DEFAULT 'like',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (post_id, user_id),
+    FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS feed_comments (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    post_id CHAR(36) NOT NULL,
+    user_id CHAR(36) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS feed_saved_posts (
+    post_id CHAR(36) NOT NULL,
+    user_id CHAR(36) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (post_id, user_id),
+    FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS feed_shares (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    post_id CHAR(36) NOT NULL,
+    user_id CHAR(36) NOT NULL,
+    message TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

@@ -10,7 +10,6 @@ import { GroupsPage } from '../pages/groups/GroupsPage';
 import { ProjectsPage } from '../pages/projects/ProjectsPage';
 import { ExplorePage } from '../pages/explore/ExplorePage';
 import { AdminModerationPage } from '../pages/admin/AdminModerationPage';
-import { UserManagementPage } from '../pages/admin/UserManagementPage';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingScreen';
 import { UserRole } from '../types/auth';
@@ -139,15 +138,6 @@ export const AppRoutes = () => (
         </ProtectedRoute>
       }
     />
-    <Route
-      path="/admin/usuarios"
-      element={
-        <ProtectedRoute allowedRoles={['admin']}>
-          <UserManagementPage />
-        </ProtectedRoute>
-      }
-    />
-
     <Route path="*" element={<Navigate to="/dashboard" replace />} />
   </Routes>
 );

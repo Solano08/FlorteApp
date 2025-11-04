@@ -1,11 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AnimatePresence, motion } from 'framer-motion';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { adminService } from '../../services/adminService';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
+import { TextArea } from '../../components/ui/TextArea';
 import { Button } from '../../components/ui/Button';
 import { UserRole } from '../../types/auth';
+import { Profile } from '../../types/profile';
 import { Shield, ShieldCheck, ShieldHalf } from 'lucide-react';
 
 const roleFilterOptions: Array<{ value: UserRole | 'all'; label: string }> = [
@@ -31,10 +37,48 @@ const formatDate = (iso: string) =>
 const statusPill = (isActive: boolean) =>
   isActive ? 'bg-emerald-100/80 text-emerald-600 border border-emerald-200/70' : 'bg-rose-100 text-rose-500 border border-rose-200/80';
 
+const optionalUrlField = z
+  .union([z.string().trim().url('Ingresa un enlace valido').max(255), z.literal('')])
+  .optional()
+  .nullable();
+
+const optionalEmailField = z
+  .union([z.string().trim().email('Ingresa un correo valido').max(160), z.literal('')])
+  .optional()
+  .nullable();
+
+const editUserSchema = z.object({
+  firstName: z.string().trim().min(2, 'Ingresa el nombre'),
+  lastName: z.string().trim().min(2, 'Ingresa el apellido'),
+  email: z.string().trim().email('Ingresa un correo valido'),
+  role: z.enum(['admin', 'instructor', 'apprentice']),
+  isActive: z.boolean(),
+  password: z.union([z.string().trim().min(6, 'La contrasena debe tener al menos 6 caracteres'), z.literal('')]).optional(),
+  headline: z
+    .union([z.string().trim().max(160, 'Maximo 160 caracteres'), z.literal('')])
+    .optional()
+    .nullable(),
+  bio: z
+    .union([z.string().trim().max(500, 'Maximo 500 caracteres'), z.literal('')])
+    .optional()
+    .nullable(),
+  avatarUrl: optionalUrlField,
+  instagramUrl: optionalUrlField,
+  githubUrl: optionalUrlField,
+  facebookUrl: optionalUrlField,
+  contactEmail: optionalEmailField,
+  xUrl: optionalUrlField
+});
+
+type EditUserValues = z.infer<typeof editUserSchema>;
+type AdminUpdatePayload = Parameters<typeof adminService.updateUser>[1];
+
 export const AdminModerationPage = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
+  const [editingUser, setEditingUser] = useState<Profile | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin', 'users'],
@@ -55,6 +99,48 @@ export const AdminModerationPage = () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }).catch(() => {});
     }
   });
+
+  const updateUserMutation = useMutation({
+    mutationFn: ({ userId, payload }: { userId: string; payload: AdminUpdatePayload }) =>
+      adminService.updateUser(userId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }).catch(() => {});
+      setEditingUser(null);
+    },
+    onError: () => {
+      setFormError('No se pudo actualizar el usuario. Intenta nuevamente.');
+    }
+  });
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors }
+  } = useForm<EditUserValues>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      role: 'apprentice',
+      isActive: true,
+      password: '',
+      headline: '',
+      bio: '',
+      avatarUrl: '',
+      instagramUrl: '',
+      githubUrl: '',
+      facebookUrl: '',
+      contactEmail: '',
+      xUrl: ''
+    }
+  });
+
+  const isActiveValue = watch('isActive');
+  const isSaving = updateUserMutation.isPending;
 
   const filteredUsers = useMemo(() => {
     if (!users.length) return [];
@@ -78,6 +164,61 @@ export const AdminModerationPage = () => {
     const suspended = total - active;
     return { total, active, suspended };
   }, [users]);
+
+  useEffect(() => {
+    if (editingUser) {
+      reset({
+        firstName: editingUser.firstName,
+        lastName: editingUser.lastName,
+        email: editingUser.email,
+        role: editingUser.role,
+        isActive: editingUser.isActive,
+        password: '',
+      headline: editingUser.headline ?? '',
+      bio: editingUser.bio ?? '',
+      avatarUrl: editingUser.avatarUrl ?? '',
+      instagramUrl: editingUser.instagramUrl ?? '',
+      githubUrl: editingUser.githubUrl ?? '',
+      facebookUrl: editingUser.facebookUrl ?? '',
+      contactEmail: editingUser.contactEmail ?? '',
+      xUrl: editingUser.xUrl ?? ''
+    });
+      setFormError(null);
+    }
+  }, [editingUser, reset]);
+
+  const normalizeOptional = (value: string | null | undefined): string | null => {
+    if (value === undefined || value === null) return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  };
+
+  const onSubmit = (values: EditUserValues) => {
+    if (!editingUser) return;
+    setFormError(null);
+    const payload: AdminUpdatePayload = {
+      firstName: values.firstName.trim(),
+      lastName: values.lastName.trim(),
+      email: values.email.trim(),
+      role: values.role,
+      isActive: values.isActive,
+      headline: normalizeOptional(values.headline),
+      bio: normalizeOptional(values.bio),
+      avatarUrl: normalizeOptional(values.avatarUrl),
+      instagramUrl: normalizeOptional(values.instagramUrl),
+      githubUrl: normalizeOptional(values.githubUrl),
+      facebookUrl: normalizeOptional(values.facebookUrl),
+      contactEmail: normalizeOptional(values.contactEmail),
+      xUrl: normalizeOptional(values.xUrl)
+    };
+
+    const passwordValue = values.password?.trim();
+    if (passwordValue) {
+      payload.password = passwordValue;
+    }
+
+    updateUserMutation.mutate({ userId: editingUser.id, payload });
+  };
 
   return (
     <DashboardLayout
@@ -209,20 +350,30 @@ export const AdminModerationPage = () => {
                     </td>
 
                     <td className="px-3 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant={user.isActive ? 'secondary' : 'primary'}
-                        loading={updateStatusMutation.isPending}
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            userId: user.id,
-                            isActive: !user.isActive
-                          })
-                        }
-                        className="px-2.5 text-[11px]"
-                      >
-                        {user.isActive ? 'Suspender' : 'Reactivar'}
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="px-2.5 text-[11px] shadow-[0_10px_20px_rgba(18,55,29,0.18)] backdrop-blur"
+                          onClick={() => setEditingUser(user)}
+                        >
+                          Editar perfil
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={user.isActive ? 'secondary' : 'primary'}
+                          loading={updateStatusMutation.isPending}
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              userId: user.id,
+                              isActive: !user.isActive
+                            })
+                          }
+                          className="px-2.5 text-[11px]"
+                        >
+                          {user.isActive ? 'Suspender' : 'Reactivar'}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -231,6 +382,201 @@ export const AdminModerationPage = () => {
           </div>
         </Card>
       </div>
+
+      <AnimatePresence>
+        {editingUser && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 px-4 py-10 backdrop-blur-[12px]"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              className="relative w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/25 bg-white/35 p-6 shadow-[0_44px_110px_rgba(15,38,25,0.33)] backdrop-blur-[26px] dark:border-white/10 dark:bg-slate-900/80"
+            >
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.48),_transparent_58%)] opacity-70 dark:opacity-30" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/12 to-white/18 dark:from-white/10 dark:via-white/6 dark:to-white/12" />
+
+              <div className="relative z-10 space-y-6">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--color-text)]">
+                      Editar perfil de {editingUser.firstName} {editingUser.lastName}
+                    </h3>
+                    <p className="text-sm text-[var(--color-muted)]">
+                      Ajusta la informacion personal, el rol y el estado de la cuenta.
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setEditingUser(null)}
+                    className="self-start text-[var(--color-muted)] hover:text-sena-green"
+                  >
+                    Cerrar
+                  </Button>
+                </div>
+
+                <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
+                  {formError && (
+                    <div className="rounded-[24px] border border-rose-300/50 bg-rose-100/60 px-4 py-3 text-sm text-rose-700 shadow-[0_18px_42px_rgba(220,38,38,0.2)]">
+                      {formError}
+                    </div>
+                  )}
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      label="Nombre"
+                      disabled={isSaving}
+                      error={errors.firstName?.message}
+                      {...register('firstName')}
+                    />
+                    <Input
+                      label="Apellido"
+                      disabled={isSaving}
+                      error={errors.lastName?.message}
+                      {...register('lastName')}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+                    <Input
+                      label="Correo"
+                      type="email"
+                      disabled={isSaving}
+                      error={errors.email?.message}
+                      {...register('email')}
+                    />
+                    <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-text)]">
+                      Rol
+                      <select
+                        className="rounded-xl border border-white/30 bg-white/25 px-3 py-2 text-xs text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30 dark:border-white/10 dark:bg-white/10"
+                        disabled={isSaving}
+                        {...register('role')}
+                      >
+                        <option value="admin">Administrador</option>
+                        <option value="instructor">Instructor</option>
+                        <option value="apprentice">Aprendiz</option>
+                      </select>
+                      {errors.role && <span className="text-xs text-red-400">{errors.role.message}</span>}
+                    </label>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-[24px] border border-white/25 bg-white/25 px-4 py-4 text-xs text-[var(--color-text)] shadow-[0_24px_54px_rgba(18,55,29,0.24)] backdrop-blur-md">
+                      <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Estado de la cuenta</p>
+                      <p className="mt-1 text-sm font-semibold">{isActiveValue ? 'Activo' : 'Suspendido'}</p>
+                      <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                        {isActiveValue
+                          ? 'El usuario puede iniciar sesion y acceder al contenido.'
+                          : 'El usuario quedara bloqueado hasta que lo reactives.'}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={isActiveValue ? 'secondary' : 'primary'}
+                        className="mt-4 w-full"
+                        onClick={() => setValue('isActive', !isActiveValue)}
+                        disabled={isSaving}
+                      >
+                        {isActiveValue ? 'Marcar como suspendido' : 'Reactivar usuario'}
+                      </Button>
+                    </div>
+                    <Input
+                      label="Nueva contrasena (opcional)"
+                      type="password"
+                      placeholder="Dejar en blanco para mantenerla"
+                      disabled={isSaving}
+                      error={errors.password?.message}
+                      {...register('password')}
+                    />
+                  </div>
+
+                  <Input
+                    label="Titular"
+                    disabled={isSaving}
+                    error={errors.headline?.message}
+                    {...register('headline')}
+                    hint="Maximo 160 caracteres"
+                  />
+
+                  <TextArea
+                    label="Biografia"
+                    rows={4}
+                    disabled={isSaving}
+                    error={errors.bio?.message}
+                    {...register('bio')}
+                    hint="Comparte una descripcion breve del usuario."
+                  />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      label="Avatar (URL)"
+                      disabled={isSaving}
+                      error={errors.avatarUrl?.message}
+                      placeholder="https://..."
+                      {...register('avatarUrl')}
+                    />
+                    <Input
+                      label="Instagram"
+                      disabled={isSaving}
+                      error={errors.instagramUrl?.message}
+                      placeholder="https://www.instagram.com/usuario"
+                      {...register('instagramUrl')}
+                    />
+                    <Input
+                      label="GitHub"
+                      disabled={isSaving}
+                      error={errors.githubUrl?.message}
+                      placeholder="https://github.com/usuario"
+                      {...register('githubUrl')}
+                    />
+                    <Input
+                      label="Facebook"
+                      disabled={isSaving}
+                      error={errors.facebookUrl?.message}
+                      placeholder="https://www.facebook.com/usuario"
+                      {...register('facebookUrl')}
+                    />
+                    <Input
+                      label="Correo de contacto"
+                      type="email"
+                      disabled={isSaving}
+                      error={errors.contactEmail?.message}
+                      placeholder="usuario@correo.com"
+                      {...register('contactEmail')}
+                    />
+                    <Input
+                      label="X (Twitter)"
+                      disabled={isSaving}
+                      error={errors.xUrl?.message}
+                      placeholder="https://x.com/usuario"
+                      {...register('xUrl')}
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setEditingUser(null)}
+                      disabled={isSaving}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" loading={isSaving} disabled={isSaving}>
+                      Guardar cambios
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 };
+

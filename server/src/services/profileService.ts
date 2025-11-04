@@ -8,8 +8,14 @@ const toPublicProfile = (user: User): PublicProfile => ({
   lastName: user.lastName,
   email: user.email,
   avatarUrl: user.avatarUrl ?? null,
+  coverImageUrl: user.coverImageUrl ?? null,
   headline: user.headline ?? null,
-  bio: user.bio ?? null,
+  bio: user.bio,
+  instagramUrl: user.instagramUrl ?? null,
+  githubUrl: user.githubUrl ?? null,
+  facebookUrl: user.facebookUrl ?? null,
+  contactEmail: user.contactEmail ?? null,
+  xUrl: user.xUrl ?? null,
   role: user.role,
   isActive: user.isActive,
   createdAt: user.createdAt,
@@ -33,5 +39,11 @@ export const profileService = {
   async updateAvatar(userId: string, avatarUrl: string | null): Promise<PublicProfile> {
     const updated = await userRepository.updateProfile({ userId, avatarUrl });
     return toPublicProfile(updated);
+  },
+
+  async updateCover(userId: string, coverImageUrl: string | null): Promise<PublicProfile> {
+    const updated = await userRepository.updateProfile({ userId, coverImageUrl });
+    return toPublicProfile(updated);
   }
 };
+

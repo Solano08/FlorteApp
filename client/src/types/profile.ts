@@ -10,4 +10,10 @@ export interface UpdateProfilePayload {
   lastName?: string;
   headline?: string | null;
   bio?: string | null;
+  coverImageUrl?: string | null;
+  instagramUrl?: string | null;
+  githubUrl?: string | null;
+  facebookUrl?: string | null;
+  contactEmail?: string | null;
+  xUrl?: string | null;
 }

@@ -15,5 +15,9 @@ export const adminService = {
             isActive
         });
         return data.user;
+    },
+    async updateUser(userId, payload) {
+        const { data } = await apiClient.put(`/admin/users/${userId}`, payload);
+        return data.user;
     }
 };
