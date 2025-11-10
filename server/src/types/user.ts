@@ -85,4 +85,3 @@ export interface UpdateUserInput {
   isActive?: boolean;
   coverImageUrl?: string | null;
 }
-

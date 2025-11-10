@@ -28,4 +28,3 @@ export const adminUpdateUserSchema = z.object({
   contactEmail: optionalEmail,
   xUrl: optionalUrl
 });
-

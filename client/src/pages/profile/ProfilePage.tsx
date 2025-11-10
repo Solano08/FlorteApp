@@ -433,9 +433,9 @@ export const ProfilePage = () => {
 
   const handleClearLinkField = (name: keyof ProfileValues) => {
     setActiveLinkEditors((prev) => {
-      const next = { ...prev };
-      delete next[name as string];
-      return next;
+      const key = name as string;
+      const { [key]: _removed, ...rest } = prev;
+      return rest;
     });
     setValue(name, '', { shouldDirty: true });
   };

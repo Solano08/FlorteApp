@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { chatService } from '../../services/chatService';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import {
   MessageCirclePlus,
@@ -15,7 +14,9 @@ import {
   Search,
   Phone,
   Video,
-  Info
+  Info,
+  MoreHorizontal,
+  Settings2
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -23,11 +24,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import classNames from 'classnames';
 import { useAuth } from '../../hooks/useAuth';
 
-type ChatFilter = 'all' | 'direct' | 'groups';
+type ChatFilter = 'all' | 'unread' | 'groups';
 
 const filterTabs: Array<{ value: ChatFilter; label: string }> = [
   { value: 'all', label: 'Todos' },
-  { value: 'direct', label: 'Privados' },
+  { value: 'unread', label: 'No leidos' },
   { value: 'groups', label: 'Grupos' }
 ];
 
@@ -209,7 +210,7 @@ export const ChatsPage = () => {
 
     return chats.filter((chat) => {
       if (activeFilter === 'groups' && !chat.isGroup) return false;
-      if (activeFilter === 'direct' && chat.isGroup) return false;
+      if (activeFilter === 'unread' && chat.lastMessageAt) return false;
 
       if (!normalized) return true;
 
@@ -217,6 +218,15 @@ export const ChatsPage = () => {
       return name.includes(normalized) || chat.id.toLowerCase().includes(normalized);
     });
   }, [chats, activeFilter, searchTerm]);
+
+  const tabStats = useMemo<Record<ChatFilter, number>>(
+    () => ({
+      all: chats.length,
+      unread: chats.filter((chat) => !chat.lastMessageAt).length,
+      groups: chats.filter((chat) => chat.isGroup).length
+    }),
+    [chats]
+  );
 
   const activeChat = useMemo(
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
@@ -261,6 +271,9 @@ export const ChatsPage = () => {
   const activeChatName = activeChat ? getChatName(activeChat.name, activeChat.isGroup) : '';
   const activeChatInitials = activeChat ? getInitialsFromLabel(activeChatName) : '';
   const activeChatGradient = activeChat ? getAvatarGradient(activeChat.id) : '';
+  const activeChatLastActivity = activeChat
+    ? formatLastActivity(activeChat.lastMessageAt ?? activeChat.createdAt)
+    : '';
 
   return (
     <DashboardLayout title="Chats" subtitle="Mantente en contacto con tus equipos y grupos de estudio.">
@@ -275,20 +288,36 @@ export const ChatsPage = () => {
           <div className="relative z-10 flex h-full flex-col">
             <header className="flex items-center justify-between gap-3 border-b border-white/20 px-6 py-5">
               <div>
-                <h2 className="text-sm font-semibold text-[var(--color-text)]">Centro de mensajes</h2>
+                <h2 className="text-base font-semibold text-[var(--color-text)]">Chats</h2>
                 <p className="text-[11px] text-[var(--color-muted)]">
-                  Organiza tus chats privados y grupos colaborativos.
+                  Mantente al dia con tus conversaciones y grupos.
                 </p>
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="px-3 text-[11px] shadow-[0_12px_24px_rgba(18,55,29,0.18)]"
-                onClick={() => setShowNewChat((prev) => !prev)}
-              >
-                <MessageCirclePlus className="h-4 w-4" />
-                Nuevo chat
-              </Button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/15 text-[var(--color-muted)] transition hover:text-sena-green"
+                  aria-label="Preferencias de chat"
+                >
+                  <Settings2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/15 text-[var(--color-muted)] transition hover:text-sena-green"
+                  aria-label="Mas opciones"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="px-3 text-[11px] shadow-[0_12px_24px_rgba(18,55,29,0.18)]"
+                  onClick={() => setShowNewChat((prev) => !prev)}
+                >
+                  <MessageCirclePlus className="h-4 w-4" />
+                  Nuevo chat
+                </Button>
+              </div>
             </header>
 
             <div className="space-y-4 border-b border-white/15 px-6 py-4">
@@ -296,7 +325,7 @@ export const ChatsPage = () => {
                 <Search className="h-4 w-4 text-[var(--color-muted)]" />
                 <input
                   type="text"
-                  placeholder="Buscar personas, grupos o ID"
+                  placeholder="Buscar en Messenger"
                   className="flex-1 bg-transparent text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
@@ -316,7 +345,19 @@ export const ChatsPage = () => {
                         : 'hover:text-[var(--color-text)]'
                     )}
                   >
-                    {tab.label}
+                    <span className="flex items-center justify-center gap-1">
+                      {tab.label}
+                      {tabStats[tab.value] > 0 && (
+                        <span
+                          className={classNames(
+                            'rounded-full px-1.5 py-[1px] text-[10px] font-semibold transition',
+                            activeFilter === tab.value ? 'bg-white/90 text-sena-green' : 'bg-white/20 text-[var(--color-muted)]'
+                          )}
+                        >
+                          {tabStats[tab.value]}
+                        </span>
+                      )}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -429,6 +470,7 @@ export const ChatsPage = () => {
                     const chatLabel = getChatName(chat.name, chat.isGroup);
                     const initials = getInitialsFromLabel(chatLabel);
                     const gradient = getAvatarGradient(chat.id);
+                    const hasUnread = !chat.lastMessageAt;
 
                     return (
                       <li key={chat.id}>
@@ -439,26 +481,48 @@ export const ChatsPage = () => {
                             'group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all',
                             isActive
                               ? 'bg-white/35 text-sena-green shadow-[0_18px_32px_rgba(57,169,0,0.20)]'
-                              : 'text-[var(--color-text)] hover:bg-white/15'
+                              : 'text-[var(--color-text)] hover:bg-white/12'
                           )}
                         >
-                          <span
-                            className={classNames(
-                              'flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-white shadow-[0_10px_20px_rgba(18,55,29,0.22)]',
-                              gradient
-                            )}
-                          >
-                            {initials}
+                          <span className="relative inline-flex">
+                            <span
+                              className={classNames(
+                                'flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-white shadow-[0_10px_20px_rgba(18,55,29,0.22)]',
+                                gradient
+                              )}
+                            >
+                              {initials}
+                            </span>
+                            <span
+                              className={classNames(
+                                'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white/80 transition',
+                                hasUnread ? 'bg-sena-green' : 'bg-transparent'
+                              )}
+                            />
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
                               <p className="truncate text-sm font-semibold">{chatLabel}</p>
-                              <span className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
+                              <span
+                                className={classNames(
+                                  'text-[10px] uppercase tracking-wide',
+                                  hasUnread ? 'text-sena-green' : 'text-[var(--color-muted)]'
+                                )}
+                              >
                                 {lastActivity}
                               </span>
                             </div>
-                            <p className="mt-1 text-xs text-[var(--color-muted)]">
-                              {chat.isGroup ? 'Grupo colaborativo' : 'Mensaje directo'}
+                            <p
+                              className={classNames(
+                                'mt-1 text-xs',
+                                hasUnread ? 'text-sena-green/90 font-semibold' : 'text-[var(--color-muted)]'
+                              )}
+                            >
+                              {chat.isGroup
+                                ? 'Grupo colaborativo'
+                                : hasUnread
+                                ? 'Sin mensajes nuevos aun'
+                                : 'Mensaje directo'}
                             </p>
                           </div>
                         </button>
@@ -494,29 +558,28 @@ export const ChatsPage = () => {
                     <div>
                       <h3 className="text-base font-semibold text-[var(--color-text)]">{activeChatName}</h3>
                       <p className="text-[11px] text-[var(--color-muted)]">
-                        {activeChat.isGroup ? 'Chat grupal' : 'Chat privado'} - Ultima actividad{' '}
-                        {formatLastActivity(activeChat.lastMessageAt ?? activeChat.createdAt)}
+                        {activeChat.isGroup ? 'Chat grupal' : 'Chat privado'} - Ultima actividad {activeChatLastActivity}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/12 text-[var(--color-text)] transition hover:text-sena-green"
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/15 text-[var(--color-text)] transition hover:border-sena-green/60 hover:text-sena-green"
                       aria-label="Llamada de voz"
                     >
                       <Phone className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/12 text-[var(--color-text)] transition hover:text-sena-green"
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/15 text-[var(--color-text)] transition hover:border-sena-green/60 hover:text-sena-green"
                       aria-label="Videollamada"
                     >
                       <Video className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/12 text-[var(--color-text)] transition hover:text-sena-green"
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/15 text-[var(--color-text)] transition hover:border-sena-green/60 hover:text-sena-green"
                       aria-label="Detalles del chat"
                     >
                       <Info className="h-4 w-4" />
@@ -524,56 +587,76 @@ export const ChatsPage = () => {
                   </div>
                 </header>
 
-                <div ref={messageListRef} className="flex-1 space-y-3 overflow-y-auto px-6 py-5">
-                  {isFetchingMessages ? (
-                    <div className="text-center text-xs text-[var(--color-muted)]">Sincronizando mensajes...</div>
-                  ) : messages.length === 0 ? (
-                    <div className="mt-6 rounded-3xl border border-dashed border-white/20 bg-white/12 px-5 py-8 text-center text-sm text-[var(--color-muted)]">
-                      Aun no hay mensajes en este chat. Escribe el primero!
+                <div ref={messageListRef} className="flex-1 overflow-y-auto px-6 py-5">
+                  <div className="mx-auto flex max-w-2xl flex-col gap-5">
+                    <div className="flex flex-col items-center gap-3 rounded-3xl border border-white/20 bg-white/12 px-6 py-6 text-center shadow-[0_28px_64px_rgba(18,55,29,0.22)] dark:bg-white/10">
+                      <span
+                        className={classNames(
+                          'flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold text-white shadow-[0_22px_44px_rgba(18,55,29,0.24)]',
+                          activeChatGradient
+                        )}
+                      >
+                        {activeChatInitials}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--color-text)]">{activeChatName}</p>
+                        <p className="text-xs text-[var(--color-muted)]">Activo(a) {activeChatLastActivity}</p>
+                      </div>
+                      <p className="max-w-xl text-xs text-[var(--color-muted)]">
+                        Los mensajes y las llamadas estan protegidos con cifrado de extremo a extremo. Solo las personas
+                        de este chat pueden leerlos o compartirlos.
+                      </p>
                     </div>
-                  ) : (
-                    messages.map((entry) => {
-                      const isOwn = authUser?.id === entry.senderId;
-                      const timestamp = new Date(entry.createdAt).toLocaleTimeString('es-CO', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      });
+                    {isFetchingMessages ? (
+                      <div className="py-6 text-center text-xs text-[var(--color-muted)]">Sincronizando mensajes...</div>
+                    ) : messages.length === 0 ? (
+                      <div className="rounded-3xl border border-dashed border-white/20 bg-white/10 px-5 py-8 text-center text-sm text-[var(--color-muted)]">
+                        Aun no hay mensajes en este chat. Escribe el primero!
+                      </div>
+                    ) : (
+                      messages.map((entry) => {
+                        const isOwn = authUser?.id === entry.senderId;
+                        const timestamp = new Date(entry.createdAt).toLocaleTimeString('es-CO', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
 
-                      return (
-                        <div
-                          key={entry.id}
-                          className={classNames('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}
-                        >
+                        return (
                           <div
-                            className={classNames(
-                              'max-w-[72%] rounded-3xl px-4 py-3 text-sm shadow-[0_14px_26px_rgba(18,55,29,0.18)] transition-colors',
-                              isOwn
-                                ? 'bg-sena-green/95 text-white'
-                                : 'bg-white/18 text-[var(--color-text)] dark:bg-white/12'
-                            )}
+                            key={entry.id}
+                            className={classNames('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}
                           >
-                            <p
+                            <div
                               className={classNames(
-                                'text-[11px] font-semibold uppercase tracking-wide',
-                                isOwn ? 'text-white/80' : 'text-[var(--color-muted)]'
+                                'max-w-[75%] rounded-3xl px-4 py-3 text-sm shadow-[0_18px_32px_rgba(18,55,29,0.20)] transition-colors',
+                                isOwn
+                                  ? 'bg-sena-green/95 text-white'
+                                  : 'bg-white/16 text-[var(--color-text)] dark:bg-white/12'
                               )}
                             >
-                              {isOwn ? 'Tu' : entry.senderId}
-                            </p>
-                            <p className="mt-1 leading-relaxed">{entry.content}</p>
-                            <p
-                              className={classNames(
-                                'mt-2 text-[10px]',
-                                isOwn ? 'text-white/70' : 'text-[var(--color-muted)]'
-                              )}
-                            >
-                              {timestamp}
-                            </p>
+                              <p
+                                className={classNames(
+                                  'text-[11px] font-semibold uppercase tracking-wide',
+                                  isOwn ? 'text-white/70' : 'text-[var(--color-muted)]'
+                                )}
+                              >
+                                {isOwn ? 'Tu' : entry.senderId}
+                              </p>
+                              <p className="mt-1 leading-relaxed">{entry.content}</p>
+                              <p
+                                className={classNames(
+                                  'mt-2 text-[10px]',
+                                  isOwn ? 'text-white/70' : 'text-[var(--color-muted)]'
+                                )}
+                              >
+                                {timestamp}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
 
                 <form className="border-t border-white/15 bg-white/10 px-6 py-4" onSubmit={handleSendMessage}>

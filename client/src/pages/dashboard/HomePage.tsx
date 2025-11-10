@@ -5,6 +5,7 @@ import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card } from '../../components/ui/Card';
 import { TextArea } from '../../components/ui/TextArea';
 import { Button } from '../../components/ui/Button';
+import { GlassDialog } from '../../components/ui/GlassDialog';
 import classNames from 'classnames';
 import { chatService } from '../../services/chatService';
 import { groupService } from '../../services/groupService';
@@ -126,10 +127,14 @@ export const HomePage = () => {
       queryClient.setQueryData<FeedPostAggregate[]>(feedQueryKey, (existing) =>
         existing ? [post, ...existing] : [post]
       );
+      void queryClient.invalidateQueries({ queryKey: feedQueryKey });
       setComposerContent('');
       setComposerMediaUrl('');
       setComposerTags([]);
       setTagInput('');
+    },
+    onError: (error) => {
+      console.error('No fue posible publicar el contenido', error);
     }
   });
 
@@ -145,6 +150,10 @@ export const HomePage = () => {
         viewerReaction: metrics.viewerReaction,
         isSaved: metrics.isSaved
       }));
+      void queryClient.invalidateQueries({ queryKey: feedQueryKey });
+    },
+    onError: (error) => {
+      console.error('No fue posible actualizar la reaccion', error);
     }
   });
 
@@ -159,6 +168,10 @@ export const HomePage = () => {
         viewerReaction: metrics.viewerReaction,
         isSaved: metrics.isSaved
       }));
+      void queryClient.invalidateQueries({ queryKey: feedQueryKey });
+    },
+    onError: (error) => {
+      console.error('No fue posible actualizar el guardado', error);
     }
   });
 
@@ -184,7 +197,12 @@ export const HomePage = () => {
         updated.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         return { ...prev, [postId]: updated };
       });
+      setExpandedComments((prev) => ({ ...prev, [postId]: true }));
       setCommentInputs((prev) => ({ ...prev, [postId]: '' }));
+      void queryClient.invalidateQueries({ queryKey: feedQueryKey });
+    },
+    onError: (error) => {
+      console.error('No fue posible enviar el comentario', error);
     }
   });
 
@@ -201,6 +219,10 @@ export const HomePage = () => {
       }));
       setShareTarget(null);
       setShareMessage('');
+      void queryClient.invalidateQueries({ queryKey: feedQueryKey });
+    },
+    onError: (error) => {
+      console.error('No fue posible compartir la publicacion', error);
     }
   });
 
@@ -287,7 +309,7 @@ export const HomePage = () => {
       return;
     }
     if (label === 'Reacciones') {
-      setComposerContent((prev) => (prev ? `${prev} 😊` : '😊'));
+      setComposerContent((prev) => (prev ? `${prev} :)` : ':)'));
     }
   };
 
@@ -856,119 +878,93 @@ export const HomePage = () => {
         })}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {showStoryModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg rounded-3xl border-white/25 bg-white/20 p-8 shadow-[0_30px_55px_rgba(18,55,29,0.22)] backdrop-blur-2xl dark:bg-white/10"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-[var(--color-text)]">Crear historia</h3>
-                  <p className="text-sm text-[var(--color-muted)]">Comparte un momento con tu comunidad.</p>
-                </div>
-                <Button variant="ghost" onClick={() => setShowStoryModal(false)}>
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-              <div className="mt-6 space-y-4">
-                <Input type="file" accept="image/*,video/*" />
-                <TextArea rows={4} placeholder="Escribe una descripcin..." />
-                <div className="flex justify-end gap-2">
-                  <Button variant="secondary" onClick={() => setShowStoryModal(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={() => setShowStoryModal(false)}>Publicar historia</Button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {showStoryModal && (
+        <GlassDialog open={showStoryModal} onClose={() => setShowStoryModal(false)} size="md" contentClassName="p-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-text)]">Crear historia</h3>
+              <p className="text-sm text-[var(--color-muted)]">Comparte un momento con tu comunidad.</p>
+            </div>
+            <Button variant="ghost" onClick={() => setShowStoryModal(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          <div className="space-y-4">
+            <Input type="file" accept="image/*,video/*" />
+            <TextArea rows={4} placeholder="Escribe una descripcion..." />
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setShowStoryModal(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={() => setShowStoryModal(false)}>Publicar historia</Button>
+            </div>
+          </div>
+        </GlassDialog>
+      )}
 
-      <AnimatePresence>
-        {shareTarget && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-sm"
-            onClick={handleCloseShareModal}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.94 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.94 }}
-              className="w-full max-w-xl rounded-3xl border border-white/25 bg-white/20 p-6 shadow-[0_32px_70px_rgba(18,55,29,0.25)] backdrop-blur-2xl dark:border-white/15 dark:bg-slate-900/80"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-[var(--color-text)]">Compartir publicacion</h3>
-                  <p className="text-sm text-[var(--color-muted)]">
-                    Agrega un mensaje personal para tu comunidad.
-                  </p>
-                </div>
-                <Button variant="ghost" onClick={handleCloseShareModal}>
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
+      {shareTarget && (
+        <GlassDialog
+          open={Boolean(shareTarget)}
+          onClose={handleCloseShareModal}
+          size="lg"
+          preventCloseOnBackdrop={isSharing}
+          contentClassName="p-6"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-text)]">Compartir publicacion</h3>
+              <p className="text-sm text-[var(--color-muted)]">Agrega un mensaje personal para tu comunidad.</p>
+            </div>
+            <Button variant="ghost" onClick={handleCloseShareModal} disabled={isSharing}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
 
-              <div className="mt-5 space-y-4">
-                <div className="rounded-2xl border border-white/20 bg-white/12 px-4 py-4 text-sm text-[var(--color-text)]">
-                  <div className="flex items-start gap-3">
-                    <img
-                      src={
-                        shareTarget.author.avatarUrl ??
-                        `https://avatars.dicebear.com/api/initials/${encodeURIComponent(shareTarget.author.fullName)}.svg`
-                      }
-                      alt={shareTarget.author.fullName}
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
-                    <div className="min-w-0">
-                      <p className="font-semibold">{shareTarget.author.fullName}</p>
-                      <p className="text-xs text-[var(--color-muted)]">{formatTimeAgo(shareTarget.createdAt)}</p>
-                    </div>
-                  </div>
-                  {shareTarget.content && (
-                    <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">{shareTarget.content}</p>
-                  )}
-                  {shareTarget.mediaUrl && (
-                    <div className="mt-3 overflow-hidden rounded-2xl border border-white/15">
-                      <img src={shareTarget.mediaUrl} alt="Vista previa" className="w-full object-cover" />
-                    </div>
-                  )}
-                </div>
-
-                <TextArea
-                  rows={4}
-                  placeholder="Agrega un mensaje para tus contactos (opcional)"
-                  value={shareMessage}
-                  onChange={(event) => setShareMessage(event.target.value)}
-                  disabled={isSharing}
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-white/20 bg-white/12 px-4 py-4 text-sm text-[var(--color-text)]">
+              <div className="flex items-start gap-3">
+                <img
+                  src={
+                    shareTarget.author.avatarUrl ??
+                    `https://avatars.dicebear.com/api/initials/${encodeURIComponent(shareTarget.author.fullName)}.svg`
+                  }
+                  alt={shareTarget.author.fullName}
+                  className="h-10 w-10 rounded-full object-cover"
                 />
-
-                <div className="flex justify-end gap-2">
-                  <Button variant="secondary" onClick={handleCloseShareModal} disabled={isSharing}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleShareSubmit} loading={isSharing} disabled={isSharing}>
-                    Compartir
-                  </Button>
+                <div className="min-w-0">
+                  <p className="font-semibold">{shareTarget.author.fullName}</p>
+                  <p className="text-xs text-[var(--color-muted)]">{formatTimeAgo(shareTarget.createdAt)}</p>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              {shareTarget.content && (
+                <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">{shareTarget.content}</p>
+              )}
+              {shareTarget.mediaUrl && (
+                <div className="mt-3 overflow-hidden rounded-2xl border border-white/15">
+                  <img src={shareTarget.mediaUrl} alt="Vista previa" className="w-full object-cover" />
+                </div>
+              )}
+            </div>
+
+            <TextArea
+              rows={4}
+              placeholder="Agrega un mensaje para tus contactos (opcional)"
+              value={shareMessage}
+              onChange={(event) => setShareMessage(event.target.value)}
+              disabled={isSharing}
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={handleCloseShareModal} disabled={isSharing}>
+                Cancelar
+              </Button>
+              <Button onClick={handleShareSubmit} loading={isSharing} disabled={isSharing}>
+                Compartir
+              </Button>
+            </div>
+          </div>
+        </GlassDialog>
+      )}
       </div>
     </DashboardLayout>
   );

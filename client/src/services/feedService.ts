@@ -69,7 +69,7 @@ export const feedService = {
   },
 
   async toggleSave(postId: string): Promise<PostMetrics> {
-    const { data } = await apiClient.post<ReactionResponse>(`/feed/${postId}/save`);
+    const { data } = await apiClient.post<ReactionResponse>(`/feed/${postId}/save`, {});
     return data.metrics;
   },
 

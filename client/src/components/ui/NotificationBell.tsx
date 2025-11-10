@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Bell, CheckCircle, MessageSquare, Users, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from './Button';
-import { Card } from './Card';
+import { GlassDialog } from './GlassDialog';
 
 const demoNotifications = [
   {
@@ -35,33 +35,18 @@ export const NotificationBell = () => {
   const isBrowser = typeof window !== 'undefined';
 
   useEffect(() => {
-    if (!isBrowser) return;
-    const previousOverflow = document.body.style.overflow;
-    if (showAll) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isBrowser, showAll]);
-
-  useEffect(() => {
-    if (!isBrowser) return;
+    if (!isBrowser || !open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setOpen(false);
-        setShowAll(false);
       }
     };
 
-    if (open || showAll) {
-      window.addEventListener('keydown', onKeyDown);
-    }
-
+    window.addEventListener('keydown', onKeyDown);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [isBrowser, open, showAll]);
+  }, [isBrowser, open]);
 
   const handleToggle = () => {
     setOpen((prev) => !prev);
@@ -92,108 +77,107 @@ export const NotificationBell = () => {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.2 }}
             className="absolute right-0 mt-3 w-80"
           >
-            <Card className="overflow-hidden border-white/30 bg-white/30 p-0 shadow-[0_20px_40px_rgba(18,55,29,0.18)] backdrop-blur-xl dark:border-white/15 dark:bg-white/10">
-              <div className="flex items-center justify-between border-b border-white/25 px-5 py-4">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--color-text)]">Notificaciones</p>
-                  <p className="text-xs text-[var(--color-muted)]">Mantente al dia con tu comunidad</p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="max-h-72 space-y-3 overflow-y-auto px-4 py-4">
-                {notifications.map(({ id, title, description, icon: Icon, time }) => (
-                  <div
-                    key={id}
-                    className="flex gap-3 rounded-2xl border border-white/20 bg-white/25 px-3 py-3 text-left transition hover:border-sena-green/40 hover:bg-white/35"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sena-green/15 text-sena-green">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--color-text)]">{title}</p>
-                      <p className="text-xs text-[var(--color-muted)]">{description}</p>
-                      <p className="mt-1 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">{time}</p>
-                    </div>
+            <div className="relative overflow-hidden rounded-[32px] border border-white/35 bg-white/55 p-5 shadow-[0_36px_80px_rgba(15,38,25,0.25)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/70">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.65),_transparent_62%)] opacity-85 dark:opacity-40" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/30 via-white/16 to-white/10 dark:from-white/10 dark:via-white/6 dark:to-white/12" />
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-start justify-between gap-4 border-b border-white/30 pb-4">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text)]">Notificaciones</p>
+                    <p className="text-xs text-[var(--color-muted)]">Mantente al dia con tu comunidad</p>
                   </div>
-                ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setOpen(false)}
+                    className="rounded-full bg-white/30 text-[var(--color-muted)] backdrop-blur hover:text-sena-green"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+                  {notifications.map(({ id, title, description, icon: Icon, time }) => (
+                    <div
+                      key={id}
+                      className="relative flex gap-3 rounded-2xl border border-white/45 bg-white/65 px-4 py-3 text-left shadow-[0_20px_42px_rgba(18,55,29,0.18)] backdrop-blur-[20px] transition hover:border-sena-green/60 hover:bg-white/80 dark:border-white/15 dark:bg-white/10"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sena-green/18 text-sena-green shadow-[0_16px_26px_rgba(18,55,29,0.22)]">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-[var(--color-text)]">{title}</p>
+                        <p className="text-xs text-[var(--color-muted)]">{description}</p>
+                        <p className="mt-1 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">{time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-white/30 pt-4">
+                  <Button
+                    variant="secondary"
+                    className="w-full rounded-2xl bg-white/60 py-2.5 text-sm font-semibold text-sena-green shadow-[0_18px_30px_rgba(18,55,29,0.25)] backdrop-blur hover:bg-white/80 dark:bg-white/10 dark:text-white"
+                    onClick={handleViewAll}
+                  >
+                    Ver todas las notificaciones
+                  </Button>
+                </div>
               </div>
-              <div className="border-t border-white/20 px-4 py-3">
-                <Button variant="secondary" className="w-full bg-white/40" onClick={handleViewAll}>
-                  Ver todas las notificaciones
-                </Button>
-              </div>
-            </Card>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {isBrowser &&
         createPortal(
-          <AnimatePresence>
-            {showAll && (
-              <motion.div
-                key="notifications-dialog"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 py-10 backdrop-blur-[14px]"
+          <GlassDialog
+            open={showAll}
+            onClose={() => setShowAll(false)}
+            size="xl"
+            contentClassName="p-7"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--color-text)]">Centro de notificaciones</h3>
+                <p className="text-sm text-[var(--color-muted)]">
+                  Revisa las novedades recientes de tus grupos y proyectos.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
                 onClick={() => setShowAll(false)}
+                className="self-start rounded-full bg-white/15 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
               >
-                <motion.div
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 24 }}
-                  transition={{ type: 'spring', stiffness: 160, damping: 22 }}
-                  className="relative w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/25 bg-white/32 p-6 shadow-[0_48px_112px_rgba(15,38,25,0.38)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/80"
-                  onClick={(event) => event.stopPropagation()}
+                Cerrar
+              </Button>
+            </div>
+
+            <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+              {notifications.map(({ id, title, description, icon: Icon, time }) => (
+                <div
+                  key={`modal-${id}`}
+                  className="flex gap-4 rounded-[24px] border border-white/25 bg-white/40 px-4 py-4 text-left shadow-[0_28px_60px_rgba(18,55,29,0.22)] backdrop-blur transition hover:border-sena-green/50 dark:border-white/15 dark:bg-white/10"
                 >
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.45),_transparent_60%)] opacity-75 dark:opacity-30" />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/30 via-white/15 to-white/20 dark:from-white/10 dark:via-white/6 dark:to-white/12" />
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-[var(--color-text)]">Centro de notificaciones</h3>
-                        <p className="text-sm text-[var(--color-muted)]">
-                          Revisa las novedades recientes de tus grupos y proyectos.
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setShowAll(false)}
-                        className="text-[var(--color-muted)] hover:text-sena-green"
-                      >
-                        Cerrar
-                      </Button>
-                    </div>
-                    <div className="mt-6 max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-                      {notifications.map(({ id, title, description, icon: Icon, time }) => (
-                        <div
-                          key={`modal-${id}`}
-                          className="flex gap-4 rounded-3xl border border-white/25 bg-white/28 px-4 py-4 text-left shadow-[0_24px_54px_rgba(18,55,29,0.22)] transition hover:border-sena-green/40 hover:bg-white/36 dark:border-white/15 dark:bg-white/10"
-                        >
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sena-green/15 text-sena-green">
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between gap-3">
-                              <p className="text-sm font-semibold text-[var(--color-text)]">{title}</p>
-                              <span className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">{time}</span>
-                            </div>
-                            <p className="mt-1 text-xs text-[var(--color-muted)]">{description}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-sena-green/18 text-sena-green shadow-[0_20px_38px_rgba(18,55,29,0.2)]">
+                    <Icon className="h-5 w-5" />
                   </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>,
+                  <div className="flex flex-1 flex-col gap-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-[var(--color-text)]">{title}</p>
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                        {time}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--color-muted)]">{description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </GlassDialog>,
           document.body
         )}
 

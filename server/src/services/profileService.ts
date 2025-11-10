@@ -46,4 +46,3 @@ export const profileService = {
     return toPublicProfile(updated);
   }
 };
-

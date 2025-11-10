@@ -236,4 +236,3 @@ export const authService = {
     await passwordResetRepository.delete(record.id);
   }
 };
-

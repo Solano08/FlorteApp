@@ -43,4 +43,3 @@ export const adminService = {
     return await userService.updateUser(actorId, input);
   }
 };
-

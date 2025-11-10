@@ -35,4 +35,3 @@ export interface AuthResult {
   user: AuthUser;
   tokens: AuthTokens;
 }
-
