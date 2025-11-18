@@ -1,5 +1,6 @@
 ﻿import { Request, Response } from 'express';
 import { profileService } from '../services/profileService';
+import { activityService } from '../services/activityService';
 import { updateProfileSchema } from '../validators/profileValidators';
 import { AppError } from '../utils/appError';
 
@@ -45,5 +46,14 @@ export const profileController = {
     const coverUrl = file ? `/uploads/covers/${file.filename}` : null;
     const profile = await profileService.updateCover(userId, coverUrl);
     res.json({ success: true, profile });
+  },
+
+  activity: async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError('Autenticacion requerida', 401);
+    }
+    const activity = await activityService.getProfileActivity(userId);
+    res.json({ success: true, activity });
   }
 };

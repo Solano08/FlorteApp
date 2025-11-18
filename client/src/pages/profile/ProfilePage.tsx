@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,8 +9,9 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { TextArea } from '../../components/ui/TextArea';
 import { Button } from '../../components/ui/Button';
-import { AvatarUploader } from '../../components/ui/AvatarUploader';
+import { AvatarUploader, AvatarUploaderHandle } from '../../components/ui/AvatarUploader';
 import { profileService } from '../../services/profileService';
+import { activityService } from '../../services/activityService';
 import { useAuth } from '../../hooks/useAuth';
 import {
   Activity,
@@ -22,7 +23,6 @@ import {
   Instagram,
   Loader2,
   Mail,
-  MoreHorizontal,
   Plus,
   RefreshCcw,
   Trash2,
@@ -31,6 +31,7 @@ import {
   X as CloseIcon
 } from 'lucide-react';
 import { Profile } from '../../types/profile';
+import { ActivityOverview } from '../../types/activity';
 
 const optionalUrlField = z
   .union([z.string().trim().url('Ingresa un enlace valido').max(255), z.literal('')])
@@ -114,26 +115,28 @@ const samplePosts: Array<{ id: string; title: string; description: string }> = [
   }
 ];
 
-const activitySummary = {
-  contributionsThisWeek: 18,
-  activeProjects: 3,
-  streakDays: 5
-};
-
 export const ProfilePage = () => {
   const queryClient = useQueryClient();
   const { updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [activeLinkEditors, setActiveLinkEditors] = useState<Record<string, boolean>>({});
-  const [pendingLinkActivation, setPendingLinkActivation] = useState<keyof ProfileValues | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const coverFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [isCoverMenuOpen, setIsCoverMenuOpen] = useState(false);
-  const coverMenuRef = useRef<HTMLDivElement | null>(null);
+  const avatarUploaderRef = useRef<AvatarUploaderHandle | null>(null);
+  const [isCoverEditorMenuOpen, setIsCoverEditorMenuOpen] = useState(false);
+  const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
+  const coverEditorMenuRef = useRef<HTMLDivElement | null>(null);
+  const avatarMenuRef = useRef<HTMLDivElement | null>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', 'me'],
     queryFn: profileService.getProfile
+  });
+
+  const { data: activityOverview } = useQuery<ActivityOverview>({
+    queryKey: ['profile', 'activity'],
+    queryFn: activityService.getOverview,
+    enabled: Boolean(profile)
   });
 
   const {
@@ -172,20 +175,11 @@ export const ProfilePage = () => {
     }
   }, [profile, reset]);
 
-  useEffect(() => {
-    if (isEditing && pendingLinkActivation) {
-      setActiveLinkEditors((prev) => ({
-        ...prev,
-        [pendingLinkActivation as string]: true
-      }));
-      setPendingLinkActivation(null);
-    }
-  }, [isEditing, pendingLinkActivation]);
-
   const closeEditor = () => {
     setIsEditing(false);
     setActiveLinkEditors({});
-    setPendingLinkActivation(null);
+    setIsCoverEditorMenuOpen(false);
+    setIsAvatarMenuOpen(false);
     if (coverFileInputRef.current) {
       coverFileInputRef.current.value = '';
     }
@@ -389,6 +383,15 @@ export const ProfilePage = () => {
   const getLinkPreviewValue = (value: string, type: 'url' | 'email') =>
     type === 'email' ? value : value.replace(/^https?:\/\/(www\.)?/i, '');
 
+  const summaryFallback = {
+    contributionsThisWeek: 0,
+    activeProjects: 0,
+    streakDays: 0,
+    hasProjectActivity: false
+  };
+
+  const activitySummary = activityOverview?.summary ?? summaryFallback;
+
   const activityStats: Array<{
     id: string;
     label: string;
@@ -417,10 +420,36 @@ export const ProfilePage = () => {
     }
   ];
 
+  type SocialLinkDisplay = {
+    id: (typeof socialLinkConfigs)[number]['name'];
+    label: string;
+    icon: typeof Github;
+    href: string;
+    rawValue: string;
+  };
+
+  const profileSocialLinks = useMemo<SocialLinkDisplay[]>(() => {
+    if (!profile) return [];
+    return socialLinkConfigs
+      .map(({ name, label, icon, type }) => {
+        const rawValue = (profile[name as keyof Profile] as string | null | undefined)?.trim() ?? '';
+        if (!rawValue) return null;
+        const href = type === 'email' ? `mailto:${rawValue}` : rawValue;
+        return {
+          id: name,
+          label,
+          icon,
+          href,
+          rawValue
+        };
+      })
+      .filter((link): link is SocialLinkDisplay => Boolean(link));
+  }, [profile]);
+
   const getErrorMessage = (field: keyof ProfileValues) =>
     (errors[field]?.message as string | undefined) ?? undefined;
 
-  const handleOpenEditor = (linkToActivate?: keyof ProfileValues) => {
+  const handleOpenEditor = () => {
     if (profile) {
       reset({
         firstName: profile.firstName,
@@ -434,7 +463,8 @@ export const ProfilePage = () => {
       });
     }
     setActiveLinkEditors({});
-    setPendingLinkActivation(linkToActivate ?? null);
+    setIsCoverEditorMenuOpen(false);
+    setIsAvatarMenuOpen(false);
     if (coverFileInputRef.current) {
       coverFileInputRef.current.value = '';
     }
@@ -453,19 +483,11 @@ export const ProfilePage = () => {
     'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80';
   const hasStoredCover = Boolean(coverPreview || coverImageUrl);
 
-  const closeCoverMenu = () => setIsCoverMenuOpen(false);
-  const toggleCoverMenu = () => setIsCoverMenuOpen((previous) => !previous);
+  const toggleCoverEditorMenu = () => setIsCoverEditorMenuOpen((previous) => !previous);
+  const toggleAvatarMenu = () => setIsAvatarMenuOpen((previous) => !previous);
 
   const handleActivateLinkField = (name: keyof ProfileValues) => {
     setActiveLinkEditors((prev) => ({ ...prev, [name as string]: true }));
-  };
-
-  const handleQuickAddLink = (name: keyof ProfileValues) => {
-    if (isEditing) {
-      handleActivateLinkField(name);
-      return;
-    }
-    handleOpenEditor(name);
   };
 
   const handleCollapseLinkField = (name: keyof ProfileValues) => {
@@ -483,7 +505,7 @@ export const ProfilePage = () => {
 
   const handleOpenCoverPicker = () => {
     if (isCoverBusy) return;
-    closeCoverMenu();
+    setIsCoverEditorMenuOpen(false);
     coverFileInputRef.current?.click();
   };
 
@@ -500,20 +522,26 @@ export const ProfilePage = () => {
 
   const handleRemoveCover = () => {
     if (!hasStoredCover || removeCoverMutation.isPending) return;
-    closeCoverMenu();
+    setIsCoverEditorMenuOpen(false);
     removeCoverMutation.mutate();
   };
 
   const handleRemoveAvatar = () => {
     if (!profile?.avatarUrl || removeAvatarMutation.isPending) return;
+    setIsAvatarMenuOpen(false);
     removeAvatarMutation.mutate();
+  };
+
+  const handleAvatarPickerTrigger = () => {
+    if (isAvatarBusy) return;
+    setIsAvatarMenuOpen(false);
+    avatarUploaderRef.current?.openPicker();
   };
 
   const coverMenuItems = [
     {
       id: 'upload',
       label: 'Subir foto',
-      description: 'Agrega una portada',
       icon: Upload,
       disabled: hasStoredCover || isCoverBusy,
       onClick: handleOpenCoverPicker
@@ -521,7 +549,6 @@ export const ProfilePage = () => {
     {
       id: 'update',
       label: 'Actualizar foto',
-      description: 'Reemplaza la portada actual',
       icon: RefreshCcw,
       disabled: !hasStoredCover || isCoverBusy,
       onClick: handleOpenCoverPicker
@@ -529,10 +556,26 @@ export const ProfilePage = () => {
     {
       id: 'remove',
       label: 'Eliminar foto',
-      description: 'Quita la imagen de portada',
       icon: Trash2,
       disabled: !hasStoredCover || isCoverBusy,
       onClick: handleRemoveCover
+    }
+  ] as const;
+
+  const avatarMenuItems = [
+    {
+      id: 'avatar-upload',
+      label: 'Actualizar avatar',
+      icon: Upload,
+      disabled: isAvatarBusy,
+      onClick: handleAvatarPickerTrigger
+    },
+    {
+      id: 'avatar-remove',
+      label: 'Eliminar avatar',
+      icon: Trash2,
+      disabled: isAvatarBusy || !profile?.avatarUrl,
+      onClick: handleRemoveAvatar
     }
   ] as const;
 
@@ -546,17 +589,30 @@ export const ProfilePage = () => {
   );
 
   useEffect(() => {
-    if (!isCoverMenuOpen) return;
+    if (!isCoverEditorMenuOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (coverMenuRef.current && !coverMenuRef.current.contains(event.target as Node)) {
-        setIsCoverMenuOpen(false);
+      if (coverEditorMenuRef.current && !coverEditorMenuRef.current.contains(event.target as Node)) {
+        setIsCoverEditorMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isCoverMenuOpen]);
+  }, [isCoverEditorMenuOpen]);
+
+  useEffect(() => {
+    if (!isAvatarMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(event.target as Node)) {
+        setIsAvatarMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAvatarMenuOpen]);
 
   return (
     <DashboardLayout
@@ -574,42 +630,6 @@ export const ProfilePage = () => {
                   className="h-full w-full object-cover opacity-80"
                 />
                 <div className="absolute inset-0 bg-gradient-to-br from-white/45 via-white/10 to-white/5 dark:from-slate-900/40 dark:via-slate-900/30 dark:to-slate-900/20" />
-                <div ref={coverMenuRef} className="absolute right-4 top-4">
-                  <button
-                    type="button"
-                    onClick={toggleCoverMenu}
-                    aria-haspopup="menu"
-                    aria-expanded={isCoverMenuOpen}
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/60 bg-white/80 text-sena-green shadow-[0_16px_32px_rgba(18,55,29,0.22)] backdrop-blur transition hover:bg-white"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Opciones de portada</span>
-                  </button>
-                  {isCoverMenuOpen && (
-                    <div
-                      role="menu"
-                      className="mt-3 w-56 rounded-3xl border border-white/40 bg-white/95 p-2 text-[var(--color-text)] shadow-[0_28px_60px_rgba(18,55,29,0.22)] backdrop-blur"
-                    >
-                      {coverMenuItems.map(({ id, label, description, icon: Icon, disabled, onClick }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={onClick}
-                          disabled={disabled}
-                          className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left text-sm font-semibold transition hover:bg-sena-green/10 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-sena-green/15 text-sena-green shadow-[0_10px_18px_rgba(18,55,29,0.18)]">
-                            <Icon className="h-4 w-4" />
-                          </span>
-                          <span className="flex flex-col leading-tight">
-                            {label}
-                            <span className="text-[11px] font-normal text-[var(--color-muted)]">{description}</span>
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
                 {(isCoverBusy || isAvatarBusy) && (
                   <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/35 backdrop-blur-sm">
                     <Loader2 className="h-6 w-6 animate-spin text-white" />
@@ -636,17 +656,17 @@ export const ProfilePage = () => {
                       {profile?.headline ?? 'Agrega un titular atractivo para tu perfil.'}
                     </p>
                   </div>
-                  <motion.div layoutId="profile-edit-launch" className="w-full sm:w-auto">
+                  <div className="w-full sm:w-auto">
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={handleOpenEditor}
+                      onClick={() => handleOpenEditor()}
                       disabled={isSaving || isMediaBusy}
                       className="w-full px-2.5 text-[11px] shadow-[0_10px_20px_rgba(18,55,29,0.18)] backdrop-blur sm:w-auto"
                     >
                       Editar perfil
                     </Button>
-                  </motion.div>
+                  </div>
                 </div>
               </div>
               {!isEditing && (
@@ -658,6 +678,23 @@ export const ProfilePage = () => {
                     >
                       {skill}
                     </span>
+                  ))}
+                </div>
+              )}
+              {profileSocialLinks.length > 0 && (
+                <div className="flex flex-wrap gap-2 px-6 pb-6">
+                  {profileSocialLinks.map(({ id, label, icon: Icon, href, rawValue }) => (
+                    <a
+                      key={id}
+                      href={href}
+                      target={href.startsWith('mailto:') ? undefined : '_blank'}
+                      rel={href.startsWith('mailto:') ? undefined : 'noreferrer'}
+                      title={rawValue}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/95 px-4 py-1.5 text-xs font-semibold text-sena-green shadow-[0_10px_20px_rgba(18,55,29,0.16)] transition hover:bg-white"
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </a>
                   ))}
                 </div>
               )}
@@ -695,43 +732,6 @@ export const ProfilePage = () => {
           </div>
 
           <div className="space-y-6">
-            <Card className="border border-white/25 bg-white/50 shadow-[0_20px_42px_rgba(18,55,29,0.18)] backdrop-blur-[16px] dark:border-white/15 dark:bg-white/10">
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Mis enlaces</h3>
-              <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Destaca tus redes profesionales para que te contacten facilmente.
-              </p>
-              <div className="mt-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {socialLinkConfigs.map(({ name, label, type }) => {
-                    const rawValue = (profile?.[name as keyof Profile] as string | null | undefined) ?? '';
-                    const trimmedValue = rawValue.trim();
-                    const previewValue =
-                      trimmedValue.length > 0 ? getLinkPreviewValue(trimmedValue, type) : null;
-
-                    return (
-                      <button
-                        key={name}
-                        type="button"
-                        onClick={() => handleQuickAddLink(name)}
-                        className="flex h-28 flex-col items-center justify-center rounded-2xl border border-dashed border-white/30 bg-white/20 text-[var(--color-muted)] shadow-[0_12px_24px_rgba(18,55,29,0.14)] transition hover:border-sena-green/50 hover:bg-white/40 hover:text-sena-green dark:border-white/10 dark:bg-white/5"
-                      >
-                        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/60 text-sena-green shadow-[0_12px_24px_rgba(18,55,29,0.14)] dark:bg-white/10">
-                          <Plus className="h-5 w-5" />
-                        </span>
-                        <span className="mt-2 text-xs font-semibold text-[var(--color-text)]">{label}</span>
-                        <span className="mt-1 text-[11px] text-[var(--color-muted)]">
-                          {previewValue ?? 'Agregar enlace'}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-3 text-[11px] text-[var(--color-muted)]">
-                  Haz clic en un cuadro para agregar o editar tus enlaces.
-                </p>
-              </div>
-            </Card>
-
             <Card className="border border-white/25 bg-white/50 shadow-[0_20px_42px_rgba(18,55,29,0.18)] backdrop-blur-[16px] dark:border-white/15 dark:bg-white/10">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -772,18 +772,17 @@ export const ProfilePage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-[10px]"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 px-4 py-6 backdrop-blur-[18px] sm:px-6"
             >
               <motion.div
-                layoutId="profile-edit-launch"
-                initial={{ opacity: 0, y: 34, scale: 0.94 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 28, scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 170, damping: 24 }}
-                className="relative w-full max-w-2xl overflow-hidden rounded-[32px] border border-white/25 bg-white/40 p-5 shadow-[0_44px_110px_rgba(15,38,25,0.33)] backdrop-blur-[28px] dark:border-white/10 dark:bg-slate-900/75"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 16 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                className="relative w-full max-w-2xl overflow-hidden rounded-[32px] border border-white/40 bg-white/85 p-6 shadow-[0_32px_90px_rgba(15,38,25,0.28)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/85"
               >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.55),_transparent_62%)] opacity-80 dark:opacity-35" />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/12 to-white/18 dark:from-white/8 dark:via-white/5 dark:to-white/10" />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.5),_transparent_70%)] opacity-90 dark:opacity-40" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/15 to-white/10 dark:from-white/5 dark:via-white/0 dark:to-white/5" />
                 <div className="relative z-10 space-y-6">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -797,8 +796,8 @@ export const ProfilePage = () => {
                     </Button>
                   </div>
 
-                  <div className="rounded-[24px] border border-white/25 bg-white/30 p-4 shadow-[0_26px_56px_rgba(18,55,29,0.18)] backdrop-blur-[20px] dark:border-white/10 dark:bg-white/10">
-                    <div className="relative h-36 overflow-hidden rounded-3xl border border-white/25">
+                  <div className="rounded-[24px] border border-white/30 bg-white/60 p-4 shadow-[0_26px_56px_rgba(18,55,29,0.12)] backdrop-blur-[20px] dark:border-white/10 dark:bg-white/10">
+                    <div className="relative h-40 overflow-hidden rounded-3xl border border-white/30">
                       <img src={displayCoverImage} alt="Portada actual" className="h-full w-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/22 via-transparent to-black/8" />
                       {isCoverBusy && (
@@ -806,55 +805,84 @@ export const ProfilePage = () => {
                           <Loader2 className="h-6 w-6 animate-spin text-white" />
                         </div>
                       )}
-                      <div className="absolute bottom-4 left-4 flex flex-wrap gap-3">
-                        <Button
+                      <div ref={coverEditorMenuRef} className="absolute right-4 top-4">
+                        <button
                           type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={handleOpenCoverPicker}
-                          disabled={isCoverBusy}
-                          className="bg-white/70 text-sena-green hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-70"
+                          onClick={toggleCoverEditorMenu}
+                          aria-haspopup="menu"
+                          aria-expanded={isCoverEditorMenuOpen}
+                          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-sena-green shadow-[0_12px_28px_rgba(18,55,29,0.2)] backdrop-blur transition hover:bg-white"
                         >
-                          <ImageUp className="mr-2 h-4 w-4" />
-                          Cambiar portada
-                        </Button>
-                        {hasStoredCover && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleRemoveCover}
-                            disabled={isCoverBusy}
-                            className="text-[var(--color-muted)] hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                          <ImageUp className="h-4 w-4" />
+                          <span className="sr-only">Opciones de portada</span>
+                        </button>
+                        {isCoverEditorMenuOpen && (
+                          <div
+                            role="menu"
+                            className="mt-2 w-48 rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left text-[var(--color-text)] shadow-[0_22px_50px_rgba(18,55,29,0.22)] backdrop-blur"
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar portada
-                          </Button>
+                            {coverMenuItems.map(({ id, label, icon: Icon, disabled, onClick }) => (
+                              <button
+                                key={id}
+                                type="button"
+                                onClick={onClick}
+                                disabled={disabled}
+                                className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-xs font-semibold transition hover:bg-sena-green/10 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-sena-green/15 text-sena-green shadow-[0_8px_14px_rgba(18,55,29,0.18)]">
+                                  <Icon className="h-3.5 w-3.5" />
+                                </span>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>
                     <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-6">
                       <div className="-mt-14 sm:-mt-16 flex flex-col items-center gap-3">
-                        <AvatarUploader
-                          imageUrl={profile?.avatarUrl}
-                          loading={isAvatarBusy}
-                          onSelect={(file) => {
-                            uploadAvatarMutation.mutate(file);
-                          }}
-                        />
-                        {profile?.avatarUrl && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleRemoveAvatar}
-                            disabled={isAvatarBusy}
-                            className="text-[var(--color-muted)] hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-70"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar foto
-                          </Button>
-                        )}
+                        <div className="relative">
+                          <AvatarUploader
+                            ref={avatarUploaderRef}
+                            imageUrl={profile?.avatarUrl}
+                            loading={isAvatarBusy}
+                            showTriggerButton={false}
+                            onSelect={(file) => {
+                              uploadAvatarMutation.mutate(file);
+                            }}
+                          />
+                          <div ref={avatarMenuRef} className="absolute -bottom-1 right-0">
+                            <button
+                              type="button"
+                              onClick={toggleAvatarMenu}
+                              aria-haspopup="menu"
+                              aria-expanded={isAvatarMenuOpen}
+                              className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/70 bg-white/95 text-sena-green shadow-[0_12px_28px_rgba(18,55,29,0.2)] backdrop-blur transition hover:bg-white"
+                            >
+                              <ImageUp className="h-4 w-4" />
+                              <span className="sr-only">Opciones de avatar</span>
+                            </button>
+                            {isAvatarMenuOpen && (
+                              <div
+                                role="menu"
+                                className="mt-2 w-44 rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left shadow-[0_22px_50px_rgba(18,55,29,0.22)] backdrop-blur"
+                              >
+                                {avatarMenuItems.map(({ id, label, icon: Icon, disabled, onClick }) => (
+                                  <button
+                                    key={id}
+                                    type="button"
+                                    onClick={onClick}
+                                    disabled={disabled}
+                                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-xs font-semibold text-[var(--color-text)] transition hover:bg-sena-green/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    <Icon className="h-3.5 w-3.5 text-sena-green" />
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       <div className="flex-1 space-y-2">
                         <p className="text-sm font-semibold text-[var(--color-text)]">
@@ -909,7 +937,6 @@ export const ProfilePage = () => {
                           const currentValue = watch(name) ?? '';
                           const hasValue = currentValue.trim().length > 0;
                           const isActive = Boolean(activeLinkEditors[name as string]);
-                          const previewValue = hasValue ? getLinkPreviewValue(currentValue, type) : null;
 
                           if (!isActive) {
                             return (
@@ -923,12 +950,6 @@ export const ProfilePage = () => {
                                   <Plus className="h-5 w-5" />
                                 </span>
                                 {label}
-                                <span className="text-xs font-normal text-[var(--color-muted)]">
-                                  {hasValue ? 'Haz clic para editar tu enlace' : 'Haz clic para agregar tu enlace'}
-                                </span>
-                                {previewValue && (
-                                  <span className="text-[11px] font-medium text-sena-green/80">{previewValue}</span>
-                                )}
                               </button>
                             );
                           }
