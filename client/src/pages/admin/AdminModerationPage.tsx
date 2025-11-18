@@ -12,23 +12,7 @@ import { Button } from '../../components/ui/Button';
 import { GlassDialog } from '../../components/ui/GlassDialog';
 import { UserRole } from '../../types/auth';
 import { Profile } from '../../types/profile';
-import { ReportStatus } from '../../types/feed';
-import {
-  AlertTriangle,
-  Facebook,
-  Flame,
-  Github,
-  Instagram,
-  Loader2,
-  Mail,
-  Plus,
-  Shield,
-  ShieldCheck,
-  ShieldHalf,
-  Twitter,
-  Users,
-  X as CloseIcon
-} from 'lucide-react';
+import { Shield, ShieldCheck, ShieldHalf } from 'lucide-react';
 
 const roleFilterOptions: Array<{ value: UserRole | 'all'; label: string }> = [
   { value: 'all', label: 'Todos los roles' },
@@ -53,11 +37,6 @@ const formatDate = (iso: string) =>
 const statusPill = (isActive: boolean) =>
   isActive ? 'bg-emerald-100/80 text-emerald-600 border border-emerald-200/70' : 'bg-rose-100 text-rose-500 border border-rose-200/80';
 
-const reportStatusPill = (status: ReportStatus) =>
-  status === 'pending'
-    ? 'bg-amber-100 text-amber-700 border border-amber-200'
-    : 'bg-emerald-100 text-emerald-600 border border-emerald-200';
-
 const optionalUrlField = z
   .union([z.string().trim().url('Ingresa un enlace valido').max(255), z.literal('')])
   .optional()
@@ -67,46 +46,6 @@ const optionalEmailField = z
   .union([z.string().trim().email('Ingresa un correo valido').max(160), z.literal('')])
   .optional()
   .nullable();
-
-const socialLinkConfigs = [
-  {
-    name: 'instagramUrl',
-    label: 'Instagram',
-    icon: Instagram,
-    placeholder: 'https://www.instagram.com/usuario',
-    type: 'url'
-  },
-  {
-    name: 'githubUrl',
-    label: 'GitHub',
-    icon: Github,
-    placeholder: 'https://github.com/usuario',
-    type: 'url'
-  },
-  {
-    name: 'facebookUrl',
-    label: 'Facebook',
-    icon: Facebook,
-    placeholder: 'https://www.facebook.com/usuario',
-    type: 'url'
-  },
-  {
-    name: 'contactEmail',
-    label: 'Correo de contacto',
-    icon: Mail,
-    placeholder: 'usuario@correo.com',
-    type: 'email'
-  },
-  {
-    name: 'xUrl',
-    label: 'X (Twitter)',
-    icon: Twitter,
-    placeholder: 'https://x.com/usuario',
-    type: 'url'
-  }
-] as const;
-
-type SocialField = (typeof socialLinkConfigs)[number]['name'];
 
 const editUserSchema = z.object({
   firstName: z.string().trim().min(2, 'Ingresa el nombre'),
@@ -140,16 +79,10 @@ export const AdminModerationPage = () => {
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [activeLinkEditors, setActiveLinkEditors] = useState<Record<string, boolean>>({});
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: adminService.listUsers
-  });
-
-  const { data: reports = [], isLoading: isLoadingReports } = useQuery({
-    queryKey: ['admin', 'reports'],
-    queryFn: adminService.listReports
   });
 
   const updateRoleMutation = useMutation({
@@ -176,14 +109,6 @@ export const AdminModerationPage = () => {
     },
     onError: () => {
       setFormError('No se pudo actualizar el usuario. Intenta nuevamente.');
-    }
-  });
-
-  const updateReportStatusMutation = useMutation({
-    mutationFn: ({ reportId, status }: { reportId: string; status: ReportStatus }) =>
-      adminService.updateReportStatus(reportId, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => {});
     }
   });
 
@@ -220,7 +145,6 @@ export const AdminModerationPage = () => {
   const handleCloseEditor = () => {
     if (isSaving) return;
     setEditingUser(null);
-    setActiveLinkEditors({});
   };
 
   const filteredUsers = useMemo(() => {
@@ -265,16 +189,6 @@ export const AdminModerationPage = () => {
         xUrl: editingUser.xUrl ?? ''
       });
       setFormError(null);
-      const nextEditors: Record<string, boolean> = {};
-      socialLinkConfigs.forEach(({ name }) => {
-        const value = editingUser[name];
-        if (value && value.trim().length > 0) {
-          nextEditors[name] = true;
-        }
-      });
-      setActiveLinkEditors(nextEditors);
-    } else {
-      setActiveLinkEditors({});
     }
   }, [editingUser, reset]);
 
@@ -310,21 +224,6 @@ export const AdminModerationPage = () => {
 
     updateUserMutation.mutate({ userId: editingUser.id, payload });
   };
-
-  const handleActivateLinkField = (name: SocialField) => {
-    setActiveLinkEditors((prev) => ({ ...prev, [name]: true }));
-  };
-
-  const handleClearLinkField = (name: SocialField) => {
-    setActiveLinkEditors((prev) => {
-      const { [name]: _removed, ...rest } = prev;
-      return rest;
-    });
-    setValue(name, '', { shouldDirty: true });
-  };
-
-  const getSocialError = (field: SocialField) =>
-    (errors[field]?.message as string | undefined) ?? undefined;
 
   return (
     <DashboardLayout
@@ -487,104 +386,6 @@ export const AdminModerationPage = () => {
             </table>
           </div>
         </Card>
-
-        <Card className="border border-white/15 bg-white/10 p-5 shadow-[0_18px_40px_rgba(18,55,29,0.18)]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Reportes de publicaciones</h3>
-              <p className="text-xs text-[var(--color-muted)]">
-                Supervisa el contenido reportado por la comunidad.
-              </p>
-            </div>
-            <span className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
-              {isLoadingReports ? 'Cargando...' : `${reports.length} reportes`}
-            </span>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {isLoadingReports ? (
-              Array.from({ length: 2 }).map((_, index) => (
-                <div key={`report-skeleton-${index}`} className="h-24 animate-pulse rounded-2xl bg-white/5" />
-              ))
-            ) : reports.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-white/20 bg-white/5 px-4 py-4 text-sm text-[var(--color-muted)]">
-                No hay reportes activos. Cuando la comunidad reporte una publicacion, veras los detalles aqui.
-              </p>
-            ) : (
-              reports.map((report) => {
-                const reporterAvatar =
-                  report.reporter.avatarUrl ??
-                  `https://avatars.dicebear.com/api/initials/${encodeURIComponent(report.reporter.fullName)}.svg`;
-                const postAuthorAvatar =
-                  report.post.author.avatarUrl ??
-                  `https://avatars.dicebear.com/api/initials/${encodeURIComponent(report.post.author.fullName)}.svg`;
-                const formattedDate = formatDate(report.createdAt);
-                const isPending = report.status === 'pending';
-                return (
-                  <div
-                    key={report.id}
-                    className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-[var(--color-text)] shadow-[0_12px_30px_rgba(18,55,29,0.12)]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <img src={reporterAvatar} alt={report.reporter.fullName} className="h-9 w-9 rounded-full object-cover" />
-                        <div>
-                          <p className="font-semibold">{report.reporter.fullName}</p>
-                          <p className="text-[11px] text-[var(--color-muted)]">Reporto el {formattedDate}</p>
-                        </div>
-                      </div>
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${reportStatusPill(
-                          report.status
-                        )}`}
-                      >
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        {report.status === 'pending' ? 'Pendiente' : 'Revisado'}
-                      </span>
-                    </div>
-                    {report.reason && (
-                      <p className="mt-2 rounded-xl bg-white/5 px-3 py-2 text-xs italic text-[var(--color-muted)]">
-                        “{report.reason}”
-                      </p>
-                    )}
-                    <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-xs">
-                      <div className="flex items-center gap-2 text-[var(--color-muted)]">
-                        <img src={postAuthorAvatar} alt={report.post.author.fullName} className="h-6 w-6 rounded-full object-cover" />
-                        <span>Publicacion de {report.post.author.fullName}</span>
-                      </div>
-                      {report.post.content && (
-                        <p className="mt-2 line-clamp-2 text-[var(--color-text)]">{report.post.content}</p>
-                      )}
-                    </div>
-                    <div className="mt-3 flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => window.open('/dashboard', '_blank')}
-                      >
-                        Ver en el feed
-                      </Button>
-                      {isPending && (
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            updateReportStatusMutation.mutate({ reportId: report.id, status: 'reviewed' })
-                          }
-                          loading={
-                            updateReportStatusMutation.isPending &&
-                            updateReportStatusMutation.variables?.reportId === report.id
-                          }
-                        >
-                          Marcar como revisado
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </Card>
       </div>
 
       {editingUser && (
@@ -593,15 +394,13 @@ export const AdminModerationPage = () => {
           onClose={handleCloseEditor}
           size="xl"
           preventCloseOnBackdrop={isSaving}
-          overlayClassName="!bg-slate-100/70 backdrop-blur-sm dark:!bg-slate-950/65"
-          contentClassName="p-0 !overflow-visible !bg-white/55 !backdrop-blur-[30px] !border-white/60 !shadow-[0_50px_120px_rgba(15,38,25,0.25)] dark:!bg-slate-900/85 dark:!border-white/15"
+          contentClassName="p-7"
         >
-          <div className="max-h-[85vh] space-y-6 overflow-y-auto rounded-[36px] border border-white/60 bg-white/45 p-5 shadow-[0_28px_70px_rgba(15,38,25,0.2)] backdrop-blur-[22px] dark:border-white/15 dark:bg-white/5 dark:shadow-[0_28px_60px_rgba(10,22,15,0.45)] sm:p-8">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                  Editar perfil de {editingUser.firstName} {editingUser.lastName}
-                </h3>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-text)]">
+                Editar perfil de {editingUser.firstName} {editingUser.lastName}
+              </h3>
               <p className="text-sm text-[var(--color-muted)]">
                 Ajusta la informacion personal, el rol y el estado de la cuenta.
               </p>
@@ -638,7 +437,7 @@ export const AdminModerationPage = () => {
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
+            <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
               <Input
                 label="Correo"
                 type="email"
@@ -646,32 +445,50 @@ export const AdminModerationPage = () => {
                 error={errors.email?.message}
                 {...register('email')}
               />
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--color-text)]">Rol</label>
-                <div className="relative">
-                  <select
-                    className="w-full appearance-none rounded-2xl border border-slate-200 bg-white/90 px-3 py-2 text-xs font-semibold text-[var(--color-text)] shadow-[0_10px_24px_rgba(15,38,25,0.15)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30 dark:border-white/15 dark:bg-white/10"
-                    disabled={isSaving}
-                    {...register('role')}
-                  >
-                    <option value="admin">Administrador</option>
-                    <option value="instructor">Instructor</option>
-                    <option value="apprentice">Aprendiz</option>
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">▾</span>
-                </div>
+              <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-text)]">
+                Rol
+                <select
+                  className="rounded-xl border border-white/30 bg-white/25 px-3 py-2 text-xs text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30 dark:border-white/10 dark:bg-white/10"
+                  disabled={isSaving}
+                  {...register('role')}
+                >
+                  <option value="admin">Administrador</option>
+                  <option value="instructor">Instructor</option>
+                  <option value="apprentice">Aprendiz</option>
+                </select>
                 {errors.role && <span className="text-xs text-red-400">{errors.role.message}</span>}
-              </div>
+              </label>
             </div>
 
-            <Input
-              label="Nueva contrasena (opcional)"
-              type="password"
-              placeholder="Dejar en blanco para mantenerla"
-              disabled={isSaving}
-              error={errors.password?.message}
-              {...register('password')}
-            />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-[24px] border border-white/25 bg-white/25 px-4 py-4 text-xs text-[var(--color-text)] shadow-[0_24px_54px_rgba(18,55,29,0.24)] backdrop-blur-md">
+                <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Estado de la cuenta</p>
+                <p className="mt-1 text-sm font-semibold">{isActiveValue ? 'Activo' : 'Suspendido'}</p>
+                <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                  {isActiveValue
+                    ? 'El usuario puede iniciar sesion y acceder al contenido.'
+                    : 'El usuario quedara bloqueado hasta que lo reactives.'}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={isActiveValue ? 'secondary' : 'primary'}
+                  className="mt-4 w-full"
+                  onClick={() => setValue('isActive', !isActiveValue)}
+                  disabled={isSaving}
+                >
+                  {isActiveValue ? 'Marcar como suspendido' : 'Reactivar usuario'}
+                </Button>
+              </div>
+              <Input
+                label="Nueva contrasena (opcional)"
+                type="password"
+                placeholder="Dejar en blanco para mantenerla"
+                disabled={isSaving}
+                error={errors.password?.message}
+                {...register('password')}
+              />
+            </div>
 
             <Input
               label="Titular"
@@ -690,93 +507,50 @@ export const AdminModerationPage = () => {
               hint="Comparte una descripcion breve del usuario."
             />
 
-            <Input
-              label="Avatar (URL)"
-              disabled={isSaving}
-              error={errors.avatarUrl?.message}
-              placeholder="https://..."
-              {...register('avatarUrl')}
-            />
-
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-[var(--color-text)]">Enlaces</p>
-              <p className="text-xs text-[var(--color-muted)]">
-                Agrega solo las redes que quieras mostrar. Haz clic en el icono + para desplegar el campo.
-              </p>
-              <div className="grid gap-4 md:grid-cols-2">
-                {socialLinkConfigs.map(({ name, label, icon: Icon, placeholder, type }) => {
-                  const currentValue = watch(name) ?? '';
-                  const isActive = activeLinkEditors[name as string] || currentValue.trim().length > 0;
-
-                  if (!isActive) {
-                    return (
-                      <button
-                        key={name}
-                        type="button"
-                        onClick={() => handleActivateLinkField(name)}
-                        className="flex h-28 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200/80 bg-white/85 text-center text-sm font-semibold text-slate-500 shadow-[0_18px_42px_rgba(18,55,29,0.12)] transition hover:border-sena-green/60 hover:text-sena-green dark:border-white/10 dark:bg-white/10 dark:text-[var(--color-muted)]"
-                      >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sena-green/15 text-sena-green shadow-[0_10px_18px_rgba(18,55,29,0.18)]">
-                          <Plus className="h-5 w-5" />
-                        </span>
-                        Agregar {label}
-                      </button>
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={name}
-                      className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_26px_52px_rgba(18,55,29,0.14)] backdrop-blur-[14px] dark:border-white/10 dark:bg-white/10 dark:shadow-[0_20px_40px_rgba(18,55,29,0.16)]"
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sena-green/15 text-sena-green shadow-[0_10px_18px_rgba(18,55,29,0.18)]">
-                          <Icon className="h-4 w-4" />
-                        </span>
-                        <div className="flex-1">
-                          <Input
-                            label={label}
-                            type={type === 'email' ? 'email' : 'url'}
-                            placeholder={placeholder}
-                            error={getSocialError(name)}
-                            disabled={isSaving}
-                            autoComplete={type === 'email' ? 'email' : 'url'}
-                            {...register(name)}
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleClearLinkField(name)}
-                          className="mt-1 flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white/70 text-slate-500 transition hover:border-sena-green/60 hover:text-sena-green dark:border-white/10 dark:bg-white/10 dark:text-[var(--color-muted)]"
-                          aria-label={`Quitar ${label}`}
-                        >
-                          <Plus className="h-4 w-4 rotate-45" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-white/35 bg-white/35 px-4 py-4 text-xs text-[var(--color-text)] shadow-[0_24px_54px_rgba(18,55,29,0.24)] backdrop-blur-md dark:border-white/20 dark:bg-white/10">
-              <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Estado de la cuenta</p>
-              <p className="mt-1 text-sm font-semibold">{isActiveValue ? 'Activo' : 'Suspendido'}</p>
-              <p className="mt-1 text-[11px] text-[var(--color-muted)]">
-                {isActiveValue
-                  ? 'El usuario puede iniciar sesion y acceder al contenido.'
-                  : 'El usuario quedara bloqueado hasta que lo reactives.'}
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                variant={isActiveValue ? 'secondary' : 'primary'}
-                className="mt-4 w-full"
-                onClick={() => setValue('isActive', !isActiveValue)}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input
+                label="Avatar (URL)"
                 disabled={isSaving}
-              >
-                {isActiveValue ? 'Marcar como suspendido' : 'Reactivar usuario'}
-              </Button>
+                error={errors.avatarUrl?.message}
+                placeholder="https://..."
+                {...register('avatarUrl')}
+              />
+              <Input
+                label="Instagram"
+                disabled={isSaving}
+                error={errors.instagramUrl?.message}
+                placeholder="https://www.instagram.com/usuario"
+                {...register('instagramUrl')}
+              />
+              <Input
+                label="GitHub"
+                disabled={isSaving}
+                error={errors.githubUrl?.message}
+                placeholder="https://github.com/usuario"
+                {...register('githubUrl')}
+              />
+              <Input
+                label="Facebook"
+                disabled={isSaving}
+                error={errors.facebookUrl?.message}
+                placeholder="https://www.facebook.com/usuario"
+                {...register('facebookUrl')}
+              />
+              <Input
+                label="Correo de contacto"
+                type="email"
+                disabled={isSaving}
+                error={errors.contactEmail?.message}
+                placeholder="usuario@correo.com"
+                {...register('contactEmail')}
+              />
+              <Input
+                label="X (Twitter)"
+                disabled={isSaving}
+                error={errors.xUrl?.message}
+                placeholder="https://x.com/usuario"
+                {...register('xUrl')}
+              />
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
@@ -788,7 +562,6 @@ export const AdminModerationPage = () => {
               </Button>
             </div>
           </form>
-          </div>
         </GlassDialog>
       )}
     </DashboardLayout>

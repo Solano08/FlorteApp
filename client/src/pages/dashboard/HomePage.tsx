@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
@@ -21,48 +21,20 @@ import {
   Image,
   Paperclip,
   Smile,
+  Video,
   Plus,
-  X,
-  ThumbsUp,
-  Trash2,
-  MoreHorizontal,
-  FileText,
-  FileArchive,
-  FileImage,
-  FileVideo,
-  FileAudio,
-  FileCode,
-  Shield
+  X
 } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Chat } from '../../types/chat';
 import { useAuth } from '../../hooks/useAuth';
 import { FeedComment, FeedPostAggregate, ReactionType } from '../../types/feed';
-import { resolveAssetUrl } from '../../utils/media';
 
 interface ChatWindowProps {
   chat: Chat;
   index: number;
   onClose: (chatId: string) => void;
 }
-
-interface ComposerAttachment {
-  id: string;
-  url: string;
-  fileName?: string | null;
-  fileType?: string | null;
-}
-
-type AttachmentPayload = {
-  url: string;
-  fileName?: string | null;
-  fileType?: string | null;
-};
-
-const generateClientId = () =>
-  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2, 11);
 
 const stories = [
   { id: 'create', name: 'Tu historia', avatar: '', isLive: false },
@@ -75,76 +47,11 @@ const stories = [
 ];
 
 const composerIcons = [
-  { icon: Image, label: 'Multimedia', action: 'media' as const },
-  { icon: Paperclip, label: 'Adjuntar archivos', action: 'attachments' as const },
-  { icon: Smile, label: 'Emojis', action: 'emoji' as const }
+  { icon: Image, label: 'Imagen' },
+  { icon: Video, label: 'Video' },
+  { icon: Paperclip, label: 'Adjuntar' },
+  { icon: Smile, label: 'Reacciones' }
 ];
-type ComposerAction = (typeof composerIcons)[number]['action'];
-
-const reactionOptions: Array<{ type: ReactionType; label: string; icon: typeof Heart; accent: string }> = [
-  { type: 'like', label: 'Me gusta', icon: ThumbsUp, accent: 'text-sena-green' },
-  { type: 'love', label: 'Me encanta', icon: Heart, accent: 'text-rose-500' },
-  { type: 'wow', label: 'Me asombra', icon: Sparkles, accent: 'text-amber-500' }
-];
-
-const iosEmojiPalette = [
-  '😀',
-  '😄',
-  '😁',
-  '😎',
-  '😍',
-  '🥰',
-  '😘',
-  '🤩',
-  '🤗',
-  '🤔',
-  '🤯',
-  '😴',
-  '😇',
-  '🤠',
-  '😻',
-  '🙌',
-  '👏',
-  '🫶',
-  '🔥',
-  '✨',
-  '🌟',
-  '🎉',
-  '🚀',
-  '🌈',
-  '💡'
-];
-
-const isVideoAsset = (url: string) => /\.(mp4|mov|webm|ogg)$/i.test(url);
-const getExtension = (fileName?: string | null) => {
-  if (!fileName) return '';
-  const parts = fileName.split('.');
-  return parts.length > 1 ? parts.pop()?.toLowerCase() ?? '' : '';
-};
-
-const getAttachmentMeta = (fileName?: string | null, fileType?: string | null) => {
-  const extension = getExtension(fileName);
-  const normalizedType = (fileType ?? '').toLowerCase();
-  if (normalizedType.includes('pdf') || extension === 'pdf') {
-    return { Icon: FileText, color: 'text-rose-500', label: 'PDF' };
-  }
-  if (normalizedType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
-    return { Icon: FileImage, color: 'text-sena-green', label: 'Imagen' };
-  }
-  if (normalizedType.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(extension)) {
-    return { Icon: FileVideo, color: 'text-blue-500', label: 'Video' };
-  }
-  if (normalizedType.startsWith('audio/') || ['mp3', 'wav', 'aac', 'flac'].includes(extension)) {
-    return { Icon: FileAudio, color: 'text-violet-500', label: 'Audio' };
-  }
-  if (['zip', 'rar', '7z'].includes(extension) || normalizedType.includes('zip')) {
-    return { Icon: FileArchive, color: 'text-amber-500', label: 'Comprimido' };
-  }
-  if (['js', 'ts', 'json', 'html', 'css'].includes(extension)) {
-    return { Icon: FileCode, color: 'text-cyan-500', label: 'Codigo' };
-  }
-  return { Icon: FileText, color: 'text-slate-500', label: extension ? extension.toUpperCase() : 'Archivo' };
-};
 
 export const HomePage = () => {
   const { user } = useAuth();
@@ -152,70 +59,17 @@ export const HomePage = () => {
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [openChatIds, setOpenChatIds] = useState<string[]>([]);
   const [showStoryModal, setShowStoryModal] = useState(false);
-  const [isComposerDialogOpen, setComposerDialogOpen] = useState(false);
   const [composerContent, setComposerContent] = useState('');
-  const [composerMedia, setComposerMedia] = useState<{ url: string; mimeType?: string } | null>(null);
-  const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([]);
-  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
-  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [composerMediaUrl, setComposerMediaUrl] = useState('');
+  const [composerTags, setComposerTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [commentsCache, setCommentsCache] = useState<Record<string, FeedComment[]>>({});
   const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
-  const [commentUploadStatus, setCommentUploadStatus] = useState<Record<string, { media?: boolean; file?: boolean }>>({});
-  const [activeEmojiPicker, setActiveEmojiPicker] = useState<
-    { type: 'composer' } | { type: 'comment'; postId: string } | null
-  >(null);
-  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
-  const [reactionPickerPostId, setReactionPickerPostId] = useState<string | null>(null);
   const [shareTarget, setShareTarget] = useState<FeedPostAggregate | null>(null);
   const [shareMessage, setShareMessage] = useState('');
-  const [reportTarget, setReportTarget] = useState<FeedPostAggregate | null>(null);
-  const [reportMessage, setReportMessage] = useState('');
-  const [actionMenuPostId, setActionMenuPostId] = useState<string | null>(null);
-  const mediaInputRef = useRef<HTMLInputElement | null>(null);
-  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
-  const mediaUploadContext = useRef<{ type: 'composer' | 'comment'; postId?: string } | null>(null);
-  const attachmentUploadContext = useRef<{ type: 'composer' | 'comment'; postId?: string } | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timeout = window.setTimeout(() => setToast(null), 3200);
-    return () => window.clearTimeout(timeout);
-  }, [toast]);
-
-  useEffect(() => {
-    if (!activeEmojiPicker) return;
-    const handleClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('[data-emoji-panel="true"]') || target?.closest('[data-emoji-trigger="true"]')) {
-        return;
-      }
-      setActiveEmojiPicker(null);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [activeEmojiPicker]);
-
-  useEffect(() => {
-    if (!actionMenuPostId) return;
-    const handleClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('[data-post-menu="true"]') || target?.closest('[data-post-menu-trigger="true"]')) {
-        return;
-      }
-      setActionMenuPostId(null);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [actionMenuPostId]);
-
-  const userNameFromProfile = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
-  const userDisplayName = userNameFromProfile || user?.email || 'Aprendiz SENA';
-  const fallbackAvatar = `https://avatars.dicebear.com/api/initials/${encodeURIComponent(userDisplayName)}.svg`;
-  const userAvatar = user?.avatarUrl ?? fallbackAvatar;
-  const composerMediaPreview = composerMedia ? resolveAssetUrl(composerMedia.url) ?? composerMedia.url : null;
-  const maxAttachmentsReached = composerAttachments.length >= 5;
+  const mediaUrlInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: chats = [] } = useQuery({
     queryKey: ['chats'],
@@ -267,7 +121,7 @@ export const HomePage = () => {
   };
 
   const createPostMutation = useMutation({
-    mutationFn: (payload: { content: string; mediaUrl?: string | null; attachments?: AttachmentPayload[] }) =>
+    mutationFn: (payload: { content: string; mediaUrl?: string | null; tags?: string[] }) =>
       feedService.createPost(payload),
     onSuccess: (post) => {
       queryClient.setQueryData<FeedPostAggregate[]>(feedQueryKey, (existing) =>
@@ -275,10 +129,9 @@ export const HomePage = () => {
       );
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
       setComposerContent('');
-      setComposerMedia(null);
-      setComposerAttachments([]);
-      setComposerDialogOpen(false);
-      setActiveEmojiPicker(null);
+      setComposerMediaUrl('');
+      setComposerTags([]);
+      setTagInput('');
     },
     onError: (error) => {
       console.error('No fue posible publicar el contenido', error);
@@ -316,7 +169,6 @@ export const HomePage = () => {
         isSaved: metrics.isSaved
       }));
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
-      void queryClient.invalidateQueries({ queryKey: ['profile', 'savedPosts'] });
     },
     onError: (error) => {
       console.error('No fue posible actualizar el guardado', error);
@@ -367,44 +219,50 @@ export const HomePage = () => {
       }));
       setShareTarget(null);
       setShareMessage('');
-      showToast('Publicacion compartida con exito');
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
     },
     onError: (error) => {
       console.error('No fue posible compartir la publicacion', error);
-      showToast('No fue posible compartir la publicacion');
-    }
-  });
-
-  const reportMutation = useMutation({
-    mutationFn: ({ postId, reason }: { postId: string; reason?: string | null }) =>
-      feedService.reportPost(postId, reason),
-    onSuccess: () => {
-      showToast('Reporte enviado al equipo de moderacion');
-      setReportTarget(null);
-      setReportMessage('');
-    },
-    onError: (error) => {
-      console.error('No fue posible enviar el reporte', error);
-      showToast('No fue posible enviar el reporte');
     }
   });
 
   const handleComposerSubmit = () => {
     const trimmedContent = composerContent.trim();
-    if (!trimmedContent || createPostMutation.isPending || isUploadingMedia || isUploadingAttachment) return;
+    if (!trimmedContent || createPostMutation.isPending) return;
     createPostMutation.mutate({
       content: trimmedContent,
-      mediaUrl: composerMedia?.url ?? undefined,
-      attachments:
-        composerAttachments.length > 0
-          ? composerAttachments.map((attachment) => ({
-              url: attachment.url,
-              fileName: attachment.fileName,
-              fileType: attachment.fileType
-            }))
-          : undefined
+      mediaUrl: composerMediaUrl.trim() ? composerMediaUrl.trim() : undefined,
+      tags: composerTags
     });
+  };
+
+  const handleTagCommit = () => {
+    const normalized = tagInput.trim().replace(/\s+/g, '');
+    if (!normalized || composerTags.length >= 5) {
+      setTagInput('');
+      return;
+    }
+    const formatted = normalized.startsWith('#') ? normalized : `#${normalized}`;
+    if (composerTags.includes(formatted)) {
+      setTagInput('');
+      return;
+    }
+    setComposerTags((prev) => [...prev, formatted]);
+    setTagInput('');
+  };
+
+  const handleTagKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      handleTagCommit();
+    } else if (event.key === 'Backspace' && tagInput === '' && composerTags.length > 0) {
+      event.preventDefault();
+      setComposerTags((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    setComposerTags((prev) => prev.filter((item) => item !== tag));
   };
 
   const handleToggleComments = async (postId: string) => {
@@ -434,236 +292,25 @@ export const HomePage = () => {
     commentMutation.mutate({ postId, content });
   };
 
-  const triggerMediaPicker = (context: { type: 'composer' | 'comment'; postId?: string }) => {
-    mediaUploadContext.current = context;
-    mediaInputRef.current?.click();
-  };
-
-  const triggerAttachmentPicker = (context: { type: 'composer' | 'comment'; postId?: string }) => {
-    attachmentUploadContext.current = context;
-    attachmentInputRef.current?.click();
-  };
-
-  const appendToCommentInput = (postId: string, value: string) => {
-    setCommentInputs((prev) => {
-      const current = prev[postId] ?? '';
-      const next = current ? `${current}\n${value}` : value;
-      return { ...prev, [postId]: next };
+  const handleShareSubmit = () => {
+    if (!shareTarget || shareMutation.isPending) return;
+    shareMutation.mutate({
+      postId: shareTarget.id,
+      message: shareMessage.trim() ? shareMessage.trim() : undefined
     });
-  };
-
-  const handleMediaChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const context = mediaUploadContext.current ?? { type: 'composer' };
-    if (context.type === 'comment' && context.postId) {
-      const targetPostId = context.postId;
-      setCommentUploadStatus((prev) => ({
-        ...prev,
-        [targetPostId]: { ...(prev[targetPostId] ?? {}), media: true }
-      }));
-    } else {
-      setIsUploadingMedia(true);
-    }
-
-    try {
-      const upload = await feedService.uploadMedia(file);
-      if (context.type === 'composer') {
-        setComposerMedia({ url: upload.url, mimeType: upload.mimeType });
-        showToast('Multimedia agregada correctamente');
-      } else if (context.postId) {
-        const finalUrl = resolveAssetUrl(upload.url) ?? upload.url;
-        appendToCommentInput(context.postId, finalUrl);
-        showToast('Multimedia agregada al comentario');
-      }
-    } catch (error) {
-      console.error('No fue posible cargar la multimedia', error);
-      showToast('No fue posible cargar la multimedia');
-    } finally {
-      if (context.type === 'comment' && context.postId) {
-        const targetPostId = context.postId;
-        setCommentUploadStatus((prev) => ({
-          ...prev,
-          [targetPostId]: { ...(prev[targetPostId] ?? {}), media: false }
-        }));
-      } else {
-        setIsUploadingMedia(false);
-      }
-      if (event.target) {
-        event.target.value = '';
-      }
-      mediaUploadContext.current = null;
-    }
-  };
-
-  const handleAttachmentChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const context = attachmentUploadContext.current ?? { type: 'composer' };
-    if (context.type === 'composer' && maxAttachmentsReached) {
-      showToast('Alcanzaste el limite de adjuntos');
-      if (event.target) {
-        event.target.value = '';
-      }
-      attachmentUploadContext.current = null;
-      return;
-    }
-    if (context.type === 'comment' && context.postId) {
-      const targetPostId = context.postId;
-      setCommentUploadStatus((prev) => ({
-        ...prev,
-        [targetPostId]: { ...(prev[targetPostId] ?? {}), file: true }
-      }));
-    } else {
-      setIsUploadingAttachment(true);
-    }
-
-    try {
-      const upload = await feedService.uploadAttachment(file);
-      if (context.type === 'composer') {
-        setComposerAttachments((prev) => [
-          ...prev,
-          {
-            id: generateClientId(),
-            url: upload.url,
-            fileName: upload.fileName ?? file.name,
-            fileType: upload.mimeType ?? file.type
-          }
-        ]);
-        showToast('Adjunto agregado');
-      } else if (context.postId) {
-        const finalUrl = resolveAssetUrl(upload.url) ?? upload.url;
-        appendToCommentInput(
-          context.postId,
-          `${upload.fileName ?? file.name}: ${finalUrl}`
-        );
-        showToast('Adjunto agregado al comentario');
-      }
-    } catch (error) {
-      console.error('No fue posible cargar el adjunto', error);
-      showToast('No fue posible cargar el adjunto');
-    } finally {
-      if (context.type === 'comment' && context.postId) {
-        const targetPostId = context.postId;
-        setCommentUploadStatus((prev) => ({
-          ...prev,
-          [targetPostId]: { ...(prev[targetPostId] ?? {}), file: false }
-        }));
-      } else {
-        setIsUploadingAttachment(false);
-      }
-      if (event.target) {
-        event.target.value = '';
-      }
-      attachmentUploadContext.current = null;
-    }
-  };
-
-  const handleRemoveComposerAttachment = (attachmentId: string) => {
-    setComposerAttachments((prev) => prev.filter((item) => item.id !== attachmentId));
-  };
-
-  const handleRemoveComposerMedia = () => {
-    setComposerMedia(null);
-  };
-
-  const toggleEmojiPicker = (nextTarget: { type: 'composer' } | { type: 'comment'; postId: string }) => {
-    setActiveEmojiPicker((prev) => {
-      if (!prev) return nextTarget;
-      if (prev.type === 'composer' && nextTarget.type === 'composer') {
-        return null;
-      }
-      if (prev.type === 'comment' && nextTarget.type === 'comment' && prev.postId === nextTarget.postId) {
-        return null;
-      }
-      return nextTarget;
-    });
-  };
-
-  const handleEmojiSelect = (emoji: string) => {
-    if (!activeEmojiPicker) return;
-    if (activeEmojiPicker.type === 'composer') {
-      setComposerContent((prev) => `${prev}${emoji}`);
-    } else {
-      const postId = activeEmojiPicker.postId;
-      setCommentInputs((prev) => {
-        const current = prev[postId] ?? '';
-        return { ...prev, [postId]: `${current}${emoji}` };
-      });
-    }
-    setActiveEmojiPicker(null);
-  };
-
-  const handleInlineComposerAction = (action: ComposerAction) => {
-    if (action === 'attachments' && maxAttachmentsReached) {
-      showToast('Alcanzaste el limite de adjuntos');
-      return;
-    }
-    openComposerDialog();
-    if (action === 'emoji') {
-      toggleEmojiPicker({ type: 'composer' });
-      return;
-    }
-    window.setTimeout(() => {
-      if (action === 'media') {
-        triggerMediaPicker({ type: 'composer' });
-      } else if (action === 'attachments') {
-        triggerAttachmentPicker({ type: 'composer' });
-      }
-    }, 150);
   };
 
   const isPublishing = createPostMutation.isPending;
   const isSharing = shareMutation.isPending;
 
-  const openComposerDialog = () => setComposerDialogOpen(true);
-  const closeComposerDialog = () => {
-    if (isPublishing) return;
-    setComposerDialogOpen(false);
-  };
-
-  const showToast = (message: string) => {
-    setToast({ id: Date.now(), message });
-  };
-
-  const copyToClipboard = async (value: string) => {
-    try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value);
-        return true;
-      }
-    } catch {
-      // fallback below
+  const handleComposerToolClick = (label: string) => {
+    if (label === 'Imagen' || label === 'Video' || label === 'Adjuntar') {
+      mediaUrlInputRef.current?.focus();
+      return;
     }
-    try {
-      const textarea = document.createElement('textarea');
-      textarea.value = value;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      const successful = document.execCommand('copy');
-      document.body.removeChild(textarea);
-      return successful;
-    } catch {
-      return false;
+    if (label === 'Reacciones') {
+      setComposerContent((prev) => (prev ? `${prev} :)` : ':)'));
     }
-  };
-
-  const handleReactionSelect = (postId: string, reaction: ReactionType) => {
-    reactionMutation.mutate({ postId, reactionType: reaction });
-    setReactionPickerPostId(null);
-  };
-
-  const handleShareLink = async (post: FeedPostAggregate) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const link = `${origin}/feed/${post.id}`;
-    const copied = await copyToClipboard(link);
-    showToast(
-      copied ? 'El enlace de la publicacion se copio correctamente' : 'No fue posible copiar el enlace automaticamente'
-    );
-    setActionMenuPostId(null);
   };
 
   const handleOpenShare = (post: FeedPostAggregate) => {
@@ -675,50 +322,6 @@ export const HomePage = () => {
     if (shareMutation.isPending) return;
     setShareTarget(null);
     setShareMessage('');
-  };
-
-  const handleShareSubmit = () => {
-    if (!shareTarget || shareMutation.isPending) return;
-    shareMutation.mutate({
-      postId: shareTarget.id,
-      message: shareMessage.trim() ? shareMessage.trim() : undefined
-    });
-  };
-
-  const handleOpenReport = (post: FeedPostAggregate) => {
-    setReportTarget(post);
-    setReportMessage('');
-    setActionMenuPostId(null);
-  };
-
-  const handleSubmitReport = () => {
-    if (!reportTarget || reportMutation.isPending) return;
-    reportMutation.mutate({
-      postId: reportTarget.id,
-      reason: reportMessage.trim() ? reportMessage.trim() : undefined
-    });
-  };
-
-  const deletePostMutation = useMutation({
-    mutationFn: (postId: string) => feedService.deletePost(postId),
-    onSuccess: (_result, postId) => {
-      queryClient.setQueryData<FeedPostAggregate[]>(feedQueryKey, (existing) =>
-        existing ? existing.filter((post) => post.id !== postId) : existing
-      );
-      void queryClient.invalidateQueries({ queryKey: feedQueryKey });
-      showToast('La publicacion se elimino correctamente');
-    },
-    onError: (error) => {
-      console.error('No fue posible eliminar la publicacion', error);
-      showToast('No fue posible eliminar la publicacion');
-    }
-  });
-
-  const handleDeletePost = (postId: string) => {
-    if (deletePostMutation.isPending) return;
-    const confirmed = window.confirm('¿Seguro que deseas eliminar esta publicacion?');
-    if (!confirmed) return;
-    deletePostMutation.mutate(postId);
   };
 
   const formatTimeAgo = (timestamp: string) => {
@@ -744,47 +347,17 @@ export const HomePage = () => {
       story.id === 'create'
         ? {
             ...story,
-            avatar: userAvatar
+            avatar: user?.avatarUrl ?? 'https://i.pravatar.cc/100?img=5'
           }
         : story
     );
-  }, [userAvatar]);
+  }, [user]);
 
   return (
     <DashboardLayout
       fluid
       contentClassName="px-2 sm:px-6 lg:px-10 xl:px-16"
     >
-      <input
-        ref={mediaInputRef}
-        type="file"
-        accept="image/*,video/*"
-        className="hidden"
-        onChange={handleMediaChange}
-        aria-hidden="true"
-      />
-      <input
-        ref={attachmentInputRef}
-        type="file"
-        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.txt,application/*"
-        className="hidden"
-        onChange={handleAttachmentChange}
-        aria-hidden="true"
-      />
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            key={toast.id}
-            initial={{ opacity: 0, y: -15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className="pointer-events-none fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-2xl border border-white/40 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 shadow-[0_16px_40px_rgba(18,55,29,0.18)] backdrop-blur dark:border-white/20 dark:bg-slate-900/85 dark:text-white"
-          >
-            {toast.message}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <div className="mx-auto grid w-full gap-4 pb-20 md:grid-cols-[minmax(0,1fr)_minmax(0,280px)] lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_minmax(0,260px)] xl:grid-cols-[minmax(0,240px)_minmax(0,1fr)_minmax(0,300px)]">
         <aside className="hidden max-w-[220px] flex-col gap-3 lg:flex">
           <Card className="bg-white/25 p-3 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
@@ -891,39 +464,96 @@ export const HomePage = () => {
           </Card>
 
           <Card className="bg-white/30 backdrop-blur-xl shadow-[0_10px_24px_rgba(18,55,29,0.14)] dark:bg-white/10">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <img
-                  src={userAvatar}
-                  alt="composer"
-                  className="h-10 w-10 rounded-full object-cover shadow-[0_10px_18px_rgba(18,55,29,0.14)]"
+            <div className="flex items-start gap-3">
+              <img
+                src={user?.avatarUrl ?? 'https://i.pravatar.cc/100?img=60'}
+                alt="composer"
+                className="h-10 w-10 rounded-full object-cover shadow-[0_10px_18px_rgba(18,55,29,0.14)]"
+              />
+              <div className="flex-1 space-y-3">
+                <TextArea
+                  placeholder="Comparte un nuevo avance, recurso o proyecto..."
+                  rows={3}
+                  value={composerContent}
+                  onChange={(event) => setComposerContent(event.target.value)}
+                  disabled={isPublishing}
                 />
-                <div className="flex-1">
-                  <TextArea
-                    placeholder="Comparte un nuevo avance, recurso o proyecto..."
-                    rows={2}
-                    value={composerContent}
-                    readOnly
-                    onClick={openComposerDialog}
-                    onFocus={openComposerDialog}
-                    className="cursor-pointer bg-white/90 text-sm placeholder:text-[var(--color-muted)] dark:bg-white/10"
+
+                {composerTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {composerTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/20 px-3 py-1 text-xs text-[var(--color-text)] transition hover:border-sena-green/60 hover:bg-white/30"
+                        onClick={() => handleRemoveTag(tag)}
+                        disabled={isPublishing}
+                      >
+                        <span>{tag}</span>
+                        <X className="h-3 w-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 rounded-2xl border border-white/25 bg-white/15 px-3 py-2 text-xs text-[var(--color-text)] focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
+                  <input
+                    ref={mediaUrlInputRef}
+                    type="url"
+                    value={composerMediaUrl}
+                    onChange={(event) => setComposerMediaUrl(event.target.value)}
+                    placeholder="Enlace multimedia (opcional)"
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-muted)]"
+                    disabled={isPublishing}
                   />
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {composerIcons.map(({ icon: Icon, label, action }) => (
+
+                <div className="flex items-center gap-2 rounded-2xl border border-dashed border-white/25 bg-white/10 px-3 py-2 text-xs text-[var(--color-text)] focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
+                  <input
+                    type="text"
+                    value={tagInput}
+                    onChange={(event) => setTagInput(event.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    placeholder={composerTags.length >= 5 ? 'Limite de 5 etiquetas alcanzado' : 'Agrega etiquetas y presiona Enter'}
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-muted)]"
+                    disabled={composerTags.length >= 5 || isPublishing}
+                  />
                   <button
-                    key={label}
                     type="button"
-                    title={label}
-                    aria-label={label}
-                    data-emoji-trigger={action === 'emoji' ? 'true' : undefined}
-                    onClick={() => handleInlineComposerAction(action)}
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/35 bg-white/20 text-sena-green shadow-[0_10px_18px_rgba(18,55,29,0.12)] transition hover:border-sena-green/60 hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sena-green/50 dark:border-white/15 dark:bg-white/10 dark:text-white"
+                    onClick={handleTagCommit}
+                    className="text-xs font-semibold text-sena-green transition hover:text-sena-green/80 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={composerTags.length >= 5 || !tagInput.trim() || isPublishing}
                   >
-                    <Icon className="h-5 w-5" />
+                    Agregar
                   </button>
-                ))}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex gap-2">
+                    {composerIcons.map(({ icon: Icon, label }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/35 text-sena-green transition hover:shadow-[0_0_18px_rgba(57,169,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
+                        aria-label={label}
+                        onClick={() => handleComposerToolClick(label)}
+                        disabled={isPublishing}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    size="sm"
+                    leftIcon={<Sparkles className="h-4 w-4" />}
+                    className="px-3 py-2 text-xs"
+                    loading={isPublishing}
+                    disabled={isPublishing || !composerContent.trim()}
+                    onClick={handleComposerSubmit}
+                  >
+                    Publicar
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
@@ -945,10 +575,10 @@ export const HomePage = () => {
             const isCommentsOpen = !!expandedComments[post.id];
             const isReacting =
               reactionMutation.isPending && reactionMutation.variables?.postId === post.id;
+            const isSavingPost = saveMutation.isPending && saveMutation.variables === post.id;
             const isCommenting =
               commentMutation.isPending && commentMutation.variables?.postId === post.id;
             const viewerHasReaction = Boolean(post.viewerReaction);
-            const viewerReactionOption = reactionOptions.find((option) => option.type === post.viewerReaction);
             const formattedTime = formatTimeAgo(post.createdAt);
             const authorAvatar =
               post.author.avatarUrl ??
@@ -956,11 +586,6 @@ export const HomePage = () => {
             const reactionLabel = post.reactionCount === 1 ? 'reaccion' : 'reacciones';
             const commentLabel = post.commentCount === 1 ? 'comentario' : 'comentarios';
             const shareLabel = post.shareCount === 1 ? 'compartido' : 'compartidos';
-            const commentUploads = commentUploadStatus[post.id] ?? {};
-            const isCommentUploading = Boolean(commentUploads.media || commentUploads.file);
-            const isSharingPost = isSharing && shareMutation.variables?.postId === post.id;
-            const ReactionIcon = viewerReactionOption?.icon ?? ThumbsUp;
-            const reactionAccent = viewerReactionOption?.accent ?? '';
 
             return (
               <Card
@@ -976,72 +601,14 @@ export const HomePage = () => {
                     )}
                     <p className="text-[11px] text-[var(--color-muted)]">{formattedTime}</p>
                   </div>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      data-post-menu-trigger="true"
-                      className="rounded-full p-2 text-[var(--color-muted)] transition hover:text-sena-green"
-                      aria-label="Acciones de publicacion"
-                      onClick={() => setActionMenuPostId((prev) => (prev === post.id ? null : post.id))}
-                    >
-                      <MoreHorizontal className="h-5 w-5" />
-                    </button>
-                    <AnimatePresence>
-                      {actionMenuPostId === post.id && (
-                        <motion.div
-                          data-post-menu="true"
-                          initial={{ opacity: 0, scale: 0.9, y: -6 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95, y: -6 }}
-                          className="absolute right-0 z-30 mt-2 w-56 rounded-2xl border border-white/30 bg-white/95 p-2 text-sm text-slate-700 shadow-[0_20px_45px_rgba(18,55,29,0.22)] dark:border-white/15 dark:bg-slate-900/90 dark:text-white"
-                        >
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left hover:bg-sena-green/10"
-                            onClick={() => {
-                              setActionMenuPostId(null);
-                              saveMutation.mutate(post.id);
-                            }}
-                          >
-                            {post.isSaved ? 'Quitar de guardados' : 'Guardar publicacion'}
-                            <Bookmark className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left hover:bg-sena-green/10"
-                            onClick={() => {
-                              setActionMenuPostId(null);
-                              void handleShareLink(post);
-                            }}
-                          >
-                            Copiar enlace
-                            <Share2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left hover:bg-sena-green/10"
-                            onClick={() => handleOpenReport(post)}
-                          >
-                            Reportar publicacion
-                            <Shield className="h-4 w-4" />
-                          </button>
-                          {post.authorId === user?.id && (
-                            <button
-                              type="button"
-                              className="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-rose-500 hover:bg-rose-500/10"
-                              onClick={() => {
-                                setActionMenuPostId(null);
-                                handleDeletePost(post.id);
-                              }}
-                            >
-                              Eliminar
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hidden px-2 py-1 text-xs text-[var(--color-muted)] hover:text-sena-green sm:inline-flex"
+                    onClick={() => handleOpenShare(post)}
+                  >
+                    Compartir
+                  </Button>
                 </div>
 
                 {post.content && (
@@ -1050,35 +617,7 @@ export const HomePage = () => {
 
                 {post.mediaUrl && (
                   <div className="overflow-hidden rounded-3xl border border-white/15">
-                    {isVideoAsset(post.mediaUrl) ? (
-                      <video src={post.mediaUrl} controls className="w-full object-cover" />
-                    ) : (
-                      <img src={post.mediaUrl} alt="Contenido compartido" className="w-full object-cover" />
-                    )}
-                  </div>
-                )}
-
-                {post.attachments?.length > 0 && (
-                  <div className="space-y-2 rounded-2xl border border-white/20 bg-white/15 p-3">
-                    {post.attachments.map((attachment) => {
-                      const meta = getAttachmentMeta(attachment.fileName, attachment.fileType);
-                      const Icon = meta.Icon;
-                      return (
-                        <a
-                          key={attachment.id}
-                          href={attachment.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center justify-between rounded-xl bg-white/30 px-3 py-2 text-xs font-medium text-[var(--color-text)] transition hover:text-sena-green"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Icon className={`h-3.5 w-3.5 ${meta.color}`} />
-                            {attachment.fileName ?? 'Archivo adjunto'}
-                          </span>
-                          <span className="text-[10px] text-[var(--color-muted)]">{meta.label}</span>
-                        </a>
-                      );
-                    })}
+                    <img src={post.mediaUrl} alt="Contenido compartido" className="w-full object-cover" />
                   </div>
                 )}
 
@@ -1097,7 +636,7 @@ export const HomePage = () => {
 
                 <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--color-muted)] sm:text-sm">
                   <div className="flex items-center gap-2 text-[var(--color-text)]">
-                    <ThumbsUp
+                    <Heart
                       className={classNames('h-4 w-4', viewerHasReaction ? 'text-sena-green' : 'text-rose-500')}
                     />
                     <span>
@@ -1115,54 +654,18 @@ export const HomePage = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between sm:gap-3">
-                  <div
-                    className="relative flex-1"
-                    data-reaction-zone="true"
-                    onMouseEnter={() => setReactionPickerPostId(post.id)}
-                    onMouseLeave={() => setReactionPickerPostId((prev) => (prev === post.id ? null : prev))}
-                    onBlur={(event) => {
-                      if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-                        setReactionPickerPostId((prev) => (prev === post.id ? null : prev));
-                      }
-                    }}
+                  <Button
+                    variant="ghost"
+                    className={classNames(
+                      'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
+                      viewerHasReaction && 'text-sena-green'
+                    )}
+                    onClick={() => reactionMutation.mutate({ postId: post.id, reactionType: 'like' })}
+                    disabled={isReacting}
+                    loading={isReacting}
                   >
-                    <Button
-                      variant="ghost"
-                      className={classNames(
-                        'w-full justify-center gap-2 text-xs sm:text-sm',
-                        viewerHasReaction && 'text-sena-green'
-                      )}
-                      onFocus={() => setReactionPickerPostId(post.id)}
-                      onClick={() => handleReactionSelect(post.id, 'like')}
-                      disabled={isReacting}
-                      loading={isReacting}
-                    >
-                      <ReactionIcon className={classNames('h-4 w-4', reactionAccent || undefined)} />
-                      {viewerReactionOption ? viewerReactionOption.label : viewerHasReaction ? 'Reaccionaste' : 'Reaccionar'}
-                    </Button>
-                    <AnimatePresence>
-                      {reactionPickerPostId === post.id && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          className="absolute -top-16 left-1/2 z-20 flex -translate-x-1/2 gap-2 rounded-full border border-white/40 bg-white/90 px-3 py-2 shadow-[0_15px_30px_rgba(18,55,29,0.2)] dark:border-white/20 dark:bg-slate-900/95"
-                        >
-                          {reactionOptions.map(({ type, label, icon: Icon, accent }) => (
-                            <button
-                              key={`${post.id}-${type}`}
-                              type="button"
-                              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-slate-700 transition hover:scale-110 dark:bg-white/15 dark:text-white"
-                              onClick={() => handleReactionSelect(post.id, type)}
-                              aria-label={label}
-                            >
-                              <Icon className={classNames('h-4 w-4', accent)} />
-                            </button>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                    <Heart className="h-4 w-4" /> {viewerHasReaction ? 'Reaccionaste' : 'Reaccionar'}
+                  </Button>
                   <Button
                     variant="ghost"
                     className={classNames(
@@ -1177,10 +680,20 @@ export const HomePage = () => {
                     variant="ghost"
                     className="justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm"
                     onClick={() => handleOpenShare(post)}
-                    disabled={isSharingPost}
-                    loading={isSharingPost}
                   >
                     <Share2 className="h-4 w-4" /> Compartir
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className={classNames(
+                      'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
+                      post.isSaved && 'text-sena-green'
+                    )}
+                    onClick={() => saveMutation.mutate(post.id)}
+                    disabled={isSavingPost}
+                    loading={isSavingPost}
+                  >
+                    <Bookmark className="h-4 w-4" /> {post.isSaved ? 'Guardado' : 'Guardar'}
                   </Button>
                 </div>
 
@@ -1218,72 +731,23 @@ export const HomePage = () => {
                       </div>
                     )}
 
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {composerIcons.map(({ icon: Icon, label, action }) => (
-                          <button
-                            key={`${post.id}-${label}`}
-                            type="button"
-                            title={label}
-                            aria-label={label}
-                            data-emoji-trigger={action === 'emoji' ? 'true' : undefined}
-                            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10 text-sena-green transition hover:border-sena-green/50 hover:bg-white/20 dark:border-white/15 dark:bg-white/5 dark:text-white"
-                            onClick={() => {
-                              if (action === 'media') {
-                                triggerMediaPicker({ type: 'comment', postId: post.id });
-                              } else if (action === 'attachments') {
-                                triggerAttachmentPicker({ type: 'comment', postId: post.id });
-                              } else {
-                                toggleEmojiPicker({ type: 'comment', postId: post.id });
-                              }
-                            }}
-                            disabled={
-                              (action === 'media' && commentUploads.media) ||
-                              (action === 'attachments' && commentUploads.file)
-                            }
-                          >
-                            <Icon className="h-4 w-4" />
-                          </button>
-                        ))}
-                        {isCommentUploading && (
-                          <span className="text-[11px] text-[var(--color-muted)]">Adjuntando archivo...</span>
-                        )}
-                      </div>
-                      {activeEmojiPicker?.type === 'comment' && activeEmojiPicker.postId === post.id && (
-                        <div
-                          data-emoji-panel="true"
-                          className="flex flex-wrap gap-1 rounded-2xl border border-white/20 bg-white/80 p-2 text-xl shadow-[0_12px_24px_rgba(18,55,29,0.18)] dark:border-white/15 dark:bg-slate-900/90"
-                        >
-                          {iosEmojiPalette.map((emoji) => (
-                            <button
-                              key={`${post.id}-emoji-${emoji}`}
-                              type="button"
-                              className="h-8 w-8 text-center"
-                              onClick={() => handleEmojiSelect(emoji)}
-                            >
-                              {emoji}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex items-end gap-2">
-                        <textarea
-                          rows={2}
-                          value={commentInputs[post.id] ?? ''}
-                          onChange={(event) => handleCommentInputChange(post.id, event.target.value)}
-                          placeholder="Escribe un comentario..."
-                          className="flex-1 resize-none rounded-2xl border border-white/20 bg-white/15 px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
-                          disabled={isCommenting || isCommentUploading}
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => handleSubmitComment(post.id)}
-                          disabled={isCommenting || isCommentUploading || !(commentInputs[post.id] ?? '').trim()}
-                          loading={isCommenting}
-                        >
-                          Enviar
-                        </Button>
-                      </div>
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        rows={2}
+                        value={commentInputs[post.id] ?? ''}
+                        onChange={(event) => handleCommentInputChange(post.id, event.target.value)}
+                        placeholder="Escribe un comentario..."
+                        className="flex-1 resize-none rounded-2xl border border-white/20 bg-white/15 px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                        disabled={isCommenting}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleSubmitComment(post.id)}
+                        disabled={isCommenting || !(commentInputs[post.id] ?? '').trim()}
+                        loading={isCommenting}
+                      >
+                        Enviar
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -1414,169 +878,6 @@ export const HomePage = () => {
         })}
       </AnimatePresence>
 
-      {isComposerDialogOpen && (
-        <GlassDialog
-          open={isComposerDialogOpen}
-          onClose={closeComposerDialog}
-          size="lg"
-          preventCloseOnBackdrop={isPublishing}
-          overlayClassName="!bg-slate-100/70 backdrop-blur-sm dark:!bg-slate-950/65"
-          contentClassName="p-0 !overflow-visible !bg-white/55 !backdrop-blur-[30px] !border-white/60 !shadow-[0_50px_120px_rgba(15,38,25,0.25)] dark:!bg-slate-900/85 dark:!border-white/15"
-        >
-          <div className="w-full max-w-2xl space-y-5 p-5 sm:p-8">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-[var(--color-text)]">Crear publicacion</h3>
-                <p className="text-sm text-[var(--color-muted)]">Comparte avances, anuncios o recursos con tu red.</p>
-              </div>
-              <Button
-                variant="ghost"
-                onClick={closeComposerDialog}
-                disabled={isPublishing}
-                className="self-start rounded-full border border-slate-200/70 bg-white/80 text-slate-600 shadow-[0_12px_30px_rgba(15,38,25,0.12)] backdrop-blur hover:border-sena-green/40 hover:text-sena-green disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/25 dark:bg-white/15 dark:text-[var(--color-muted)]"
-              >
-                <X className="mr-1 h-4 w-4" /> Cerrar
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-2xl border border-white/30 bg-white/40 p-3 shadow-[0_12px_28px_rgba(18,55,29,0.12)] dark:border-white/10 dark:bg-white/5">
-              <img src={userAvatar} alt={userDisplayName} className="h-12 w-12 rounded-full object-cover" />
-              <div>
-                <p className="text-sm font-semibold text-[var(--color-text)]">{userDisplayName}</p>
-              </div>
-            </div>
-
-            <TextArea
-              rows={5}
-              autoFocus
-              placeholder="Que estas pensando hoy?"
-              value={composerContent}
-              onChange={(event) => setComposerContent(event.target.value)}
-              disabled={isPublishing}
-              className="bg-white/90 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] dark:bg-white/10"
-            />
-
-            {composerMedia && composerMediaPreview && (
-              <div className="space-y-3 rounded-2xl border border-white/20 bg-white/60 p-3 shadow-[0_12px_30px_rgba(18,55,29,0.1)] dark:border-white/15 dark:bg-white/5 w-full max-w-xs">
-                <div className="flex items-center justify-between text-sm font-semibold text-[var(--color-text)]">
-                  <span>Multimedia seleccionada</span>
-                  <button
-                    type="button"
-                    className="text-xs text-rose-500 hover:text-rose-600"
-                    onClick={handleRemoveComposerMedia}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-                <div className="overflow-hidden rounded-xl border border-white/40">
-                  {isVideoAsset(composerMediaPreview) ? (
-                    <video src={composerMediaPreview} controls className="h-32 w-full object-cover" />
-                  ) : (
-                    <img src={composerMediaPreview} alt="Vista previa" className="h-32 w-full object-cover" />
-                  )}
-                </div>
-              </div>
-            )}
-
-                {composerAttachments.length > 0 && (
-                  <div className="space-y-2 rounded-2xl border border-white/20 bg-white/50 p-3 shadow-[0_12px_30px_rgba(18,55,29,0.1)] dark:border-white/15 dark:bg-white/5">
-                    <p className="text-sm font-semibold text-[var(--color-text)]">Archivos adjuntos</p>
-                    {composerAttachments.map((attachment) => {
-                      const meta = getAttachmentMeta(attachment.fileName, attachment.fileType);
-                      const Icon = meta.Icon;
-                      return (
-                        <div
-                          key={attachment.id}
-                          className="flex items-center justify-between rounded-xl bg-white/70 px-3 py-2 text-xs text-[var(--color-text)] dark:bg-white/10"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Icon className={`h-3.5 w-3.5 ${meta.color}`} />
-                            {attachment.fileName ?? 'Archivo'}
-                            <span className="text-[10px] text-[var(--color-muted)]">({meta.label})</span>
-                          </span>
-                          <button
-                            type="button"
-                            className="text-rose-500 hover:text-rose-600"
-                            onClick={() => handleRemoveComposerAttachment(attachment.id)}
-                          >
-                            Quitar
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-            <div className="rounded-2xl border border-dashed border-white/40 bg-white/25 px-4 py-4 shadow-[0_12px_30px_rgba(18,55,29,0.1)] dark:border-white/15 dark:bg-white/5">
-              <p className="text-sm font-semibold text-[var(--color-text)]">Agregar a tu publicacion</p>
-              <div className="mt-3 space-y-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  {composerIcons.map(({ icon: Icon, label, action }) => (
-                    <button
-                      key={`modal-${label}`}
-                      type="button"
-                      title={label}
-                      aria-label={label}
-                      data-emoji-trigger={action === 'emoji' ? 'true' : undefined}
-                      onClick={() => {
-                        if (action === 'media') {
-                          triggerMediaPicker({ type: 'composer' });
-                        } else if (action === 'attachments') {
-                          if (!maxAttachmentsReached) {
-                            triggerAttachmentPicker({ type: 'composer' });
-                          }
-                        } else {
-                          toggleEmojiPicker({ type: 'composer' });
-                        }
-                      }}
-                      className={classNames(
-                        'flex min-w-[140px] flex-1 items-center gap-2 rounded-2xl border border-white/40 bg-white/40 px-3 py-2 text-left text-xs font-semibold text-[var(--color-text)] transition hover:border-sena-green/40 hover:bg-white/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sena-green/40 dark:border-white/15 dark:bg-white/10',
-                        action === 'attachments' && maxAttachmentsReached && 'opacity-50'
-                      )}
-                      disabled={action === 'attachments' && maxAttachmentsReached}
-                    >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/70 text-sena-green shadow-[0_6px_16px_rgba(18,55,29,0.15)] dark:bg-white/15 dark:text-white">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="text-[13px]">
-                        {label}
-                        {action === 'attachments' && maxAttachmentsReached ? ' (limite)' : ''}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                {activeEmojiPicker?.type === 'composer' && (
-                  <div
-                    data-emoji-panel="true"
-                    className="flex flex-wrap gap-1 rounded-2xl border border-white/30 bg-white/80 p-2 text-xl shadow-[0_12px_24px_rgba(18,55,29,0.18)] dark:border-white/15 dark:bg-slate-900/85"
-                  >
-                    {iosEmojiPalette.map((emoji) => (
-                      <button key={`composer-emoji-${emoji}`} type="button" className="h-8 w-8 text-center" onClick={() => handleEmojiSelect(emoji)}>
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <Button variant="secondary" onClick={closeComposerDialog} disabled={isPublishing}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleComposerSubmit}
-                loading={isPublishing}
-                disabled={isPublishing || isUploadingMedia || isUploadingAttachment || !composerContent.trim()}
-                className="min-w-[120px]"
-              >
-                Publicar
-              </Button>
-            </div>
-          </div>
-        </GlassDialog>
-      )}
-
       {showStoryModal && (
         <GlassDialog open={showStoryModal} onClose={() => setShowStoryModal(false)} size="md" contentClassName="p-8">
           <div className="flex items-center justify-between">
@@ -1612,9 +913,7 @@ export const HomePage = () => {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-[var(--color-text)]">Compartir publicacion</h3>
-              <p className="text-sm text-[var(--color-muted)]">
-                Agrega un mensaje y compartelo con tu comunidad.
-              </p>
+              <p className="text-sm text-[var(--color-muted)]">Agrega un mensaje personal para tu comunidad.</p>
             </div>
             <Button variant="ghost" onClick={handleCloseShareModal} disabled={isSharing}>
               <X className="h-5 w-5" />
@@ -1622,14 +921,6 @@ export const HomePage = () => {
           </div>
 
           <div className="space-y-4">
-            <TextArea
-              rows={4}
-              placeholder="Que piensas sobre esta publicacion?"
-              value={shareMessage}
-              onChange={(event) => setShareMessage(event.target.value)}
-              disabled={isSharing}
-            />
-
             <div className="rounded-2xl border border-white/20 bg-white/12 px-4 py-4 text-sm text-[var(--color-text)]">
               <div className="flex items-start gap-3">
                 <img
@@ -1650,31 +941,18 @@ export const HomePage = () => {
               )}
               {shareTarget.mediaUrl && (
                 <div className="mt-3 overflow-hidden rounded-2xl border border-white/15">
-                  {isVideoAsset(shareTarget.mediaUrl) ? (
-                    <video src={shareTarget.mediaUrl} controls className="w-full object-cover" />
-                  ) : (
-                    <img src={shareTarget.mediaUrl} alt="Vista previa" className="w-full object-cover" />
-                  )}
-                </div>
-              )}
-              {shareTarget.attachments?.length > 0 && (
-                <div className="mt-3 space-y-2 rounded-xl border border-white/15 bg-white/20 p-3">
-                  {shareTarget.attachments.map((attachment) => {
-                    const meta = getAttachmentMeta(attachment.fileName, attachment.fileType);
-                    const Icon = meta.Icon;
-                    return (
-                      <div key={attachment.id} className="flex items-center justify-between text-xs">
-                        <span className="flex items-center gap-2">
-                          <Icon className={`h-3.5 w-3.5 ${meta.color}`} />
-                          {attachment.fileName ?? 'Archivo'}
-                        </span>
-                        <span className="text-[10px] text-[var(--color-muted)]">{meta.label}</span>
-                      </div>
-                    );
-                  })}
+                  <img src={shareTarget.mediaUrl} alt="Vista previa" className="w-full object-cover" />
                 </div>
               )}
             </div>
+
+            <TextArea
+              rows={4}
+              placeholder="Agrega un mensaje para tus contactos (opcional)"
+              value={shareMessage}
+              onChange={(event) => setShareMessage(event.target.value)}
+              disabled={isSharing}
+            />
 
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={handleCloseShareModal} disabled={isSharing}>
@@ -1687,90 +965,6 @@ export const HomePage = () => {
           </div>
         </GlassDialog>
       )}
-
-      {reportTarget && (
-        <GlassDialog
-          open={Boolean(reportTarget)}
-          onClose={() => {
-            if (reportMutation.isPending) return;
-            setReportTarget(null);
-            setReportMessage('');
-          }}
-          size="md"
-          preventCloseOnBackdrop={reportMutation.isPending}
-          contentClassName="p-0 !overflow-visible !bg-white/55 !backdrop-blur-[30px] !border-white/60 !shadow-[0_50px_120px_rgba(15,38,25,0.25)] dark:!bg-slate-900/85 dark:!border-white/15"
-        >
-          <div className="max-h-[70vh] space-y-5 overflow-y-auto rounded-[32px] border border-white/60 bg-white/45 p-5 shadow-[0_28px_70px_rgba(15,38,25,0.2)] backdrop-blur-[22px] dark:border-white/15 dark:bg-white/5 dark:shadow-[0_28px_60px_rgba(10,22,15,0.45)] sm:p-8">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-[var(--color-text)]">Reportar publicacion</h3>
-                <p className="text-sm text-[var(--color-muted)]">
-                  Describe el motivo para que el equipo de moderacion pueda revisarla.
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  if (reportMutation.isPending) return;
-                  setReportTarget(null);
-                  setReportMessage('');
-                }}
-                className="self-start rounded-full border border-slate-200/70 bg-white/80 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green dark:border-white/20 dark:bg-white/10"
-                disabled={reportMutation.isPending}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-
-            <TextArea
-              rows={4}
-              placeholder="Contenido falso, spam, lenguaje inapropiado, etc."
-              value={reportMessage}
-              onChange={(event) => setReportMessage(event.target.value)}
-              disabled={reportMutation.isPending}
-              className="bg-white/80 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] dark:bg-white/10"
-            />
-
-            <div className="rounded-[24px] border border-white/25 bg-white/35 p-4 text-sm text-[var(--color-text)] shadow-[0_20px_40px_rgba(18,55,29,0.18)] dark:border-white/10 dark:bg-white/10">
-              <div className="flex items-center gap-3">
-                <img
-                  src={
-                    reportTarget.author.avatarUrl ??
-                    `https://avatars.dicebear.com/api/initials/${encodeURIComponent(reportTarget.author.fullName)}.svg`
-                  }
-                  alt={reportTarget.author.fullName}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-                <div>
-                  <p className="text-sm font-semibold">{reportTarget.author.fullName}</p>
-                  <p className="text-[11px] text-[var(--color-muted)]">{formatTimeAgo(reportTarget.createdAt)}</p>
-                </div>
-              </div>
-              {reportTarget.content && (
-                <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">{reportTarget.content}</p>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  if (reportMutation.isPending) return;
-                  setReportTarget(null);
-                  setReportMessage('');
-                }}
-                disabled={reportMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleSubmitReport} loading={reportMutation.isPending} disabled={reportMutation.isPending}>
-                Enviar reporte
-              </Button>
-            </div>
-          </div>
-        </GlassDialog>
-      )}
-
       </div>
     </DashboardLayout>
   );

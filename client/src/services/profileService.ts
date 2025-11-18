@@ -1,17 +1,15 @@
 import { apiClient } from './apiClient';
-import { Profile, ProfileActivityOverview, UpdateProfilePayload } from '../types/profile';
-import { FeedPostAggregate } from '../types/feed';
-import { normalizeFeedPost, normalizeProfile } from '../utils/media';
+import { Profile, UpdateProfilePayload } from '../types/profile';
 
 export const profileService = {
   async getProfile(): Promise<Profile> {
     const { data } = await apiClient.get<{ success: boolean; profile: Profile }>('/profile/me');
-    return normalizeProfile(data.profile);
+    return data.profile;
   },
 
   async updateProfile(payload: UpdateProfilePayload): Promise<Profile> {
     const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me', payload);
-    return normalizeProfile(data.profile);
+    return data.profile;
   },
 
   async updateAvatar(file: File): Promise<Profile> {
@@ -20,7 +18,7 @@ export const profileService = {
     const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/avatar', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
-    return normalizeProfile(data.profile);
+    return data.profile;
   },
 
   async removeAvatar(): Promise<Profile> {
@@ -28,7 +26,7 @@ export const profileService = {
     const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/avatar', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
-    return normalizeProfile(data.profile);
+    return data.profile;
   },
 
   async updateCover(file: File): Promise<Profile> {
@@ -37,7 +35,7 @@ export const profileService = {
     const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/cover', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
-    return normalizeProfile(data.profile);
+    return data.profile;
   },
 
   async removeCover(): Promise<Profile> {
@@ -45,20 +43,6 @@ export const profileService = {
     const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/cover', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
-    return normalizeProfile(data.profile);
-  },
-
-  async getActivityOverview(weeks = 5): Promise<ProfileActivityOverview> {
-    const { data } = await apiClient.get<{ success: boolean; activity: ProfileActivityOverview }>('/profile/me/activity', {
-      params: { weeks }
-    });
-    return data.activity;
-  },
-
-  async getRecentPosts(limit = 3): Promise<FeedPostAggregate[]> {
-    const { data } = await apiClient.get<{ success: boolean; posts: FeedPostAggregate[] }>('/profile/me/posts', {
-      params: { limit }
-    });
-    return data.posts.map((post) => normalizeFeedPost(post));
+    return data.profile;
   }
 };

@@ -1,23 +1,13 @@
 import { projectRepository } from '../repositories/projectRepository';
 import { AppError } from '../utils/appError';
 import { CreateProjectInput, Project, UpdateProjectInput } from '../types/project';
-import { activityService } from './activityService';
 
 export const projectService = {
   async createProject(input: CreateProjectInput): Promise<Project> {
     if (!input.title.trim()) {
-      throw new AppError('El titulo del proyecto es obligatorio', 400);
+      throw new AppError('El título del proyecto es obligatorio', 400);
     }
-    const project = await projectRepository.createProject(input);
-    await activityService
-      .recordProjectContribution({
-        userId: input.ownerId,
-        projectId: project.id,
-        contributionPoints: 3,
-        description: 'Creacion del proyecto'
-      })
-      .catch(() => {});
-    return project;
+    return await projectRepository.createProject(input);
   },
 
   async listProjects(): Promise<Project[]> {
@@ -36,16 +26,6 @@ export const projectService = {
     if (project.ownerId !== actorId) {
       throw new AppError('No tienes permisos para actualizar este proyecto', 403);
     }
-
-    const updated = await projectRepository.updateProject(input);
-    await activityService
-      .recordProjectContribution({
-        userId: actorId,
-        projectId: updated.id,
-        contributionPoints: 1,
-        description: 'Actualizacion del proyecto'
-      })
-      .catch(() => {});
-    return updated;
+    return await projectRepository.updateProject(input);
   }
 };

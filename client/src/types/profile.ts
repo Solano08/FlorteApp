@@ -17,20 +17,3 @@ export interface UpdateProfilePayload {
   contactEmail?: string | null;
   xUrl?: string | null;
 }
-
-export interface ContributionPoint {
-  date: string;
-  contributions: number;
-}
-
-export interface ProfileActivitySummary {
-  contributionsThisWeek: number;
-  activeProjects: number;
-  streakDays: number;
-  hasProjectActivity: boolean;
-}
-
-export interface ProfileActivityOverview {
-  summary: ProfileActivitySummary;
-  heatmap: ContributionPoint[];
-}

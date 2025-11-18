@@ -4,7 +4,6 @@ import {
   createCommentSchema,
   createPostSchema,
   feedPaginationSchema,
-  reportPostSchema,
   sharePostSchema,
   toggleReactionSchema
 } from '../validators/feedValidators';
@@ -17,8 +16,8 @@ export const feedController = {
       throw new AppError('Autenticacion requerida', 401);
     }
 
-    const { limit = 15, offset = 0, authorId } = feedPaginationSchema.parse(req.query);
-    const posts = await feedService.listPosts({ viewerId: userId, limit, offset, authorId });
+    const { limit = 15, offset = 0 } = feedPaginationSchema.parse(req.query);
+    const posts = await feedService.listPosts(userId, limit, offset);
     res.json({ success: true, posts });
   },
 
@@ -33,8 +32,7 @@ export const feedController = {
         authorId: userId,
         content: data.content,
         mediaUrl: data.mediaUrl ?? null,
-        tags: data.tags ?? [],
-        attachments: data.attachments ?? []
+        tags: data.tags ?? []
       },
       userId
     );
@@ -95,63 +93,5 @@ export const feedController = {
     const { message } = sharePostSchema.parse(req.body);
     const result = await feedService.sharePost({ postId, userId, message });
     res.status(201).json({ success: true, ...result });
-  },
-
-  async listSavedPosts(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) throw new AppError('Autenticacion requerida', 401);
-    const posts = await feedService.listSavedPosts(userId);
-    res.json({ success: true, posts });
-  },
-
-  async reportPost(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) throw new AppError('Autenticacion requerida', 401);
-    const { postId } = req.params;
-    const { reason } = reportPostSchema.parse(req.body);
-    const report = await feedService.reportPost(postId, userId, reason);
-    res.status(201).json({ success: true, report });
-  },
-
-  async uploadMedia(req: Request, res: Response) {
-    if (!req.user?.userId) {
-      throw new AppError('Autenticacion requerida', 401);
-    }
-    const file = req.file;
-    if (!file) {
-      throw new AppError('No se recibio ningun archivo', 400);
-    }
-    res.status(201).json({
-      success: true,
-      url: `/uploads/feed/media/${file.filename}`,
-      fileName: file.originalname,
-      mimeType: file.mimetype
-    });
-  },
-
-  async uploadAttachment(req: Request, res: Response) {
-    if (!req.user?.userId) {
-      throw new AppError('Autenticacion requerida', 401);
-    }
-    const file = req.file;
-    if (!file) {
-      throw new AppError('No se recibio ningun archivo', 400);
-    }
-    res.status(201).json({
-      success: true,
-      url: `/uploads/feed/files/${file.filename}`,
-      fileName: file.originalname,
-      mimeType: file.mimetype
-    });
-  },
-
-  async deletePost(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      throw new AppError('Autenticacion requerida', 401);
-    }
-    const { postId } = req.params;
-    await feedService.deletePost(postId, userId);
-    res.status(204).send();
   }
 };

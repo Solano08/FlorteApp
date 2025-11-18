@@ -113,28 +113,6 @@ CREATE TABLE IF NOT EXISTS project_members (
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS project_activity_logs (
-    id CHAR(36) NOT NULL PRIMARY KEY,
-    user_id CHAR(36) NOT NULL,
-    project_id CHAR(36) NOT NULL,
-    activity_date DATE NOT NULL,
-    contribution_points INT NOT NULL DEFAULT 1,
-    description VARCHAR(255),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
-    INDEX idx_project_activity_user_date (user_id, activity_date)
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS user_login_activity (
-    user_id CHAR(36) NOT NULL,
-    activity_date DATE NOT NULL,
-    login_count INT NOT NULL DEFAULT 1,
-    last_login TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, activity_date),
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
 CREATE TABLE IF NOT EXISTS library_resources (
     id CHAR(36) NOT NULL PRIMARY KEY,
     title VARCHAR(160) NOT NULL,
@@ -171,7 +149,7 @@ CREATE TABLE IF NOT EXISTS feed_posts (
 CREATE TABLE IF NOT EXISTS feed_post_reactions (
     post_id CHAR(36) NOT NULL,
     user_id CHAR(36) NOT NULL,
-    reaction_type ENUM('like','love','wow') NOT NULL DEFAULT 'like',
+    reaction_type ENUM('like','celebrate','love','insightful','support') NOT NULL DEFAULT 'like',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (post_id, user_id),
     FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
@@ -205,28 +183,6 @@ CREATE TABLE IF NOT EXISTS feed_shares (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS feed_post_attachments (
-    id CHAR(36) NOT NULL PRIMARY KEY,
-    post_id CHAR(36) NOT NULL,
-    file_name VARCHAR(255),
-    file_type VARCHAR(50),
-    url VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS feed_reports (
-    id CHAR(36) NOT NULL PRIMARY KEY,
-    post_id CHAR(36) NOT NULL,
-    reporter_id CHAR(36) NOT NULL,
-    reason TEXT,
-    status ENUM('pending','reviewed') NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    reviewed_at TIMESTAMP NULL,
-    FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
-    FOREIGN KEY (reporter_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Seed admin user for initial access (email: admin.testing@florteapp.com / password: Admin!234)

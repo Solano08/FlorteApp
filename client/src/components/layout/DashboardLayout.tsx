@@ -41,7 +41,7 @@ export const DashboardLayout = ({
   children,
   title,
   subtitle,
-  fluid = true,
+  fluid = false,
   contentClassName
 }: DashboardLayoutProps) => {
   const { user, logout } = useAuth();
@@ -178,7 +178,7 @@ export const DashboardLayout = ({
               'h-full w-full overflow-y-auto py-4',
               fluid
                 ? 'mx-0 px-4 sm:px-6 lg:px-10 xl:px-16'
-                : 'mx-auto max-w-6xl px-4 sm:px-6 xl:px-8',
+                : 'mx-auto max-w-5xl px-4 sm:px-6',
               contentClassName
             )}
           >

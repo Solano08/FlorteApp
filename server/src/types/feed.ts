@@ -1,13 +1,4 @@
-export type ReactionType = 'like' | 'love' | 'wow';
-export type ReportStatus = 'pending' | 'reviewed';
-
-export interface FeedAttachment {
-  id: string;
-  postId: string;
-  url: string;
-  fileName: string | null;
-  fileType: string | null;
-}
+export type ReactionType = 'like' | 'celebrate' | 'love' | 'insightful' | 'support';
 
 export interface FeedAuthor {
   id: string;
@@ -22,7 +13,6 @@ export interface FeedPost {
   content: string;
   mediaUrl: string | null;
   tags: string[];
-  attachments: FeedAttachment[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,7 +41,6 @@ export interface CreatePostInput {
   content: string;
   mediaUrl?: string | null;
   tags?: string[];
-  attachments?: PostAttachmentInput[];
 }
 
 export interface CreateCommentInput {
@@ -70,30 +59,4 @@ export interface SharePostInput {
   postId: string;
   userId: string;
   message?: string;
-}
-
-export interface PostAttachmentInput {
-  url: string;
-  fileName?: string | null;
-  fileType?: string | null;
-}
-
-export interface FeedReportPostSummary {
-  id: string;
-  content: string;
-  mediaUrl: string | null;
-  createdAt: Date;
-  author: FeedAuthor;
-}
-
-export interface FeedReport {
-  id: string;
-  postId: string;
-  reporterId: string;
-  reason: string | null;
-  status: ReportStatus;
-  createdAt: Date;
-  reviewedAt: Date | null;
-  reporter: FeedAuthor;
-  post: FeedReportPostSummary;
 }

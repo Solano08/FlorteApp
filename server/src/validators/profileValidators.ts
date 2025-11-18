@@ -15,11 +15,3 @@ export const updateProfileSchema = z.object({
   xUrl: optionalUrl,
   coverImageUrl: optionalUrl
 });
-
-export const profileActivityQuerySchema = z.object({
-  weeks: z.coerce.number().int().min(1).max(12).optional()
-});
-
-export const profilePostsQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().max(10).optional()
-});

@@ -80,7 +80,7 @@ export const NotificationBell = () => {
             transition={{ duration: 0.2 }}
             className="absolute right-0 mt-3 w-80"
           >
-            <div className="relative rounded-[32px] border border-white/35 bg-white/55 p-5 shadow-[0_36px_80px_rgba(15,38,25,0.25)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/70">
+            <div className="relative overflow-hidden rounded-[32px] border border-white/35 bg-white/55 p-5 shadow-[0_36px_80px_rgba(15,38,25,0.25)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/70">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.65),_transparent_62%)] opacity-85 dark:opacity-40" />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/30 via-white/16 to-white/10 dark:from-white/10 dark:via-white/6 dark:to-white/12" />
               <div className="relative z-10 space-y-4">
@@ -138,46 +138,44 @@ export const NotificationBell = () => {
             open={showAll}
             onClose={() => setShowAll(false)}
             size="xl"
-            contentClassName="p-0 !overflow-visible !bg-white/55 !backdrop-blur-[30px] !border-white/60 !shadow-[0_50px_120px_rgba(15,38,25,0.25)] dark:!bg-slate-900/85 dark:!border-white/15"
+            contentClassName="p-7"
           >
-            <div className="max-h-[75vh] space-y-6 overflow-y-auto rounded-[36px] border border-white/60 bg-white/45 p-5 shadow-[0_28px_70px_rgba(15,38,25,0.2)] backdrop-blur-[22px] dark:border-white/15 dark:bg-white/5 dark:shadow-[0_28px_60px_rgba(10,22,15,0.45)] sm:p-8">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-[var(--color-text)]">Centro de notificaciones</h3>
-                  <p className="text-sm text-[var(--color-muted)]">
-                    Revisa las novedades recientes de tus grupos y proyectos.
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowAll(false)}
-                  className="self-start rounded-full border border-slate-200/70 bg-white/80 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green dark:border-white/20 dark:bg-white/10"
-                >
-                  Cerrar
-                </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--color-text)]">Centro de notificaciones</h3>
+                <p className="text-sm text-[var(--color-muted)]">
+                  Revisa las novedades recientes de tus grupos y proyectos.
+                </p>
               </div>
+              <Button
+                variant="ghost"
+                onClick={() => setShowAll(false)}
+                className="self-start rounded-full bg-white/15 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
+              >
+                Cerrar
+              </Button>
+            </div>
 
-              <div className="space-y-4 pr-1">
-                {notifications.map(({ id, title, description, icon: Icon, time }) => (
-                  <div
-                    key={`modal-${id}`}
-                    className="flex gap-4 rounded-[24px] border border-white/25 bg-white/45 px-4 py-4 text-left shadow-[0_28px_60px_rgba(18,55,29,0.22)] backdrop-blur transition hover:border-sena-green/50 dark:border-white/15 dark:bg-white/10"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-sena-green/18 text-sena-green shadow-[0_20px_38px_rgba(18,55,29,0.2)]">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex flex-1 flex-col gap-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-semibold text-[var(--color-text)]">{title}</p>
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                          {time}
-                        </span>
-                      </div>
-                      <p className="text-xs text-[var(--color-muted)]">{description}</p>
-                    </div>
+            <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+              {notifications.map(({ id, title, description, icon: Icon, time }) => (
+                <div
+                  key={`modal-${id}`}
+                  className="flex gap-4 rounded-[24px] border border-white/25 bg-white/40 px-4 py-4 text-left shadow-[0_28px_60px_rgba(18,55,29,0.22)] backdrop-blur transition hover:border-sena-green/50 dark:border-white/15 dark:bg-white/10"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-sena-green/18 text-sena-green shadow-[0_20px_38px_rgba(18,55,29,0.2)]">
+                    <Icon className="h-5 w-5" />
                   </div>
-                ))}
-              </div>
+                  <div className="flex flex-1 flex-col gap-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-[var(--color-text)]">{title}</p>
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                        {time}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--color-muted)]">{description}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </GlassDialog>,
           document.body

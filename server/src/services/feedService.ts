@@ -4,18 +4,9 @@ import {
   CreatePostInput,
   FeedComment,
   FeedPostAggregate,
-  FeedReport,
   ReactionType,
-  SharePostInput,
-  ReportStatus
+  SharePostInput
 } from '../types/feed';
-
-interface ListPostsOptions {
-  viewerId: string;
-  limit?: number;
-  offset?: number;
-  authorId?: string;
-}
 
 export const feedService = {
   async createPost(input: CreatePostInput, viewerId: string): Promise<FeedPostAggregate> {
@@ -27,8 +18,8 @@ export const feedService = {
     return aggregate;
   },
 
-  async listPosts({ viewerId, limit = 15, offset = 0, authorId }: ListPostsOptions): Promise<FeedPostAggregate[]> {
-    return await feedRepository.listPosts(viewerId, limit, offset, authorId);
+  async listPosts(viewerId: string, limit = 15, offset = 0): Promise<FeedPostAggregate[]> {
+    return await feedRepository.listPosts(viewerId, limit, offset);
   },
 
   async addComment(input: CreateCommentInput, viewerId: string): Promise<{
@@ -65,32 +56,5 @@ export const feedService = {
 
   async getPost(postId: string, viewerId: string): Promise<FeedPostAggregate | null> {
     return await feedRepository.findPostWithMeta(postId, viewerId);
-  },
-
-  async deletePost(postId: string, userId: string) {
-    const deleted = await feedRepository.deletePost(postId, userId);
-    if (!deleted) {
-      throw new Error('No se encontro la publicacion o no tienes permisos para eliminarla');
-    }
-  },
-
-  async listSavedPosts(viewerId: string): Promise<FeedPostAggregate[]> {
-    return await feedRepository.listSavedPosts(viewerId);
-  },
-
-  async reportPost(postId: string, reporterId: string, reason?: string | null): Promise<FeedReport> {
-    return await feedRepository.createReport(postId, reporterId, reason);
-  },
-
-  async listReports(): Promise<FeedReport[]> {
-    return await feedRepository.listReports();
-  },
-
-  async updateReportStatus(reportId: string, status: ReportStatus): Promise<FeedReport> {
-    const report = await feedRepository.updateReportStatus(reportId, status);
-    if (!report) {
-      throw new Error('Reporte no encontrado');
-    }
-    return report;
   }
 };

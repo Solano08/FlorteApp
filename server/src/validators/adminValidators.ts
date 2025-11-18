@@ -28,7 +28,3 @@ export const adminUpdateUserSchema = z.object({
   contactEmail: optionalEmail,
   xUrl: optionalUrl
 });
-
-export const updateReportStatusSchema = z.object({
-  status: z.enum(['pending', 'reviewed'])
-});
