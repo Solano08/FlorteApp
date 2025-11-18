@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import { storage } from '../utils/storage';
+import { normalizeAuthUserMedia } from '../utils/media';
 import { AuthResponse, AuthUser } from '../types/auth';
 
 export interface RegisterPayload {
@@ -19,9 +20,11 @@ const handleAuthResponse = (response: AuthResponse) => {
     storage.setSession(response.tokens.accessToken, response.tokens.refreshToken);
   }
   if (response.user) {
-    storage.setUser(response.user);
+    const normalizedUser = normalizeAuthUserMedia(response.user);
+    storage.setUser(normalizedUser);
+    return normalizedUser;
   }
-  return response.user;
+  return null;
 };
 
 export const authService = {

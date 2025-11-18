@@ -10,8 +10,10 @@ import { Input } from '../../components/ui/Input';
 import { TextArea } from '../../components/ui/TextArea';
 import { Button } from '../../components/ui/Button';
 import { AvatarUploader, AvatarUploaderHandle } from '../../components/ui/AvatarUploader';
+import { GlassDialog } from '../../components/ui/GlassDialog';
 import { profileService } from '../../services/profileService';
 import { activityService } from '../../services/activityService';
+import { feedService } from '../../services/feedService';
 import { useAuth } from '../../hooks/useAuth';
 import {
   Activity,
@@ -30,8 +32,10 @@ import {
   Upload,
   X as CloseIcon
 } from 'lucide-react';
+import { FeedPostAggregate, ProfileFeedPost } from '../../types/feed';
 import { Profile } from '../../types/profile';
 import { ActivityOverview } from '../../types/activity';
+import { floatingModalContentClass } from '../../utils/modalStyles';
 
 const optionalUrlField = z
   .union([z.string().trim().url('Ingresa un enlace valido').max(255), z.literal('')])
@@ -102,19 +106,6 @@ const socialLinkConfigs: Array<{
   }
 ];
 
-const samplePosts: Array<{ id: string; title: string; description: string }> = [
-  {
-    id: 'p1',
-    title: 'Bitacora de aprendizaje UX',
-    description: 'Un resumen de las metodologias aplicadas durante el sprint de diseno.'
-  },
-  {
-    id: 'p2',
-    title: 'Presentacion proyecto SenaConnect',
-    description: 'Pitch y maquetas del proyecto colaborativo mas reciente.'
-  }
-];
-
 export const ProfilePage = () => {
   const queryClient = useQueryClient();
   const { updateUser } = useAuth();
@@ -127,6 +118,9 @@ export const ProfilePage = () => {
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const coverEditorMenuRef = useRef<HTMLDivElement | null>(null);
   const avatarMenuRef = useRef<HTMLDivElement | null>(null);
+  const [isSavedModalOpen, setSavedModalOpen] = useState(false);
+  const [isProfilePostsModalOpen, setProfilePostsModalOpen] = useState(false);
+  const [selectedProfilePost, setSelectedProfilePost] = useState<ProfileFeedPost | null>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', 'me'],
@@ -138,6 +132,33 @@ export const ProfilePage = () => {
     queryFn: activityService.getOverview,
     enabled: Boolean(profile)
   });
+
+  const {
+    data: savedPosts = [],
+    isLoading: isLoadingSaved
+  } = useQuery<FeedPostAggregate[]>({
+    queryKey: ['feed', 'saved'],
+    queryFn: () => feedService.listSavedPosts(24),
+    enabled: Boolean(profile)
+  });
+
+  const { data: profilePosts = [], isLoading: isLoadingProfilePosts } = useQuery<ProfileFeedPost[]>({
+    queryKey: ['profile', 'recent-posts'],
+    queryFn: () => feedService.listProfilePosts(12),
+    enabled: Boolean(profile)
+  });
+
+  const displayedSavedPosts = savedPosts.slice(0, 3);
+  const hasMoreSaved = savedPosts.length > 3;
+  const previewProfilePosts = profilePosts.slice(0, 3);
+  const hasMoreProfilePosts = profilePosts.length > 3;
+
+  const handleOpenProfilePost = (post: ProfileFeedPost) => {
+    setSelectedProfilePost(post);
+    setProfilePostsModalOpen(false);
+  };
+
+  const handleCloseProfilePost = () => setSelectedProfilePost(null);
 
   const {
     register,
@@ -380,9 +401,6 @@ export const ProfilePage = () => {
   const isCoverBusy = updateCoverMutation.isPending || removeCoverMutation.isPending;
   const isMediaBusy = isAvatarBusy || isCoverBusy;
 
-  const getLinkPreviewValue = (value: string, type: 'url' | 'email') =>
-    type === 'email' ? value : value.replace(/^https?:\/\/(www\.)?/i, '');
-
   const summaryFallback = {
     contributionsThisWeek: 0,
     activeProjects: 0,
@@ -622,12 +640,12 @@ export const ProfilePage = () => {
       <LayoutGroup>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)]">
           <div className="space-y-6">
-            <Card className="overflow-hidden border border-white/25 bg-white/45 p-0 shadow-[0_34px_70px_rgba(15,38,25,0.22)] backdrop-blur-[18px] dark:border-white/15 dark:bg-white/10">
-              <div className="relative h-56 w-full overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(74,222,128,0.32),_rgba(18,55,29,0.58),_transparent_80%)]">
+            <Card className="relative overflow-visible rounded-[32px] border border-white/25 bg-white/45 p-0 shadow-[0_34px_70px_rgba(15,38,25,0.22)] backdrop-blur-[18px] dark:border-white/15 dark:bg-white/10">
+              <div className="relative h-56 w-full overflow-hidden rounded-t-[32px] bg-[radial-gradient(circle_at_top,_rgba(74,222,128,0.32),_rgba(18,55,29,0.58),_transparent_80%)]">
                 <img
                   src={displayCoverImage}
                   alt="Portada de perfil"
-                  className="h-full w-full object-cover opacity-80"
+                  className="h-full w-full object-contain opacity-80"
                 />
                 <div className="absolute inset-0 bg-gradient-to-br from-white/45 via-white/10 to-white/5 dark:from-slate-900/40 dark:via-slate-900/30 dark:to-slate-900/20" />
                 {(isCoverBusy || isAvatarBusy) && (
@@ -710,59 +728,122 @@ export const ProfilePage = () => {
             <Card className="border border-white/25 bg-white/50 shadow-[0_20px_42px_rgba(18,55,29,0.18)] backdrop-blur-[16px] dark:border-white/15 dark:bg-white/10">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-semibold text-[var(--color-text)]">Publicaciones recientes</h3>
-                <Button variant="ghost" size="sm">
-                  Ver todas
-                </Button>
+                {hasMoreProfilePosts && (
+                  <Button variant="ghost" size="sm" onClick={() => setProfilePostsModalOpen(true)}>
+                    Ver todas
+                  </Button>
+                )}
               </div>
-              <div className="mt-4 space-y-4">
-                {samplePosts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="rounded-2xl border border-white/25 bg-white/40 px-4 py-3 shadow-[0_16px_30px_rgba(18,55,29,0.16)] dark:border-white/10 dark:bg-white/10"
-                  >
-                    <p className="text-sm font-semibold text-[var(--color-text)]">{post.title}</p>
-                    <p className="text-xs text-[var(--color-muted)]">{post.description}</p>
-                  </div>
-                ))}
+              <div className="mt-4 space-y-3">
+                {isLoadingProfilePosts ? (
+                  <p className="text-xs text-[var(--color-muted)]">Cargando publicaciones recientes...</p>
+                ) : profilePosts.length === 0 ? (
+                  <p className="text-xs text-[var(--color-muted)]">Todav铆a no has compartido ninguna publicaci贸n.</p>
+                ) : (
+                  previewProfilePosts.map((post) => (
+                    <button
+                      key={post.id}
+                      type="button"
+                      onClick={() => setSelectedProfilePost(post)}
+                      className="group w-full text-left"
+                    >
+                      <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-semibold text-[var(--color-text)]">
+                            {post.content ? `${post.content.slice(0, 72)}${post.content.length > 72 ? '...' : ''}` : 'Publicaci贸n sin descripci贸n'}
+                          </p>
+                          <span className="text-[11px] text-[var(--color-muted)]">
+                            {new Date(post.createdAt).toLocaleDateString('es-CO')}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between gap-2 text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
+                          <span>{post.source === 'shared' ? 'Compartido' : 'Propio'}</span>
+                          {post.shareMessage && (
+                            <span className="text-[10px] text-[var(--color-muted)] line-clamp-1">{post.shareMessage}</span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
                 <Button variant="secondary" className="w-full">
-                  Crear una nueva publicacion
+                  Crear una nueva publicaci贸n
                 </Button>
               </div>
             </Card>
           </div>
 
-          <div className="space-y-6">
-            <Card className="border border-white/25 bg-white/50 shadow-[0_20px_42px_rgba(18,55,29,0.18)] backdrop-blur-[16px] dark:border-white/15 dark:bg-white/10">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-semibold text-[var(--color-text)]">Mi actividad</h3>
-                  <p className="text-xs text-[var(--color-muted)]">
-                    Visualiza tus contribuciones recientes en proyectos.
-                  </p>
+        <div className="space-y-6">
+          <Card className="border border-white/25 bg-white/50 shadow-[0_20px_42px_rgba(18,55,29,0.18)] backdrop-blur-[16px] dark:border-white/15 dark:bg-white/10">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-[var(--color-text)]">Mi actividad</h3>
+                <p className="text-xs text-[var(--color-muted)]">
+                  Visualiza tus contribuciones recientes en proyectos.
+                </p>
+              </div>
+              <span className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
+                Ultimas 5 semanas
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {activityStats.map(({ id, label, value, icon: Icon, accent }) => (
+                <div
+                  key={id}
+                  className="group relative flex min-h-[100px] flex-col items-center justify-center gap-3 rounded-2xl border border-white/25 bg-white/35 px-4 py-5 text-center shadow-[0_16px_28px_rgba(18,55,29,0.14)]"
+                  role="figure"
+                  title={label}
+                  aria-label={label}
+                >
+                  <p className="text-4xl font-bold text-[var(--color-text)]">{value}</p>
+                  <Icon className={`h-7 w-7 ${accent ?? 'text-[var(--color-muted)]'}`} />
+                  <span className="pointer-events-none absolute -bottom-8 rounded-full bg-slate-900/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white opacity-0 shadow-[0_8px_16px_rgba(15,23,42,0.35)] transition group-hover:opacity-100">
+                    {label}
+                  </span>
                 </div>
-                <span className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
-                  Ultimas 5 semanas
-                </span>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="border border-white/25 bg-white/50 shadow-[0_20px_42px_rgba(18,55,29,0.18)] backdrop-blur-[16px] dark:border-white/15 dark:bg-white/10">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-[var(--color-text)]">Elementos guardados</h3>
+                <p className="text-xs text-[var(--color-muted)]">Accede rapidamente a lo que guardaste.</p>
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {activityStats.map(({ id, label, value, icon: Icon, accent }) => (
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {isLoadingSaved ? (
+                <p className="text-xs text-[var(--color-muted)]">Cargando elementos guardados...</p>
+              ) : savedPosts.length === 0 ? (
+                <p className="text-xs text-[var(--color-muted)]">No tienes elementos guardados.</p>
+              ) : (
+                displayedSavedPosts.map((post) => (
                   <div
-                    key={id}
-                    className="group relative flex min-h-[150px] flex-col items-center justify-center gap-4 rounded-2xl border border-white/25 bg-white/35 px-4 py-6 text-center shadow-[0_16px_28px_rgba(18,55,29,0.14)]"
-                    role="figure"
-                    title={label}
-                    aria-label={label}
+                    key={post.id}
+                    className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] dark:border-white/15 dark:bg-white/10"
                   >
-                    <p className="text-4xl font-bold text-[var(--color-text)]">{value}</p>
-                    <Icon className={`h-7 w-7 ${accent ?? 'text-[var(--color-muted)]'}`} />
-                    <span className="pointer-events-none absolute -bottom-9 rounded-full bg-slate-900/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white opacity-0 shadow-[0_8px_16px_rgba(15,23,42,0.35)] transition group-hover:opacity-100">
-                      {label}
-                    </span>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold">{post.author.fullName}</p>
+                      <span className="text-[11px] text-[var(--color-muted)]">
+                        {new Date(post.createdAt).toLocaleDateString('es-CO')}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                      {post.content ? `${post.content.slice(0, 100)}${post.content.length > 100 ? '...' : ''}` : 'Sin descripcion disponible.'}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </Card>
-          </div>
+                ))
+              )}
+              {hasMoreSaved && (
+                <Button variant="secondary" size="sm" className="w-full" onClick={() => setSavedModalOpen(true)}>
+                  Ver todos los elementos guardados
+                </Button>
+              )}
+            </div>
+          </Card>
+        </div>
         </div>
 
         <AnimatePresence>
@@ -779,7 +860,7 @@ export const ProfilePage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 16 }}
                 transition={{ duration: 0.25, ease: 'easeInOut' }}
-                className="relative w-full max-w-2xl overflow-hidden rounded-[32px] border border-white/40 bg-white/85 p-6 shadow-[0_32px_90px_rgba(15,38,25,0.28)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/85"
+                className="relative w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/40 bg-white/85 p-6 shadow-[0_32px_90px_rgba(15,38,25,0.28)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/85"
               >
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.5),_transparent_70%)] opacity-90 dark:opacity-40" />
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/15 to-white/10 dark:from-white/5 dark:via-white/0 dark:to-white/5" />
@@ -819,7 +900,7 @@ export const ProfilePage = () => {
                         {isCoverEditorMenuOpen && (
                           <div
                             role="menu"
-                            className="mt-2 w-48 rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left text-[var(--color-text)] shadow-[0_22px_50px_rgba(18,55,29,0.22)] backdrop-blur"
+                            className="absolute right-0 top-full mt-2 w-48 transform -translate-x-full rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left text-[var(--color-text)] shadow-[0_22px_50px_rgba(18,55,29,0.22)] backdrop-blur"
                           >
                             {coverMenuItems.map(({ id, label, icon: Icon, disabled, onClick }) => (
                               <button
@@ -865,7 +946,7 @@ export const ProfilePage = () => {
                             {isAvatarMenuOpen && (
                               <div
                                 role="menu"
-                                className="mt-2 w-44 rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left shadow-[0_22px_50px_rgba(18,55,29,0.22)] backdrop-blur"
+                                className="absolute left-full top-0 mt-0 w-48 translate-x-2 rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left shadow-[0_22px_50px_rgba(18,55,29,0.22)] backdrop-blur"
                               >
                                 {avatarMenuItems.map(({ id, label, icon: Icon, disabled, onClick }) => (
                                   <button
@@ -1018,7 +1099,149 @@ export const ProfilePage = () => {
             </motion.div>
           )}
         </AnimatePresence>
-      </LayoutGroup>
-    </DashboardLayout>
-  );
+      <GlassDialog
+        open={isSavedModalOpen}
+        onClose={() => setSavedModalOpen(false)}
+        size="lg"
+        contentClassName={floatingModalContentClass}
+      >
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-[var(--color-text)]">Elementos guardados</h3>
+            <p className="text-sm text-[var(--color-muted)]">Revisa todo lo que has guardado en tu perfil.</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSavedModalOpen(false)}
+            className="rounded-full px-3 py-1 text-xs text-[var(--color-muted)]"
+          >
+            Cerrar
+          </Button>
+        </div>
+        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+          {savedPosts.length === 0 ? (
+            <p className="text-xs text-[var(--color-muted)]">A鷑 no tienes publicaciones guardadas.</p>
+          ) : (
+            savedPosts.map((post) => (
+              <div
+                key={post.id}
+                className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] dark:border-white/15 dark:bg-white/10"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold">{post.author.fullName}</p>
+                  <span className="text-[11px] text-[var(--color-muted)]">
+                    {new Date(post.createdAt).toLocaleDateString('es-CO')}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                  {post.content ? `${post.content.slice(0, 120)}${post.content.length > 120 ? '...' : ''}` : 'Sin descripci髇 disponible.'}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </GlassDialog>
+
+      <GlassDialog
+        open={isProfilePostsModalOpen}
+        onClose={() => setProfilePostsModalOpen(false)}
+        size="xl"
+        contentClassName={floatingModalContentClass}
+      >
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-[var(--color-text)]">Todas las publicaciones</h3>
+            <p className="text-sm text-[var(--color-muted)]">Explora tus contribuciones m醩 recientes.</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setProfilePostsModalOpen(false)}
+            className="rounded-full px-3 py-1 text-xs text-[var(--color-muted)]"
+          >
+            Cerrar
+          </Button>
+        </div>
+        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+          {profilePosts.length === 0 ? (
+            <p className="text-xs text-[var(--color-muted)]">No hay publicaciones para mostrar.</p>
+          ) : (
+            profilePosts.map((post) => (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => handleOpenProfilePost(post)}
+                className="group w-full text-left"
+              >
+                <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-[var(--color-text)]">
+                      {post.content ? `${post.content.slice(0, 72)}${post.content.length > 72 ? '...' : ''}` : 'Publicaci髇 sin descripci髇'}
+                    </p>
+                    <span className="text-[11px] text-[var(--color-muted)]">
+                      {new Date(post.createdAt).toLocaleDateString('es-CO')}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2 text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
+                    <span>{post.source === 'shared' ? 'Compartido' : 'Propio'}</span>
+                    {post.shareMessage && <span className="text-[10px] line-clamp-1">{post.shareMessage}</span>}
+                  </div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </GlassDialog>
+
+      {selectedProfilePost && (
+        <GlassDialog
+          open={Boolean(selectedProfilePost)}
+          onClose={handleCloseProfilePost}
+          size="lg"
+          contentClassName={floatingModalContentClass}
+        >
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                {selectedProfilePost.source === 'shared' ? 'Compartido' : 'Propio'}
+              </p>
+              <h3 className="text-lg font-semibold text-[var(--color-text)]">
+                {selectedProfilePost.author.fullName}
+              </h3>
+              <p className="text-xs text-[var(--color-muted)]">
+                {new Date(selectedProfilePost.createdAt).toLocaleDateString('es-CO')}
+              </p>
+            </div>
+            {selectedProfilePost.mediaUrl && (
+              <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/10">
+                <img
+                  src={selectedProfilePost.mediaUrl}
+                  alt="Vista previa de la publicaci髇"
+                  className="max-h-56 w-full object-cover"
+                />
+              </div>
+            )}
+            <p className="text-sm text-[var(--color-text)]">{selectedProfilePost.content}</p>
+            {selectedProfilePost.attachments?.length ? (
+              <div className="grid gap-2 md:grid-cols-2">
+                {selectedProfilePost.attachments.map((attachment) => (
+                  <div key={attachment.id} className="rounded-2xl border border-white/20 bg-white/10 p-3 text-[11px]">
+                    <p className="font-semibold text-[var(--color-text)] truncate">{attachment.url}</p>
+                    <p className="text-[10px] text-[var(--color-muted)]">{attachment.mimeType ?? 'Archivo adjunto'}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="flex justify-end">
+              <Button variant="ghost" onClick={handleCloseProfilePost} className="text-xs">
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </GlassDialog>
+      )}
+    </LayoutGroup>
+  </DashboardLayout>
+);
 };

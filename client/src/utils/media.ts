@@ -26,6 +26,7 @@ const uploadsBase = inferUploadsBase();
 
 export const resolveAssetUrl = (value?: string | null): string | null => {
   if (!value) return null;
+  if (value.startsWith('data:')) return value;
   if (/^https?:\/\//i.test(value)) {
     return value;
   }
@@ -73,9 +74,11 @@ export const normalizeFeedPost = (post: FeedPostAggregate): FeedPostAggregate =>
 export const normalizeFeedReport = (report: FeedReport): FeedReport => ({
   ...report,
   reporter: normalizeFeedAuthor(report.reporter),
+  postAuthor: normalizeFeedAuthor(report.postAuthor),
   post: {
     ...report.post,
-    mediaUrl: report.post.mediaUrl ? resolveAssetUrl(report.post.mediaUrl) : null,
-    author: normalizeFeedAuthor(report.post.author)
-  }
+    mediaUrl: report.post.mediaUrl ? resolveAssetUrl(report.post.mediaUrl) : null
+  },
+  commentAuthor: report.commentAuthor ? normalizeFeedAuthor(report.commentAuthor) : null,
+  commentAttachmentUrl: report.commentAttachmentUrl ? resolveAssetUrl(report.commentAttachmentUrl) : null
 });

@@ -1,4 +1,4 @@
-import { forwardRef, KeyboardEvent, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, KeyboardEvent, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import classNames from 'classnames';
 import { Camera } from 'lucide-react';
 
@@ -36,10 +36,10 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
       };
     }, [preview]);
 
-    const handleOpenPicker = () => {
+    const handleOpenPicker = useCallback(() => {
       if (loading) return;
       inputRef.current?.click();
-    };
+    }, [loading]);
 
     useImperativeHandle(
       ref,
@@ -48,7 +48,7 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
           handleOpenPicker();
         }
       }),
-      [loading]
+      [handleOpenPicker]
     );
 
     const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -82,7 +82,7 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
           <img
             src={preview ?? imageUrl ?? 'https://avatars.dicebear.com/api/initials/FlorteApp.svg'}
             alt="Avatar"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
           />
         </div>
         {showTriggerButton && (

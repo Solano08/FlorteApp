@@ -1,8 +1,10 @@
 ﻿import { Request, Response } from 'express';
-import { profileService } from '../services/profileService';
 import { activityService } from '../services/activityService';
-import { updateProfileSchema } from '../validators/profileValidators';
+import { feedService } from '../services/feedService';
+import { profileService } from '../services/profileService';
 import { AppError } from '../utils/appError';
+import { profileFeedSchema } from '../validators/feedValidators';
+import { updateProfileSchema } from '../validators/profileValidators';
 
 export const profileController = {
   me: async (req: Request, res: Response) => {
@@ -55,5 +57,15 @@ export const profileController = {
     }
     const activity = await activityService.getProfileActivity(userId);
     res.json({ success: true, activity });
+  },
+
+  recentPosts: async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError('Autenticacion requerida', 401);
+    }
+    const { limit = 6 } = profileFeedSchema.parse(req.query);
+    const posts = await feedService.listProfilePosts(userId, userId, limit);
+    res.json({ success: true, posts });
   }
 };

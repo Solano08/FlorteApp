@@ -1,12 +1,62 @@
 import { feedRepository } from '../repositories/feedRepository';
+import { AppError } from '../utils/appError';
+import { UserRole } from '../types/user';
 import {
   CreateCommentInput,
   CreatePostInput,
   FeedComment,
   FeedPostAggregate,
+  FeedReport,
+  PostMetrics,
+  ProfileFeedPost,
   ReactionType,
+  ReportPostInput,
+  ReportStatus,
   SharePostInput
 } from '../types/feed';
+
+const assertPostAccess = async (postId: string, userId: string, role: UserRole): Promise<void> => {
+  const authorId = await feedRepository.findPostAuthorId(postId);
+  if (!authorId) {
+    throw new AppError('Publicacion no encontrada', 404);
+  }
+  if (authorId !== userId && role !== 'admin') {
+    throw new AppError('No tienes permisos para modificar esta publicacion', 403);
+  }
+};
+
+const assertCommentAccess = async (
+  postId: string,
+  commentId: string,
+  userId: string,
+  role: UserRole
+): Promise<void> => {
+  const owner = await feedRepository.findCommentOwner(commentId);
+  if (!owner) {
+    throw new AppError('Comentario no encontrado', 404);
+  }
+
+  if (owner.postId !== postId) {
+    throw new AppError('El comentario no pertenece a la publicacion indicada', 400);
+  }
+
+  if (owner.userId !== userId && role !== 'admin') {
+    throw new AppError('No tienes permisos para modificar este comentario', 403);
+  }
+};
+
+const validateReportTarget = async (input: ReportPostInput): Promise<void> => {
+  if (!input.commentId) {
+    return;
+  }
+  const owner = await feedRepository.findCommentOwner(input.commentId);
+  if (!owner) {
+    throw new AppError('Comentario no encontrado', 404);
+  }
+  if (owner.postId !== input.postId) {
+    throw new AppError('El comentario reportado no pertenece a la publicacion', 400);
+  }
+};
 
 export const feedService = {
   async createPost(input: CreatePostInput, viewerId: string): Promise<FeedPostAggregate> {
@@ -20,6 +70,30 @@ export const feedService = {
 
   async listPosts(viewerId: string, limit = 15, offset = 0): Promise<FeedPostAggregate[]> {
     return await feedRepository.listPosts(viewerId, limit, offset);
+  },
+
+  async updatePost(
+    postId: string,
+    updates: { content?: string; mediaUrl?: string | null; tags?: string[] },
+    viewerId: string,
+    viewerRole: UserRole
+  ): Promise<FeedPostAggregate> {
+    await assertPostAccess(postId, viewerId, viewerRole);
+    await feedRepository.updatePost(postId, updates);
+    const post = await feedRepository.findPostWithMeta(postId, viewerId);
+    if (!post) {
+      throw new Error('No fue posible cargar la publicacion actualizada');
+    }
+    return post;
+  },
+
+  async deletePost(postId: string, viewerId: string, viewerRole: UserRole): Promise<void> {
+    await assertPostAccess(postId, viewerId, viewerRole);
+    await feedRepository.deletePost(postId);
+  },
+
+  async listSavedPosts(userId: string, limit = 10): Promise<FeedPostAggregate[]> {
+    return await feedRepository.listSavedPosts(userId, limit);
   },
 
   async addComment(input: CreateCommentInput, viewerId: string): Promise<{
@@ -42,6 +116,33 @@ export const feedService = {
     return await feedRepository.listComments(postId);
   },
 
+  async updateComment(
+    postId: string,
+    commentId: string,
+    content: string,
+    viewerId: string,
+    viewerRole: UserRole
+  ): Promise<FeedComment> {
+    await assertCommentAccess(postId, commentId, viewerId, viewerRole);
+    await feedRepository.updateComment(commentId, content);
+    const comment = await feedRepository.findCommentById(commentId);
+    if (!comment) {
+      throw new Error('No fue posible cargar el comentario actualizado');
+    }
+    return comment;
+  },
+
+  async deleteComment(
+    postId: string,
+    commentId: string,
+    viewerId: string,
+    viewerRole: UserRole
+  ): Promise<PostMetrics> {
+    await assertCommentAccess(postId, commentId, viewerId, viewerRole);
+    await feedRepository.deleteComment(commentId);
+    return await feedRepository.getPostMetrics(postId, viewerId);
+  },
+
   async toggleReaction(postId: string, userId: string, reactionType: ReactionType) {
     return await feedRepository.toggleReaction(postId, userId, reactionType);
   },
@@ -54,7 +155,24 @@ export const feedService = {
     return await feedRepository.sharePost(input);
   },
 
+  async listProfilePosts(ownerId: string, viewerId: string, limit = 6): Promise<ProfileFeedPost[]> {
+    return await feedRepository.listPostsForUser(ownerId, viewerId, limit);
+  },
+
   async getPost(postId: string, viewerId: string): Promise<FeedPostAggregate | null> {
     return await feedRepository.findPostWithMeta(postId, viewerId);
+  },
+
+  async reportPost(input: ReportPostInput): Promise<FeedReport> {
+    await validateReportTarget(input);
+    return await feedRepository.reportPost(input);
+  },
+
+  async listReports(): Promise<FeedReport[]> {
+    return await feedRepository.listReports();
+  },
+
+  async updateReportStatus(reportId: string, status: ReportStatus): Promise<FeedReport> {
+    return await feedRepository.updateReportStatus(reportId, status);
   }
 };
