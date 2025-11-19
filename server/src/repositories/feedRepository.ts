@@ -33,6 +33,49 @@ const parseTags = (raw: unknown): string[] => {
   }
 };
 
+const ensureFeedReportsSchema = async (): Promise<void> => {
+  await getPool().execute(`
+    CREATE TABLE IF NOT EXISTS feed_reports (
+      id CHAR(36) NOT NULL PRIMARY KEY,
+      post_id CHAR(36) NOT NULL,
+      reporter_id CHAR(36) NOT NULL,
+      comment_id CHAR(36) NULL,
+      reason VARCHAR(255) NOT NULL,
+      details TEXT,
+      status ENUM('pending','reviewed') NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      resolved_at TIMESTAMP NULL DEFAULT NULL,
+      FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
+      FOREIGN KEY (reporter_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (comment_id) REFERENCES feed_comments (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  let addedCommentColumn = false;
+  try {
+    await getPool().execute(`ALTER TABLE feed_reports ADD COLUMN comment_id CHAR(36) NULL AFTER reporter_id`);
+    addedCommentColumn = true;
+  } catch (error) {
+    const mysqlError = error as MysqlError;
+    if (mysqlError?.code !== 'ER_DUP_FIELDNAME') {
+      throw error;
+    }
+  }
+
+  if (addedCommentColumn) {
+    try {
+      await getPool().execute(
+        `ALTER TABLE feed_reports ADD CONSTRAINT fk_feed_reports_comment FOREIGN KEY (comment_id) REFERENCES feed_comments (id) ON DELETE SET NULL`
+      );
+    } catch (error) {
+      const mysqlError = error as MysqlError;
+      if (mysqlError?.code !== 'ER_DUP_KEYNAME') {
+        throw error;
+      }
+    }
+  }
+};
+
 const mapAuthor = (row: RowDataPacket): FeedAuthor => ({
   id: row.author_id,
   fullName: `${row.first_name} ${row.last_name}`.trim(),
@@ -696,21 +739,47 @@ export const feedRepository = {
   },
 
   async reportPost(input: ReportPostInput): Promise<FeedReport> {
+    await ensureFeedReportsSchema();
     const id = crypto.randomUUID();
-    const [result] = await getPool().execute<ResultSetHeader>(
-      `INSERT INTO feed_reports (id, post_id, reporter_id, reason, details, comment_id)
-       VALUES (:id, :postId, :reporterId, :reason, :details, :commentId)`,
-      {
-        id,
-        postId: input.postId,
-        reporterId: input.reporterId,
-        reason: input.reason,
-        details: input.details ?? null,
-        commentId: input.commentId ?? null
-      }
-    );
+    let result: ResultSetHeader | null = null;
 
-    if (result.affectedRows !== 1) {
+    try {
+      const [insertResult] = await getPool().execute<ResultSetHeader>(
+        `INSERT INTO feed_reports (id, post_id, reporter_id, reason, details, comment_id)
+         VALUES (:id, :postId, :reporterId, :reason, :details, :commentId)`,
+        {
+          id,
+          postId: input.postId,
+          reporterId: input.reporterId,
+          reason: input.reason,
+          details: input.details ?? null,
+          commentId: input.commentId ?? null
+        }
+      );
+      result = insertResult;
+    } catch (error) {
+      const mysqlError = error as MysqlError;
+      if (mysqlError?.code === 'ER_NO_SUCH_TABLE' || mysqlError?.code === 'ER_BAD_FIELD_ERROR') {
+        await ensureFeedReportsSchema();
+        const [fallbackResult] = await getPool().execute<ResultSetHeader>(
+          `INSERT INTO feed_reports (id, post_id, reporter_id, reason, details, comment_id)
+           VALUES (:id, :postId, :reporterId, :reason, :details, :commentId)`,
+          {
+            id,
+            postId: input.postId,
+            reporterId: input.reporterId,
+            reason: input.reason,
+            details: input.details ?? null,
+            commentId: input.commentId ?? null
+          }
+        );
+        result = fallbackResult;
+      } else {
+        throw error;
+      }
+    }
+
+    if (!result || result.affectedRows !== 1) {
       throw new Error('No fue posible registrar el reporte');
     }
 
@@ -722,6 +791,7 @@ export const feedRepository = {
   },
 
   async listReports(): Promise<FeedReport[]> {
+    await ensureFeedReportsSchema();
     const [rows] = await getPool().query<RowDataPacket[]>(
       `SELECT
          r.id AS report_id,
@@ -761,6 +831,7 @@ export const feedRepository = {
   },
 
   async updateReportStatus(reportId: string, status: ReportStatus): Promise<FeedReport> {
+    await ensureFeedReportsSchema();
     const [result] = await getPool().execute<ResultSetHeader>(
       `UPDATE feed_reports
        SET status = :status,
@@ -781,6 +852,7 @@ export const feedRepository = {
   },
 
   async findReportById(id: string): Promise<FeedReport | null> {
+    await ensureFeedReportsSchema();
     const [rows] = await getPool().query<RowDataPacket[]>(
       `SELECT
          r.id AS report_id,

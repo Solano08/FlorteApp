@@ -8,7 +8,7 @@ const sizeClasses: Record<GlassDialogSize, string> = {
   sm: 'max-w-md',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
-  xl: 'max-w-3xl'
+  xl: 'max-w-4xl'
 };
 
 interface GlassDialogProps {
@@ -75,7 +75,7 @@ export const GlassDialog = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className={classNames(
-            'fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 py-10 backdrop-blur-[18px]',
+            'fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-slate-900/30 px-4 py-10 backdrop-blur-[28px]',
             overlayClassName
           )}
           onClick={handleOverlayClick}
@@ -87,7 +87,7 @@ export const GlassDialog = ({
             transition={{ type: 'spring', stiffness: 170, damping: 24 }}
             {...motionRest}
             className={classNames(
-              'relative w-full overflow-hidden rounded-[32px] border border-white/25 bg-white/36 p-6 shadow-[0_44px_110px_rgba(15,38,25,0.33)] backdrop-blur-[28px] dark:border-white/10 dark:bg-slate-900/80',
+              'relative w-full rounded-[32px] border border-white/25 bg-white/85 p-6 shadow-[0_44px_110px_rgba(15,38,25,0.25)] backdrop-blur-[12px] dark:border-white/10 dark:bg-slate-900/85',
               sizeClasses[size],
               contentClassName,
               motionClassName

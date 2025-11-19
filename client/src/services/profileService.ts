@@ -8,6 +8,11 @@ export const profileService = {
     return normalizeProfile(data.profile);
   },
 
+  async getPublicProfile(userId: string): Promise<Profile> {
+    const { data } = await apiClient.get<{ success: boolean; profile: Profile }>(`/profile/${userId}`);
+    return normalizeProfile(data.profile);
+  },
+
   async updateProfile(payload: UpdateProfilePayload): Promise<Profile> {
     const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me', payload);
     return normalizeProfile(data.profile);

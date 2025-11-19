@@ -6,15 +6,14 @@ import { Card } from '../../components/ui/Card';
 import { TextArea } from '../../components/ui/TextArea';
 import { Button } from '../../components/ui/Button';
 import { GlassDialog } from '../../components/ui/GlassDialog';
+import { EmojiPicker } from '../../components/ui/EmojiPicker';
 import classNames from 'classnames';
 import { chatService } from '../../services/chatService';
-import { groupService } from '../../services/groupService';
 import { projectService } from '../../services/projectService';
 import { libraryService } from '../../services/libraryService';
 import { feedService } from '../../services/feedService';
 import {
   Bookmark,
-  CheckCircle2,
   FileText,
   Flag,
   Heart,
@@ -22,6 +21,9 @@ import {
   Laugh,
   MessageCircle,
   MoreHorizontal,
+  ArrowUpRight,
+  Users,
+  FolderKanban,
   Paperclip,
   Plus,
   Share2,
@@ -84,7 +86,7 @@ const reactionOptions = [
 const reportReasons = [
   'Contenido inapropiado',
   'Informacion falsa',
-  'Discurso dañino o spam',
+  'Discurso danino o spam',
   'Violacion de derechos',
   'Otro'
 ];
@@ -98,9 +100,26 @@ const shareAudienceOptions = [
 
 type ShareScope = (typeof shareAudienceOptions)[number]['id'];
 
-const iosEmojis = ['😀', '😃', '😄', '😁', '😆', '😍', '🤩', '😎', '🥰', '🫶', '🙌', '👍', '🎉'];
-
-const getRandomIosEmoji = () => iosEmojis[Math.floor(Math.random() * iosEmojis.length)];
+const announcementSlides = [
+  {
+    id: 'ad-1',
+    image:
+      'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=800&q=60',
+    alt: 'Equipo creativo colaborando en laptops'
+  },
+  {
+    id: 'ad-2',
+    image:
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=60',
+    alt: 'Prototipos y dispositivos sobre una mesa'
+  },
+  {
+    id: 'ad-3',
+    image:
+      'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=800&q=60',
+    alt: 'Desarrollador trabajando en codigo'
+  }
+];
 
 const detectMediaType = (value: string): 'image' | 'video' | 'pdf' | 'other' => {
   const lowerValue = value.toLowerCase();
@@ -167,15 +186,19 @@ const renderAttachmentMedia = (attachment: AnyAttachment, className?: string) =>
       <video src={url} className={classNames('h-full w-full bg-black object-cover', className)} controls muted playsInline preload="metadata" />
     );
   }
-  if (mediaType === 'pdf') {
-    return (
-      <iframe title="Documento adjunto" src={url} className={classNames('h-full w-full', className)} />
-    );
-  }
+  const label = mediaType === 'pdf' ? 'Documento PDF' : 'Archivo adjunto';
   return (
-    <div className={classNames('flex h-full w-full items-center justify-center bg-white/70 p-2 text-[10px] text-[var(--color-muted)]', className)}>
-      <FileText className="h-5 w-5 text-sena-green" />
-      <span className="ml-1 truncate">{getAttachmentLabel(attachment)}</span>
+    <div
+      className={classNames(
+        'flex h-full w-full items-center gap-2 rounded-xl bg-white/80 p-3 text-left text-[var(--color-text)] shadow-inner',
+        className
+      )}
+    >
+      <FileText className="h-6 w-6 text-sena-green" />
+      <div className="min-w-0">
+        <p className="text-xs font-semibold">{label}</p>
+        <p className="text-[11px] text-[var(--color-muted)] truncate">{getAttachmentLabel(attachment)}</p>
+      </div>
     </div>
   );
 };
@@ -193,7 +216,6 @@ export const HomePage = () => {
   const [composerContent, setComposerContent] = useState('');
   const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([]);
   const [composerSuccessMessage, setComposerSuccessMessage] = useState<string | null>(null);
-  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [commentsCache, setCommentsCache] = useState<Record<string, FeedComment[]>>({});
   const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
@@ -205,6 +227,7 @@ export const HomePage = () => {
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [reportReason, setReportReason] = useState(reportReasons[0]);
   const [reportDetails, setReportDetails] = useState('');
+  const [reportError, setReportError] = useState<string | null>(null);
   const [editingPost, setEditingPost] = useState<FeedPostAggregate | null>(null);
   const [editingPostContent, setEditingPostContent] = useState('');
   const [reactionPickerPost, setReactionPickerPost] = useState<string | null>(null);
@@ -212,17 +235,25 @@ export const HomePage = () => {
   const [commentAttachments, setCommentAttachments] = useState<Record<string, ComposerAttachment | null>>({});
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [emojiPickerTarget, setEmojiPickerTarget] = useState<{ type: 'composer' } | { type: 'comment'; postId: string } | null>(null);
+  const [commentModalPost, setCommentModalPost] = useState<FeedPostAggregate | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const postMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const commentMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const commentFileInputsRef = useRef<Record<string, Partial<Record<AttachmentKind, HTMLInputElement | null>>>>({});
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const userDisplayName = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'FlorteApp';
   const composerAvatarUrl =
     user?.avatarUrl ??
     `https://avatars.dicebear.com/api/initials/${encodeURIComponent(userDisplayName)}.svg`;
+
+  const appendEmoji = (value: string, emoji: string) => {
+    const trimmed = value.trimEnd();
+    return trimmed ? `${trimmed} ${emoji} ` : `${emoji} `;
+  };
 
   const handleClearAttachments = () => {
     setComposerAttachments([]);
@@ -253,13 +284,34 @@ export const HomePage = () => {
       return;
     }
     if (action === 'emoji') {
-      const emoji = getRandomIosEmoji();
+      setEmojiPickerTarget((current) =>
+        current?.type === 'comment' && current.postId === postId ? null : { type: 'comment', postId }
+      );
+    }
+  };
+
+  const handleNavigateToProfile = (targetUserId: string) => {
+    if (!targetUserId) return;
+    if (user?.id === targetUserId) {
+      navigate('/profile');
+      return;
+    }
+    navigate(`/profile/${targetUserId}`);
+  };
+
+  const closeEmojiPicker = () => setEmojiPickerTarget(null);
+
+  const handleEmojiSelect = (emoji: string) => {
+    if (!emojiPickerTarget) return;
+    if (emojiPickerTarget.type === 'composer') {
+      setComposerContent((prev) => appendEmoji(prev, emoji));
+    } else {
       setCommentInputs((prev) => {
-        const current = prev[postId] ?? '';
-        const trimmed = current.trimEnd();
-        return { ...prev, [postId]: trimmed ? `${trimmed} ${emoji} ` : `${emoji} ` };
+        const current = prev[emojiPickerTarget.postId] ?? '';
+        return { ...prev, [emojiPickerTarget.postId]: appendEmoji(current, emoji) };
       });
     }
+    closeEmojiPicker();
   };
 
   const handleReactionHover = (postId: string) => {
@@ -283,9 +335,36 @@ export const HomePage = () => {
 
   useEffect(() => {
     if (!composerSuccessMessage) return;
-    const timeout = window.setTimeout(() => setComposerSuccessMessage(null), 4000);
+    const timeout = window.setTimeout(() => setComposerSuccessMessage(null), 3000);
     return () => window.clearTimeout(timeout);
   }, [composerSuccessMessage]);
+
+  useEffect(() => {
+    if (announcementSlides.length <= 1) return;
+    const interval = window.setInterval(() => {
+      setActiveAnnouncement((prev) => (prev + 1) % announcementSlides.length);
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!emojiPickerTarget) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current?.contains(event.target as Node)) {
+        return;
+      }
+      setEmojiPickerTarget(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [emojiPickerTarget]);
+
+  useEffect(() => {
+    if (emojiPickerTarget?.type !== 'comment') return;
+    if (!commentModalPost || commentModalPost.id !== emojiPickerTarget.postId) {
+      setEmojiPickerTarget(null);
+    }
+  }, [emojiPickerTarget, commentModalPost]);
 
   const registerPostMenuRef = (postId: string, element: HTMLDivElement | null) => {
     postMenuRefs.current[postId] = element;
@@ -335,11 +414,6 @@ export const HomePage = () => {
     queryFn: chatService.listChats
   });
 
-  const { data: groups = [] } = useQuery({
-    queryKey: ['groups', 'me'],
-    queryFn: groupService.listMyGroups
-  });
-
   const { data: projects = [] } = useQuery({
     queryKey: ['projects', 'me'],
     queryFn: projectService.listMyProjects
@@ -356,7 +430,7 @@ export const HomePage = () => {
     queryFn: () => feedService.listPosts()
   });
 
-  const friendSuggestions = groups.slice(0, 3);
+  const [activeAnnouncement, setActiveAnnouncement] = useState(0);
   const learningHighlights = projects.slice(0, 3);
 
   const updatePostInCache = (postId: string, updater: (post: FeedPostAggregate) => FeedPostAggregate) => {
@@ -584,10 +658,12 @@ export const HomePage = () => {
       setReportTarget(null);
       setReportDetails('');
       setReportReason(reportReasons[0]);
+      setReportError(null);
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => {});
     },
     onError: (error) => {
       console.error('No fue posible enviar el reporte', error);
+      setReportError('No fue posible enviar el reporte. Intentalo nuevamente.');
     }
   });
 
@@ -658,21 +734,28 @@ export const HomePage = () => {
     }
   };
 
-  const handleToggleComments = async (postId: string) => {
-    const nextState = !expandedComments[postId];
-    setExpandedComments((prev) => ({ ...prev, [postId]: nextState }));
-    if (nextState && !commentsCache[postId]) {
-      setLoadingComments((prev) => ({ ...prev, [postId]: true }));
-      try {
-        const comments = await feedService.listComments(postId);
-        comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        setCommentsCache((prev) => ({ ...prev, [postId]: comments }));
-      } catch {
-        // noop - UI can remain with latest comments
-      } finally {
-        setLoadingComments((prev) => ({ ...prev, [postId]: false }));
-      }
+  const ensureCommentsLoaded = async (postId: string) => {
+    if (commentsCache[postId]) return;
+    setLoadingComments((prev) => ({ ...prev, [postId]: true }));
+    try {
+      const comments = await feedService.listComments(postId);
+      comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      setCommentsCache((prev) => ({ ...prev, [postId]: comments }));
+    } catch {
+      // ignore - keep fallback comments
+    } finally {
+      setLoadingComments((prev) => ({ ...prev, [postId]: false }));
     }
+  };
+
+  const handleOpenCommentsModal = async (post: FeedPostAggregate) => {
+    await ensureCommentsLoaded(post.id);
+    setCommentModalPost(post);
+  };
+
+  const handleCloseCommentsModal = () => {
+    setCommentModalPost(null);
+    setEmojiPickerTarget((current) => (current?.type === 'comment' ? null : current));
   };
 
   const handleCommentInputChange = (postId: string, value: string) => {
@@ -703,6 +786,7 @@ export const HomePage = () => {
     setReportTarget(target);
     setReportReason(reportReasons[0]);
     setReportDetails('');
+    setReportError(null);
     setPostMenuOpenId(null);
     setCommentMenuOpenId(null);
   };
@@ -720,10 +804,16 @@ export const HomePage = () => {
     setReportTarget(null);
     setReportDetails('');
     setReportReason(reportReasons[0]);
+    setReportError(null);
   };
 
   const handleSubmitReport = () => {
     if (!reportTarget || reportMutation.isPending) return;
+    if (!reportReason.trim()) {
+      setReportError('Selecciona un motivo para continuar.');
+      return;
+    }
+    setReportError(null);
     reportMutation.mutate({
       postId: reportTarget.post.id,
       reason: reportReason,
@@ -792,11 +882,6 @@ export const HomePage = () => {
     }
   };
 
-  const handleShowLess = () => {
-    setComposerSuccessMessage('Mostrando menos publicaciones.');
-    setPostMenuOpenId(null);
-  };
-
   const isPublishing = createPostMutation.isPending;
   const isSharing = shareMutation.isPending;
 
@@ -814,11 +899,7 @@ export const HomePage = () => {
       return;
     }
     if (action === 'emoji') {
-      const emoji = getRandomIosEmoji();
-      setComposerContent((prev) => {
-        const trimmed = prev.trimEnd();
-        return trimmed ? `${trimmed} ${emoji}` : emoji;
-      });
+      setEmojiPickerTarget((current) => (current?.type === 'composer' ? null : { type: 'composer' }));
     }
   };
 
@@ -852,6 +933,576 @@ export const HomePage = () => {
     });
   };
 
+  const renderPostCard = (post: FeedPostAggregate, context: 'list' | 'modal' = 'list') => {
+    const comments = commentsCache[post.id] ?? post.latestComments;
+    const isReacting = reactionMutation.isPending && reactionMutation.variables?.postId === post.id;
+    const isSavingPost = saveMutation.isPending && saveMutation.variables === post.id;
+    const isCommenting = commentMutation.isPending && commentMutation.variables?.postId === post.id;
+    const viewerHasReaction = Boolean(post.viewerReaction);
+    const formattedTime = formatTimeAgo(post.createdAt);
+    const authorAvatar =
+      post.author.avatarUrl ??
+      `https://avatars.dicebear.com/api/initials/${encodeURIComponent(post.author.fullName)}.svg`;
+    const reactionLabel = post.reactionCount === 1 ? 'reaccion' : 'reacciones';
+    const commentLabel = post.commentCount === 1 ? 'comentario' : 'comentarios';
+    const shareLabel = post.shareCount === 1 ? 'compartido' : 'compartidos';
+    const attachmentsFromPost =
+      post.attachments?.length
+        ? post.attachments
+        : post.mediaUrl
+        ? [
+            {
+              id: `${post.id}-legacy`,
+              postId: post.id,
+              url: post.mediaUrl,
+              mimeType: null,
+              createdAt: post.createdAt
+            }
+          ]
+        : [];
+    const canManagePost = user?.role === 'admin' || user?.id === post.authorId;
+    const viewerReactionType = post.viewerReaction === 'support' ? 'celebrate' : post.viewerReaction;
+    const selectedReaction = reactionOptions.find((option) => option.type === viewerReactionType);
+    const ReactionIconComponent = selectedReaction?.icon ?? Heart;
+    const reactionButtonLabel = selectedReaction?.label ?? 'Reaccionar';
+    const wasEdited = post.updatedAt && post.updatedAt !== post.createdAt;
+    const commentAttachment = commentAttachments[post.id] ?? null;
+    const commentInputValue = commentInputs[post.id] ?? '';
+    const canSendComment = Boolean(commentInputValue.trim()) || Boolean(commentAttachment);
+    const isModal = context === 'modal';
+
+    return (
+      <Card
+        key={`${context}-${post.id}`}
+        className={classNames(
+          'space-y-4 bg-white/30 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.16)] dark:bg-white/10',
+          isModal && 'bg-white/95 shadow-[0_30px_60px_rgba(18,55,29,0.25)] dark:bg-slate-900/90'
+        )}
+      >
+        <div className="flex items-start gap-3">
+          <button
+            type="button"
+            onClick={() => handleNavigateToProfile(post.authorId)}
+            className="h-11 w-11 overflow-hidden rounded-full border border-white/20 bg-white/40 p-[1px] transition hover:border-sena-green/50"
+          >
+            <img src={authorAvatar} alt={post.author.fullName} className="h-full w-full rounded-full object-cover" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleNavigateToProfile(post.authorId)}
+                className="text-left text-sm font-semibold text-[var(--color-text)] transition hover:text-sena-green"
+              >
+                {post.author.fullName}
+              </button>
+              {wasEdited && <span className="text-[11px] text-[var(--color-muted)]">(Editado)</span>}
+            </div>
+            {post.author.headline && (
+              <p className="text-xs text-[var(--color-muted)] truncate">{post.author.headline}</p>
+            )}
+            <p className="text-[11px] text-[var(--color-muted)]">{formattedTime}</p>
+          </div>
+          <div className="relative" ref={(element) => registerPostMenuRef(post.id, element)}>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-muted)] transition hover:bg-white/30 hover:text-sena-green"
+              aria-haspopup="true"
+              aria-expanded={postMenuOpenId === post.id}
+              onClick={() => handlePostMenuToggle(post.id)}
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+            {postMenuOpenId === post.id && (
+              <div className="absolute right-0 top-9 z-20 w-48 rounded-2xl border border-white/20 bg-white/95 p-2 text-sm text-[var(--color-text)] shadow-[0_18px_35px_rgba(18,55,29,0.18)] dark:bg-slate-900/95">
+                {canManagePost && (
+                  <button
+                    type="button"
+                    onClick={() => handleStartEditPost(post)}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                  >
+                    <FileText className="h-4 w-4 text-sena-green" /> Editar publicacion
+                  </button>
+                )}
+                {canManagePost && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePost(post)}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                  >
+                    <Trash2 className="h-4 w-4 text-rose-500" /> Eliminar
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleOpenReportForPost(post)}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                >
+                  <Flag className="h-4 w-4 text-rose-500" /> Reportar publicacion
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopyPostLink(post)}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                >
+                  <Share2 className="h-4 w-4 text-sena-green" /> Copiar enlace
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {post.content && (
+          <p className="whitespace-pre-line text-sm text-[var(--color-text)]">{post.content}</p>
+        )}
+
+        {attachmentsFromPost.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {attachmentsFromPost.map((attachment) => (
+              <div
+                key={attachment.id}
+                className={classNames(
+                  'relative overflow-hidden rounded-2xl border border-white/15 bg-white/5',
+                  attachmentsFromPost.length === 1 ? 'w-full' : 'w-full sm:w-[calc(50%-4px)]'
+                )}
+              >
+                {renderAttachmentMedia(attachment, 'h-full w-full')}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {post.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {post.tags.map((tag) => (
+              <span
+                key={`${post.id}-${tag}`}
+                className="rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold text-sena-green"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--color-muted)] sm:text-sm">
+          <div className="flex items-center gap-2 text-[var(--color-text)]">
+            <Heart
+              className={classNames('h-4 w-4', viewerHasReaction ? 'text-sena-green' : 'text-rose-500')}
+            />
+            <span>
+              {post.reactionCount} {reactionLabel}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleOpenCommentsModal(post)}
+              className={classNames(
+                'text-left text-[var(--color-text)] underline-offset-2 transition hover:text-sena-green',
+                isModal && 'cursor-default text-sena-green'
+              )}
+              disabled={isModal}
+            >
+              {post.commentCount} {commentLabel}
+            </button>
+            <span>
+              {post.shareCount} {shareLabel}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between sm:gap-3">
+          <div className="relative sm:flex-1" onMouseLeave={handleReactionPickerLeave}>
+            <Button
+              variant="ghost"
+              className={classNames(
+                'w-full justify-center gap-2 text-xs sm:text-sm',
+                viewerHasReaction && 'text-sena-green'
+              )}
+              onMouseEnter={() => handleReactionHover(post.id)}
+              onClick={() => reactionMutation.mutate({ postId: post.id, reactionType: 'like' })}
+              disabled={isReacting}
+              loading={isReacting}
+            >
+              <ReactionIconComponent
+                className={classNames(
+                  'h-4 w-4',
+                  selectedReaction?.color ?? (viewerHasReaction ? 'text-sena-green' : 'text-rose-500')
+                )}
+              />
+              {reactionButtonLabel}
+            </Button>
+            {reactionPickerPost === post.id && (
+              <div
+                className="absolute bottom-full left-1/2 z-10 -translate-x-1/2 translate-y-2 rounded-2xl border border-white/40 bg-white/95 px-4 py-3 shadow-[0_18px_35px_rgba(18,55,29,0.25)] dark:border-white/20 dark:bg-slate-900/95"
+                onMouseEnter={() => handleReactionHover(post.id)}
+              >
+                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap sm:gap-3">
+                  {reactionOptions.map(({ type, label, icon: Icon, color }) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className="flex items-center gap-2 rounded-full border border-white/50 bg-white px-3 py-1 text-xs font-semibold text-[var(--color-text)] shadow-sm transition hover:-translate-y-0.5 hover:border-sena-green/60 dark:bg-slate-900/90"
+                      onClick={() => handleReactionSelect(post.id, type)}
+                    >
+                      <Icon className={classNames('h-4 w-4', color)} />
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            className={classNames(
+              'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
+              isModal && 'cursor-default text-sena-green'
+            )}
+            onClick={() => {
+              if (isModal) return;
+              void handleOpenCommentsModal(post);
+            }}
+            disabled={isModal}
+          >
+            <MessageCircle className="h-4 w-4" /> Comentar
+          </Button>
+          <Button
+            variant="ghost"
+            className="justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm"
+            onClick={() => handleOpenShare(post)}
+          >
+            <Share2 className="h-4 w-4" /> Compartir
+          </Button>
+          <Button
+            variant="ghost"
+            className={classNames(
+              'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
+              post.isSaved && 'text-sena-green'
+            )}
+            onClick={() => saveMutation.mutate(post.id)}
+            disabled={isSavingPost}
+            loading={isSavingPost}
+          >
+            <Bookmark className="h-4 w-4" /> {post.isSaved ? 'Guardado' : 'Guardar'}
+          </Button>
+        </div>
+
+        {isModal && (
+          <div className="space-y-3 rounded-2xl border border-white/15 bg-white/12 px-3 py-3">
+            {loadingComments[post.id] ? (
+              <p className="text-xs text-[var(--color-muted)]">Cargando comentarios...</p>
+            ) : comments.length === 0 ? (
+              <p className="text-xs text-[var(--color-muted)]">
+                Aun no hay comentarios. Se el primero en opinar.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {comments.map((comment) => {
+                  const commentAvatar =
+                    comment.author.avatarUrl ??
+                    `https://avatars.dicebear.com/api/initials/${encodeURIComponent(comment.author.fullName)}.svg`;
+                  const commentAttachmentType = comment.attachmentUrl ? detectMediaType(comment.attachmentUrl) : null;
+                  const commentAttachmentName = comment.attachmentUrl ? extractFileName(comment.attachmentUrl) : '';
+                  const isEditingComment = editingCommentId === comment.id;
+                  const canManageComment = user?.role === 'admin' || user?.id === comment.userId;
+                  return (
+                    <div key={comment.id} className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleNavigateToProfile(comment.userId)}
+                        className="h-8 w-8 overflow-hidden rounded-full border border-white/20 bg-white/40 p-[1px] transition hover:border-sena-green/50"
+                      >
+                        <img src={commentAvatar} alt={comment.author.fullName} className="h-full w-full rounded-full object-cover" />
+                      </button>
+                      <div className="relative flex-1 rounded-2xl bg-white/18 px-3 py-2 text-xs text-[var(--color-text)]">
+                        {isEditingComment ? (
+                          <div className="space-y-3">
+                            <textarea
+                              rows={3}
+                              value={editingCommentContent}
+                              onChange={(event) => setEditingCommentContent(event.target.value)}
+                              className="w-full resize-none rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-xs text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="xs"
+                                onClick={() => handleConfirmEditComment(post.id)}
+                                loading={updateCommentMutation.isPending}
+                                disabled={updateCommentMutation.isPending}
+                              >
+                                Guardar
+                              </Button>
+                              <Button
+                                size="xs"
+                                variant="ghost"
+                                onClick={handleCancelEditComment}
+                                disabled={updateCommentMutation.isPending}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-start justify-between gap-3">
+                              <button
+                                type="button"
+                                onClick={() => handleNavigateToProfile(comment.userId)}
+                                className="text-left font-semibold text-[var(--color-text)] transition hover:text-sena-green"
+                              >
+                                {comment.author.fullName}
+                              </button>
+                              <div
+                                className="absolute right-3 top-3"
+                                ref={(element) => registerCommentMenuRef(comment.id, element)}
+                              >
+                                <button
+                                  type="button"
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--color-muted)] transition hover:bg-white/30 hover:text-sena-green"
+                                  aria-haspopup="true"
+                                  aria-expanded={commentMenuOpenId === comment.id}
+                                  onClick={() =>
+                                    setCommentMenuOpenId((previous) => (previous === comment.id ? null : comment.id))
+                                  }
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </button>
+                                {commentMenuOpenId === comment.id && (
+                                  <div className="absolute right-0 top-8 z-20 w-48 rounded-2xl border border-white/20 bg-white/95 p-2 text-sm text-[var(--color-text)] shadow-[0_18px_35px_rgba(18,55,29,0.18)] dark:bg-slate-900/95">
+                                    {canManageComment && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleStartEditComment(post.id, comment)}
+                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                      >
+                                        <FileText className="h-4 w-4 text-sena-green" /> Editar comentario
+                                      </button>
+                                    )}
+                                    {canManageComment && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteComment(post.id, comment.id)}
+                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-rose-500" /> Eliminar
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenReportForComment(post, comment)}
+                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                    >
+                                      <Flag className="h-4 w-4 text-rose-500" /> Reportar comentario
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <p className="mt-1 leading-relaxed">{comment.content}</p>
+                            {comment.attachmentUrl && (
+                              <div className="mt-2 overflow-hidden rounded-xl border border-white/20 bg-white/10">
+                                {commentAttachmentType === 'image' && (
+                                  <img
+                                    src={comment.attachmentUrl}
+                                    alt="Adjunto del comentario"
+                                    className="max-h-32 w-full object-cover"
+                                  />
+                                )}
+                                {commentAttachmentType === 'video' && (
+                                  <video
+                                    src={comment.attachmentUrl}
+                                    controls
+                                    className="max-h-32 w-full bg-black"
+                                    preload="metadata"
+                                  />
+                                )}
+                                {commentAttachmentType === 'pdf' && (
+                                  <div className="flex flex-col gap-1 px-3 py-2">
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4 text-sena-green" />
+                                      <p className="text-xs font-semibold">{commentAttachmentName}</p>
+                                    </div>
+                                    <a
+                                      href={comment.attachmentUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[11px] font-semibold text-sena-green underline-offset-2 hover:underline"
+                                    >
+                                      Ver documento
+                                    </a>
+                                  </div>
+                                )}
+                                {commentAttachmentType === 'other' && (
+                                  <div className="flex flex-col gap-1 px-3 py-2">
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4 text-sena-green" />
+                                      <p className="text-xs font-semibold">{commentAttachmentName}</p>
+                                    </div>
+                                    <a
+                                      href={comment.attachmentUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[11px] font-semibold text-sena-green underline-offset-2 hover:underline"
+                                    >
+                                      Abrir adjunto
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <p className="mt-1 text-[10px] text-[var(--color-muted)]">
+                              {formatTimeAgo(comment.createdAt)}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {commentAttachment && (
+                <div className="space-y-2 rounded-2xl border border-white/20 bg-white/15 px-3 py-2 text-xs text-[var(--color-text)]">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
+                        Adjunto en comentario
+                      </p>
+                      <p className="truncate text-sm font-semibold">{commentAttachment.fileName}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleClearCommentAttachment(post.id)}
+                      className="rounded-full bg-white/40 p-1 text-[var(--color-text)] hover:bg-white/60"
+                      aria-label="Quitar adjunto del comentario"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {commentAttachment.kind === 'image' && (
+                    <img
+                      src={commentAttachment.dataUrl}
+                      alt={commentAttachment.fileName}
+                      className="max-h-32 w-full rounded-xl object-cover"
+                    />
+                  )}
+                  {commentAttachment.kind === 'video' && (
+                    <video
+                      src={commentAttachment.dataUrl}
+                      controls
+                      className="max-h-32 w-full rounded-xl bg-black"
+                      preload="metadata"
+                    />
+                  )}
+                  {commentAttachment.kind === 'document' && (
+                    <div className="flex items-center gap-2 rounded-xl bg-white/70 px-3 py-2 text-[var(--color-text)]">
+                      <FileText className="h-5 w-5 text-sena-green" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">
+                          {commentAttachment.fileName.toLowerCase().endsWith('.pdf')
+                            ? 'Documento PDF'
+                            : 'Archivo adjunto'}
+                        </p>
+                        <p className="text-[11px] text-[var(--color-muted)] truncate">
+                          {commentAttachment.fileName}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-end gap-2">
+                <textarea
+                  rows={2}
+                  value={commentInputValue}
+                  onChange={(event) => handleCommentInputChange(post.id, event.target.value)}
+                  placeholder="Escribe un comentario..."
+                  className="flex-1 resize-none rounded-2xl border border-white/20 bg-white/15 px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                  disabled={isCommenting}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => handleSubmitComment(post.id)}
+                  disabled={isCommenting || !canSendComment}
+                  loading={isCommenting}
+                >
+                  Enviar
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                <div className="flex gap-2">
+                  {composerIcons.map(({ icon: Icon, label, action }) => {
+                    const isEmojiAction = action === 'emoji';
+                    const isEmojiOpen =
+                      emojiPickerTarget?.type === 'comment' &&
+                      emojiPickerTarget.postId === post.id &&
+                      isEmojiAction;
+                    return (
+                      <div
+                        key={`${post.id}-${action}`}
+                        className={classNames('relative', isEmojiAction && 'z-30')}
+                      >
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sena-green transition hover:bg-white/40"
+                          aria-label={`${label} comentario`}
+                          onClick={() => handleCommentToolClick(post.id, action)}
+                          disabled={isCommenting}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </button>
+                        {isEmojiAction && isEmojiOpen && (
+                          <div className="absolute right-0 top-10 z-50" ref={emojiPickerRef}>
+                            <EmojiPicker
+                              onEmojiSelect={handleEmojiSelect}
+                              onClose={closeEmojiPicker}
+                              className="w-[320px]"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <span className="text-[10px] text-[var(--color-muted)]">
+                  Puedes agregar fotos, videos o emojis.
+                </span>
+              </div>
+            </div>
+
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              ref={(element) => registerCommentFileInput(post.id, 'image', element)}
+              onChange={(event) => handleCommentFileChange(post.id, event, 'image')}
+            />
+            <input
+              type="file"
+              accept="video/*"
+              className="hidden"
+              ref={(element) => registerCommentFileInput(post.id, 'video', element)}
+              onChange={(event) => handleCommentFileChange(post.id, event, 'video')}
+            />
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              className="hidden"
+              ref={(element) => registerCommentFileInput(post.id, 'document', element)}
+              onChange={(event) => handleCommentFileChange(post.id, event, 'document')}
+            />
+          </div>
+        )}
+      </Card>
+    );
+  };
+
   const storiesWithAvatars = useMemo(() => {
     return stories.map((story) =>
       story.id === 'create'
@@ -863,38 +1514,84 @@ export const HomePage = () => {
     );
   }, [user]);
 
+  const activeModalPost = commentModalPost
+    ? feedPosts.find((post) => post.id === commentModalPost.id) ?? commentModalPost
+    : null;
+
   return (
     <DashboardLayout
       fluid
       contentClassName="px-2 sm:px-6 lg:px-10 xl:px-16"
     >
-      <div className="mx-auto grid w-full gap-4 pb-20 md:grid-cols-[minmax(0,1fr)_minmax(0,280px)] lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_minmax(0,260px)] xl:grid-cols-[minmax(0,240px)_minmax(0,1fr)_minmax(0,300px)]">
-        <aside className="hidden max-w-[220px] flex-col gap-3 lg:flex">
-          <Card className="bg-white/25 p-3 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+      <AnimatePresence>
+        {composerSuccessMessage && (
+          <motion.div
+            key={composerSuccessMessage}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="pointer-events-auto fixed inset-x-0 top-24 z-40 mx-auto w-[min(88vw,360px)] rounded-2xl border border-white/50 bg-white/95 px-5 pb-4 pt-5 text-center text-sm text-[var(--color-text)] shadow-[0_18px_30px_rgba(18,55,29,0.18)] dark:border-white/20 dark:bg-slate-900/95"
+          >
+            <button
+              type="button"
+              onClick={() => setComposerSuccessMessage(null)}
+              className="absolute right-3 top-3 rounded-full bg-slate-900/5 p-1 text-[var(--color-text)] transition hover:bg-slate-900/10 dark:bg-white/10 dark:hover:bg-white/20"
+              aria-label="Cerrar notificacion"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <p className="text-base font-semibold tracking-wide text-[var(--color-text)]">{composerSuccessMessage}</p>
+            <div className="absolute bottom-0 left-0 h-1 w-full overflow-hidden rounded-b-2xl bg-transparent">
+              <motion.div
+                initial={{ width: '100%' }}
+                animate={{ width: 0 }}
+                transition={{ duration: 3, ease: 'linear' }}
+                className="h-full bg-sena-green"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="mx-auto grid w-full gap-4 pb-20 md:grid-cols-[minmax(0,1fr)_minmax(0,280px)] lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)_minmax(0,260px)] xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,320px)]">
+        <aside className="hidden w-full flex-col gap-3 lg:flex">
+          <Card className="bg-white/25 p-4 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">Sugerencias</h3>
+              <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rapida</h3>
               <Sparkles className="h-3.5 w-3.5 text-sena-green" />
             </div>
-            <div className="mt-2 space-y-2.5">
-              {friendSuggestions.length === 0 && (
-                <p className="text-xs text-[var(--color-muted)]">
-                  Unete a grupos para recibir recomendaciones personalizadas.
-                </p>
-              )}
-              {friendSuggestions.map((group) => (
-                <div
-                  key={group.id}
-                  className="rounded-xl border border-white/30 bg-white/25 px-3 py-2.5 transition hover:border-sena-green/40 hover:bg-white/35 dark:border-white/15 dark:bg-white/10"
-                >
-                  <p className="text-sm font-semibold text-[var(--color-text)] truncate">{group.name}</p>
-                  <p className="text-[11px] text-[var(--color-muted)]">
-                    Grupo - {new Date(group.createdAt ?? '').toLocaleDateString('es-CO')}
-                  </p>
-                  <Button size="sm" className="mt-2 w-full text-xs">
-                    Conectar
-                  </Button>
-                </div>
-              ))}
+            <p className="mt-3 text-xs text-[var(--color-muted)]">
+              Accede en segundos a proyectos, grupos y espacios clave de tu comunidad.
+            </p>
+            <div className="mt-4 space-y-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="w-full justify-between px-3"
+                onClick={() => navigate('/explore')}
+              >
+                Explorar proyectos
+                <ArrowUpRight className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full justify-between px-3"
+                onClick={() => navigate('/groups')}
+              >
+                Encontrar grupos
+                <Users className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full justify-between px-3"
+                onClick={() => navigate('/projects')}
+              >
+                Revisar mis proyectos
+                <FolderKanban className="h-4 w-4" />
+              </Button>
             </div>
           </Card>
 
@@ -925,33 +1622,6 @@ export const HomePage = () => {
 
 
         <section className="mx-auto flex min-w-0 w-full max-w-3xl flex-col gap-5">
-          <AnimatePresence>
-            {composerSuccessMessage && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-                className="rounded-2xl border border-sena-green/40 bg-sena-green/10 px-4 py-3 text-sm text-[var(--color-text)]"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-sena-green" />
-                    <p className="font-semibold">{composerSuccessMessage}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setComposerSuccessMessage(null)}
-                    className="rounded-full bg-white/50 p-1 text-[var(--color-text)] hover:bg-white/70"
-                    aria-label="Cerrar notificacion"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           <Card className="overflow-hidden bg-white/30 backdrop-blur-xl shadow-[0_10px_24px_rgba(18,55,29,0.14)] dark:bg-white/10">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-[var(--color-text)] sm:text-base">Historias</h2>
@@ -1018,18 +1688,28 @@ export const HomePage = () => {
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex gap-2">
-                    {composerIcons.map(({ icon: Icon, label, action }) => (
-                      <button
-                        key={action}
-                        type="button"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/35 text-sena-green transition hover:shadow-[0_0_18px_rgba(57,169,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label={label}
-                        onClick={() => handleComposerToolClick(action)}
-                        disabled={isPublishing}
-                      >
-                        <Icon className="h-4 w-4" />
-                      </button>
-                    ))}
+                    {composerIcons.map(({ icon: Icon, label, action }) => {
+                      const isEmojiAction = action === 'emoji';
+                      const isEmojiOpen = emojiPickerTarget?.type === 'composer' && isEmojiAction;
+                      return (
+                        <div key={action} className={classNames('relative', isEmojiAction && 'z-30')}>
+                          <button
+                            type="button"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/35 text-sena-green transition hover:shadow-[0_0_18px_rgba(57,169,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
+                            aria-label={label}
+                            onClick={() => handleComposerToolClick(action)}
+                            disabled={isPublishing}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </button>
+                          {isEmojiAction && isEmojiOpen && (
+                            <div className="absolute right-0 top-11 z-50" ref={emojiPickerRef}>
+                              <EmojiPicker onEmojiSelect={handleEmojiSelect} onClose={closeEmojiPicker} className="w-[320px]" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                   <Button
                     size="sm"
@@ -1129,521 +1809,18 @@ export const HomePage = () => {
             </Card>
           )}
 
-          {feedPosts.map((post) => {
-            const comments = commentsCache[post.id] ?? post.latestComments;
-            const isCommentsOpen = !!expandedComments[post.id];
-            const isReacting =
-              reactionMutation.isPending && reactionMutation.variables?.postId === post.id;
-            const isSavingPost = saveMutation.isPending && saveMutation.variables === post.id;
-            const isCommenting =
-              commentMutation.isPending && commentMutation.variables?.postId === post.id;
-            const viewerHasReaction = Boolean(post.viewerReaction);
-            const formattedTime = formatTimeAgo(post.createdAt);
-            const authorAvatar =
-              post.author.avatarUrl ??
-              `https://avatars.dicebear.com/api/initials/${encodeURIComponent(post.author.fullName)}.svg`;
-            const reactionLabel = post.reactionCount === 1 ? 'reaccion' : 'reacciones';
-            const commentLabel = post.commentCount === 1 ? 'comentario' : 'comentarios';
-            const shareLabel = post.shareCount === 1 ? 'compartido' : 'compartidos';
-            const attachmentsFromPost =
-              post.attachments?.length
-                ? post.attachments
-                : post.mediaUrl
-                ? [
-                    {
-                      id: `${post.id}-legacy`,
-                      postId: post.id,
-                      url: post.mediaUrl,
-                      mimeType: null,
-                      createdAt: post.createdAt
-                    }
-                  ]
-                : [];
-            const canManagePost = user?.role === 'admin' || user?.id === post.authorId;
-            const viewerReactionType = post.viewerReaction === 'support' ? 'celebrate' : post.viewerReaction;
-            const selectedReaction = reactionOptions.find((option) => option.type === viewerReactionType);
-            const ReactionIconComponent = selectedReaction?.icon ?? Heart;
-            const reactionButtonLabel = selectedReaction?.label ?? 'Reaccionar';
-            const commentAttachment = commentAttachments[post.id] ?? null;
-            const canSendComment = Boolean((commentInputs[post.id] ?? '').trim()) || Boolean(commentAttachment);
-
-            return (
-              <Card
-                key={post.id}
-                className="space-y-4 bg-white/30 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.16)] dark:bg-white/10"
-              >
-                <div className="flex items-start gap-3">
-                  <img src={authorAvatar} alt={post.author.fullName} className="h-11 w-11 rounded-full object-cover" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-[var(--color-text)]">{post.author.fullName}</p>
-                    {post.author.headline && (
-                      <p className="text-xs text-[var(--color-muted)] truncate">{post.author.headline}</p>
-                    )}
-                    <p className="text-[11px] text-[var(--color-muted)]">{formattedTime}</p>
-                  </div>
-                    <div className="relative" ref={(element) => registerPostMenuRef(post.id, element)}>
-                      <button
-                        type="button"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-muted)] transition hover:bg-white/30 hover:text-sena-green"
-                      aria-haspopup="true"
-                      aria-expanded={postMenuOpenId === post.id}
-                      onClick={() => handlePostMenuToggle(post.id)}
-                    >
-                      <MoreHorizontal className="h-5 w-5" />
-                    </button>
-                    {postMenuOpenId === post.id && (
-                      <div className="absolute right-0 top-9 z-20 w-48 rounded-2xl border border-white/20 bg-white/95 p-2 text-sm text-[var(--color-text)] shadow-[0_18px_35px_rgba(18,55,29,0.18)] dark:bg-slate-900/95">
-                        {canManagePost && (
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditPost(post)}
-                            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
-                          >
-                            <FileText className="h-4 w-4 text-sena-green" /> Editar publicacion
-                          </button>
-                        )}
-                        {canManagePost && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePost(post)}
-                            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-rose-600 transition hover:bg-rose-100"
-                          >
-                            <Trash2 className="h-4 w-4" /> Eliminar publicacion
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenReportForPost(post)}
-                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
-                        >
-                          <Flag className="h-4 w-4 text-rose-500" /> Reportar publicacion
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyPostLink(post)}
-                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
-                        >
-                          <Share2 className="h-4 w-4 text-sena-green" /> Copiar enlace
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleShowLess}
-                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
-                        >
-                          <Bookmark className="h-4 w-4" /> Mostrar menos
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {post.content && (
-                  <p className="whitespace-pre-line text-sm text-[var(--color-text)]">{post.content}</p>
-                )}
-
-                {attachmentsFromPost.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {attachmentsFromPost.map((attachment) => (
-                      <div
-                        key={`${post.id}-${attachment.id}`}
-                        className="relative h-24 w-24 flex-none overflow-hidden rounded-2xl border border-white/15 bg-white/5"
-                      >
-                        {renderAttachmentMedia(attachment, 'h-full w-full')}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {post.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {post.tags.map((tag) => (
-                      <span
-                        key={`${post.id}-${tag}`}
-                        className="rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold text-sena-green"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--color-muted)] sm:text-sm">
-                  <div className="flex items-center gap-2 text-[var(--color-text)]">
-                    <Heart
-                      className={classNames('h-4 w-4', viewerHasReaction ? 'text-sena-green' : 'text-rose-500')}
-                    />
-                    <span>
-                      {post.reactionCount} {reactionLabel}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span>
-                      {post.commentCount} {commentLabel}
-                    </span>
-                    <span>
-                      {post.shareCount} {shareLabel}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between sm:gap-3">
-                  <div className="relative sm:flex-1" onMouseLeave={handleReactionPickerLeave}>
-                    <Button
-                      variant="ghost"
-                      className={classNames(
-                        'w-full justify-center gap-2 text-xs sm:text-sm',
-                        viewerHasReaction && 'text-sena-green'
-                      )}
-                      onMouseEnter={() => handleReactionHover(post.id)}
-                      onClick={() => reactionMutation.mutate({ postId: post.id, reactionType: 'like' })}
-                      disabled={isReacting}
-                      loading={isReacting}
-                    >
-                      <ReactionIconComponent className={classNames('h-4 w-4', selectedReaction?.color ?? (viewerHasReaction ? 'text-sena-green' : 'text-rose-500'))} />
-                      {reactionButtonLabel}
-                    </Button>
-                    {reactionPickerPost === post.id && (
-                      <div
-                        className="absolute bottom-full left-1/2 z-10 -translate-x-1/2 translate-y-2 rounded-full border border-white/40 bg-white px-3 py-1 shadow-[0_10px_26px_rgba(18,55,29,0.25)] dark:bg-slate-900"
-                        onMouseEnter={() => handleReactionHover(post.id)}
-                      >
-                        <div className="flex items-center gap-2">
-                          {reactionOptions.map(({ type, label, icon: Icon, color }) => (
-                            <button
-                              key={type}
-                              type="button"
-                              className="flex h-10 w-10 flex-col items-center justify-center gap-1 rounded-full bg-white/80 text-[10px] font-semibold text-[var(--color-text)] transition hover:scale-105 hover:bg-white"
-                              onClick={() => handleReactionSelect(post.id, type)}
-                            >
-                              <Icon className={classNames('h-4 w-4', color)} />
-                              <span className="hidden sm:block">{label.split(' ')[1]}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    className={classNames(
-                      'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
-                      isCommentsOpen && 'text-sena-green'
-                    )}
-                    onClick={() => handleToggleComments(post.id)}
-                  >
-                    <MessageCircle className="h-4 w-4" /> Comentar
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm"
-                    onClick={() => handleOpenShare(post)}
-                  >
-                    <Share2 className="h-4 w-4" /> Compartir
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className={classNames(
-                      'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
-                      post.isSaved && 'text-sena-green'
-                    )}
-                    onClick={() => saveMutation.mutate(post.id)}
-                    disabled={isSavingPost}
-                    loading={isSavingPost}
-                  >
-                    <Bookmark className="h-4 w-4" /> {post.isSaved ? 'Guardado' : 'Guardar'}
-                  </Button>
-                </div>
-
-                {isCommentsOpen && (
-                  <div className="space-y-3 rounded-2xl border border-white/15 bg-white/12 px-3 py-3">
-                    {loadingComments[post.id] ? (
-                      <p className="text-xs text-[var(--color-muted)]">Cargando comentarios...</p>
-                    ) : comments.length === 0 ? (
-                      <p className="text-xs text-[var(--color-muted)]">
-                        Aun no hay comentarios. Se el primero en opinar.
-                      </p>
-                    ) : (
-                      <div className="space-y-3">
-                        {comments.map((comment) => {
-                          const commentAvatar =
-                            comment.author.avatarUrl ??
-                            `https://avatars.dicebear.com/api/initials/${encodeURIComponent(comment.author.fullName)}.svg`;
-                          const commentAttachmentType = comment.attachmentUrl ? detectMediaType(comment.attachmentUrl) : null;
-                          const commentAttachmentName = comment.attachmentUrl ? extractFileName(comment.attachmentUrl) : '';
-                          const isEditingComment = editingCommentId === comment.id;
-                          const canManageComment = user?.role === 'admin' || user?.id === comment.userId;
-                          return (
-                            <div key={comment.id} className="flex items-start gap-2">
-                              <img
-                                src={commentAvatar}
-                                alt={comment.author.fullName}
-                                className="h-8 w-8 rounded-full object-cover"
-                              />
-                              <div className="relative flex-1 rounded-2xl bg-white/18 px-3 py-2 text-xs text-[var(--color-text)]">
-                                {isEditingComment ? (
-                                  <div className="space-y-3">
-                                    <textarea
-                                      rows={3}
-                                      value={editingCommentContent}
-                                      onChange={(event) => setEditingCommentContent(event.target.value)}
-                                      className="w-full resize-none rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-xs text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
-                                    />
-                                    <div className="flex justify-end gap-2">
-                                      <Button
-                                        size="xs"
-                                        onClick={() => handleConfirmEditComment(post.id)}
-                                        loading={updateCommentMutation.isPending}
-                                        disabled={updateCommentMutation.isPending}
-                                      >
-                                        Guardar
-                                      </Button>
-                                      <Button
-                                        size="xs"
-                                        variant="ghost"
-                                        onClick={handleCancelEditComment}
-                                        disabled={updateCommentMutation.isPending}
-                                      >
-                                        Cancelar
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="flex items-start justify-between gap-3">
-                                      <p className="font-semibold">{comment.author.fullName}</p>
-                                      <div className="absolute right-3 top-3" ref={(element) => registerCommentMenuRef(comment.id, element)}>
-                                        <button
-                                          type="button"
-                                          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--color-muted)] transition hover:bg-white/30 hover:text-sena-green"
-                                          aria-haspopup="true"
-                                          aria-expanded={commentMenuOpenId === comment.id}
-                                          onClick={() =>
-                                            setCommentMenuOpenId((previous) => (previous === comment.id ? null : comment.id))
-                                          }
-                                        >
-                                          <MoreHorizontal className="h-4 w-4" />
-                                        </button>
-                                        {commentMenuOpenId === comment.id && (
-                                          <div className="absolute right-0 top-8 z-20 w-48 rounded-2xl border border-white/20 bg-white/95 p-2 text-sm text-[var(--color-text)] shadow-[0_18px_35px_rgba(18,55,29,0.18)] dark:bg-slate-900/95">
-                                            {canManageComment && (
-                                              <button
-                                                type="button"
-                                                onClick={() => handleStartEditComment(post.id, comment)}
-                                                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
-                                              >
-                                                <FileText className="h-4 w-4 text-sena-green" /> Editar comentario
-                                              </button>
-                                            )}
-                                            {canManageComment && (
-                                              <button
-                                                type="button"
-                                                onClick={() => handleDeleteComment(post.id, comment.id)}
-                                                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-rose-600 transition hover:bg-rose-100"
-                                              >
-                                                <Trash2 className="h-4 w-4" /> Eliminar comentario
-                                              </button>
-                                            )}
-                                            <button
-                                              type="button"
-                                              onClick={() => handleOpenReportForComment(post, comment)}
-                                              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
-                                            >
-                                              <Flag className="h-4 w-4 text-rose-500" /> Reportar comentario
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <p className="mt-1 leading-relaxed">{comment.content}</p>
-                                  </>
-                                )}
-                                {comment.attachmentUrl && (
-                                  <div className="mt-2 overflow-hidden rounded-xl border border-white/20 bg-white/10">
-                                    {commentAttachmentType === 'image' && (
-                                      <img
-                                        src={comment.attachmentUrl}
-                                        alt="Adjunto del comentario"
-                                        className="max-h-32 w-full object-cover"
-                                      />
-                                    )}
-                                    {commentAttachmentType === 'video' && (
-                                      <video
-                                        src={comment.attachmentUrl}
-                                        controls
-                                        className="max-h-32 w-full bg-black"
-                                        preload="metadata"
-                                      />
-                                    )}
-                                    {commentAttachmentType === 'pdf' && (
-                                      <iframe
-                                        title="Documento adjunto"
-                                        src={comment.attachmentUrl}
-                                        className="h-36 w-full bg-white"
-                                      />
-                                    )}
-                                    {commentAttachmentType === 'other' && (
-                                      <div className="flex flex-col gap-1 px-3 py-2">
-                                        <div className="flex items-center gap-2">
-                                          <FileText className="h-4 w-4 text-sena-green" />
-                                          <p className="text-xs font-semibold">{commentAttachmentName}</p>
-                                        </div>
-                                        <a
-                                          href={comment.attachmentUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-[11px] font-semibold text-sena-green underline-offset-2 hover:underline"
-                                        >
-                                          Abrir adjunto
-                                        </a>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                                <p className="mt-1 text-[10px] text-[var(--color-muted)]">
-                                  {formatTimeAgo(comment.createdAt)}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    <div className="space-y-3">
-                      {commentAttachment && (
-                        <div className="space-y-2 rounded-2xl border border-white/20 bg-white/15 px-3 py-2 text-xs text-[var(--color-text)]">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
-                                Adjunto en comentario
-                              </p>
-                              <p className="truncate text-sm font-semibold">{commentAttachment.fileName}</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleClearCommentAttachment(post.id)}
-                              className="rounded-full bg-white/40 p-1 text-[var(--color-text)] hover:bg-white/60"
-                              aria-label="Quitar adjunto del comentario"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                          {commentAttachment.kind === 'image' && (
-                            <img
-                              src={commentAttachment.dataUrl}
-                              alt={commentAttachment.fileName}
-                              className="max-h-32 w-full rounded-xl object-cover"
-                            />
-                          )}
-                          {commentAttachment.kind === 'video' && (
-                            <video
-                              src={commentAttachment.dataUrl}
-                              controls
-                              className="max-h-32 w-full rounded-xl bg-black"
-                              preload="metadata"
-                            />
-                          )}
-                          {commentAttachment.kind === 'document' &&
-                            (commentAttachment.mimeType === 'application/pdf' ||
-                            commentAttachment.fileName.toLowerCase().endsWith('.pdf') ? (
-                              <iframe
-                                title="Documento adjunto del comentario"
-                                src={commentAttachment.dataUrl}
-                                className="h-48 w-full rounded-xl bg-white"
-                              />
-                            ) : (
-                              <div className="flex items-center gap-2 rounded-xl bg-white/70 px-3 py-2 text-[var(--color-text)]">
-                                <FileText className="h-4 w-4 text-sena-green" />
-                                <div>
-                                  <p className="text-sm font-semibold">Archivo adjunto</p>
-                                  <p className="text-[11px] text-[var(--color-muted)]">
-                                    Se compartira junto con tu comentario.
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-
-                      <div className="flex items-end gap-2">
-                        <textarea
-                          rows={2}
-                          value={commentInputs[post.id] ?? ''}
-                          onChange={(event) => handleCommentInputChange(post.id, event.target.value)}
-                          placeholder="Escribe un comentario..."
-                          className="flex-1 resize-none rounded-2xl border border-white/20 bg-white/15 px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
-                          disabled={isCommenting}
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => handleSubmitComment(post.id)}
-                          disabled={isCommenting || !canSendComment}
-                          loading={isCommenting}
-                        >
-                          Enviar
-                        </Button>
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                        <div className="flex gap-2">
-                          {composerIcons.map(({ icon: Icon, label, action }) => (
-                            <button
-                              key={`${post.id}-${action}`}
-                              type="button"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sena-green transition hover:bg-white/40"
-                              aria-label={`${label} comentario`}
-                              onClick={() => handleCommentToolClick(post.id, action)}
-                              disabled={isCommenting}
-                            >
-                              <Icon className="h-4 w-4" />
-                            </button>
-                          ))}
-                        </div>
-                        <span className="text-[10px] text-[var(--color-muted)]">
-                          Puedes agregar fotos, videos o emojis.
-                        </span>
-                      </div>
-
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        ref={(element) => registerCommentFileInput(post.id, 'image', element)}
-                        onChange={(event) => handleCommentFileChange(post.id, event, 'image')}
-                      />
-                      <input
-                        type="file"
-                        accept="video/*"
-                        className="hidden"
-                        ref={(element) => registerCommentFileInput(post.id, 'video', element)}
-                        onChange={(event) => handleCommentFileChange(post.id, event, 'video')}
-                      />
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        className="hidden"
-                        ref={(element) => registerCommentFileInput(post.id, 'document', element)}
-                        onChange={(event) => handleCommentFileChange(post.id, event, 'document')}
-                      />
-                    </div>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+          {feedPosts.map((post) => renderPostCard(post, 'list'))}
         </section>
 
-
-
         <aside className="hidden flex-col gap-4 md:flex">
-          <Card className="bg-white/25 p-3 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+          <Card className="bg-white/25 p-4 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-[var(--color-text)]">Tendencias</h3>
               <Button variant="ghost" size="sm" className="px-2 py-1 text-xs">
                 Ver todo
               </Button>
             </div>
-            <div className="mt-2 space-y-2.5">
+            <div className="mt-3 space-y-2.5">
               {resources.slice(0, 5).map((resource) => (
                 <div
                   key={resource.id}
@@ -1661,26 +1838,48 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          <Card className="bg-white/25 p-3 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+          <Card className="bg-white/25 p-4 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rpida</h3>
+              <h3 className="text-sm font-semibold text-[var(--color-text)]">Anuncios</h3>
               <Sparkles className="h-3.5 w-3.5 text-sena-green" />
             </div>
-            <div className="mt-3 space-y-2 text-xs text-[var(--color-muted)] sm:text-sm">
-              <p>Explora proyectos destacados y sigue a tus instructores favoritos.</p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="px-3 py-1.5 text-xs"
-                  onClick={() => navigate('/explore')}
-                >
-                  Explorar proyectos
-                </Button>
-                <Button size="sm" variant="ghost" className="px-3 py-1.5 text-xs">
-                  Invitar amigos
-                </Button>
-              </div>
+            <div className="mt-4 h-64 overflow-hidden rounded-3xl">
+              <AnimatePresence initial={false} mode="wait">
+                {announcementSlides.map(
+                  (slide, index) =>
+                    index === activeAnnouncement && (
+                      <motion.div
+                        key={slide.id}
+                        className="h-full w-full"
+                        initial={{ opacity: 0.2, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ duration: 0.4 }}
+                      >
+                        <img
+                          src={slide.image}
+                          alt={slide.alt}
+                          className="h-full w-full rounded-3xl object-cover"
+                          loading="lazy"
+                        />
+                      </motion.div>
+                    )
+                )}
+              </AnimatePresence>
+            </div>
+            <div className="mt-4 flex justify-center gap-2">
+              {announcementSlides.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  onClick={() => setActiveAnnouncement(index)}
+                  className={classNames(
+                    'h-2 w-6 rounded-full transition',
+                    index === activeAnnouncement ? 'bg-sena-green' : 'bg-white/40'
+                  )}
+                  aria-label={`Mostrar anuncio ${index + 1}`}
+                />
+              ))}
             </div>
           </Card>
         </aside>
@@ -1925,7 +2124,10 @@ export const HomePage = () => {
                 <button
                   key={reason}
                   type="button"
-                  onClick={() => setReportReason(reason)}
+                  onClick={() => {
+                    setReportReason(reason);
+                    setReportError(null);
+                  }}
                   className={classNames(
                     'rounded-full px-3 py-1 text-xs font-semibold transition',
                     reportReason === reason ? 'bg-rose-500 text-white' : 'bg-white/20 text-[var(--color-text)]'
@@ -1943,6 +2145,7 @@ export const HomePage = () => {
               onChange={(event) => setReportDetails(event.target.value)}
               disabled={reportMutation.isPending}
             />
+            {reportError && <p className="text-xs font-semibold text-rose-500">{reportError}</p>}
 
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={handleCloseReportModal} disabled={reportMutation.isPending}>
@@ -1952,6 +2155,28 @@ export const HomePage = () => {
                 Enviar reporte
               </Button>
             </div>
+          </div>
+        </GlassDialog>
+      )}
+
+      {activeModalPost && (
+        <GlassDialog
+          open={Boolean(activeModalPost)}
+          onClose={handleCloseCommentsModal}
+          size="xl"
+          contentClassName="overflow-visible border-none bg-transparent p-0 shadow-none"
+        >
+          <div className="max-h-[85vh] w-full overflow-y-auto rounded-[36px] border border-white/30 bg-white/95 p-6 shadow-[0_30px_80px_rgba(18,55,29,0.25)]">
+            <div className="flex items-center justify-between pb-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-sena-green">Comentarios</p>
+                <h3 className="text-xl font-semibold text-[var(--color-text)]">{activeModalPost.author.fullName}</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleCloseCommentsModal}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            {renderPostCard(activeModalPost, 'modal')}
           </div>
         </GlassDialog>
       )}
@@ -2078,6 +2303,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
     </motion.div>
   );
 };
+
 
 
 

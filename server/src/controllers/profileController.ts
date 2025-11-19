@@ -67,5 +67,18 @@ export const profileController = {
     const { limit = 6 } = profileFeedSchema.parse(req.query);
     const posts = await feedService.listProfilePosts(userId, userId, limit);
     res.json({ success: true, posts });
+  },
+
+  publicProfile: async (req: Request, res: Response) => {
+    const requesterId = req.user?.userId;
+    if (!requesterId) {
+      throw new AppError('Autenticacion requerida', 401);
+    }
+    const { userId } = req.params;
+    if (!userId) {
+      throw new AppError('Usuario no valido', 400);
+    }
+    const profile = await profileService.getProfile(userId);
+    res.json({ success: true, profile });
   }
 };

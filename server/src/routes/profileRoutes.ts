@@ -11,5 +11,6 @@ router.get('/me/posts', requireAuth, profileController.recentPosts);
 router.put('/me', requireAuth, profileController.updateProfile);
 router.put('/me/avatar', requireAuth, avatarUpload.single('avatar'), profileController.updateAvatar);
 router.put('/me/cover', requireAuth, coverUpload.single('cover'), profileController.updateCover);
+router.get('/:userId', requireAuth, profileController.publicProfile);
 
 export default router;
