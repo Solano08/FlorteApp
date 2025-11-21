@@ -1,0 +1,15 @@
+.DS_Store
+node_modules
+.env
+dist
+build
+coverage
+*.log
+*.tsbuildinfo
+client/node_modules
+server/node_modules
+client/dist
+server/dist
+client/.vite
+client/.DS_Store
+server/.DS_Store
