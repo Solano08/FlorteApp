@@ -15,7 +15,7 @@ export interface LoginPayload {
   password: string;
 }
 
-const handleAuthResponse = (response: AuthResponse) => {
+const handleAuthResponse = (response: AuthResponse): AuthUser => {
   if (response.tokens?.accessToken && response.tokens?.refreshToken) {
     storage.setSession(response.tokens.accessToken, response.tokens.refreshToken);
   }
@@ -24,7 +24,7 @@ const handleAuthResponse = (response: AuthResponse) => {
     storage.setUser(normalizedUser);
     return normalizedUser;
   }
-  return null;
+  throw new Error('Respuesta de autenticacion invalida');
 };
 
 export const authService = {

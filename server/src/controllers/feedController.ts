@@ -30,10 +30,11 @@ export const feedController = {
       throw new AppError('Autenticacion requerida', 401);
     }
     const data = createPostSchema.parse(req.body);
+    const content = data.content?.trim() && data.content.trim().length > 0 ? data.content.trim() : 'Adjunto multimedia';
     const post = await feedService.createPost(
       {
         authorId: userId,
-        content: data.content,
+        content,
         mediaUrl: data.mediaUrl ?? null,
         tags: data.tags ?? [],
         attachments: data.attachments ?? []
@@ -89,9 +90,12 @@ export const feedController = {
       throw new AppError('Autenticacion requerida', 401);
     }
     const { postId } = req.params;
-    const { content, attachmentUrl } = createCommentSchema.parse(req.body);
+    const parsed = createCommentSchema.parse(req.body);
+    const content = parsed.content?.trim() ?? '';
+    const attachmentUrl = parsed.attachmentUrl ?? null;
+    const safeContent = content.length > 0 ? content : 'Adjunto multimedia';
     const result = await feedService.addComment(
-      { postId, userId, content, attachmentUrl },
+      { postId, userId, content: safeContent, attachmentUrl },
       userId
     );
     res.status(201).json({ success: true, ...result });

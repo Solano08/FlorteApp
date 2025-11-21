@@ -13,17 +13,18 @@ import { projectService } from '../../services/projectService';
 import { libraryService } from '../../services/libraryService';
 import { feedService } from '../../services/feedService';
 import {
+  ArrowUpRight,
   Bookmark,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   Flag,
+  FolderKanban,
   Heart,
   Image,
   Laugh,
   MessageCircle,
   MoreHorizontal,
-  ArrowUpRight,
-  Users,
-  FolderKanban,
   Paperclip,
   Plus,
   Share2,
@@ -31,14 +32,14 @@ import {
   Sparkles,
   ThumbsUp,
   Trash2,
+  Users,
   Video,
   X
 } from 'lucide-react';
-import { Input } from '../../components/ui/Input';
 import { Chat } from '../../types/chat';
 import { useAuth } from '../../hooks/useAuth';
 import { FeedAttachment, FeedComment, FeedPostAggregate, ReactionType } from '../../types/feed';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { floatingModalContentClass } from '../../utils/modalStyles';
 
 interface ChatWindowProps {
@@ -46,16 +47,6 @@ interface ChatWindowProps {
   index: number;
   onClose: (chatId: string) => void;
 }
-
-const stories = [
-  { id: 'create', name: 'Tu historia', avatar: '', isLive: false },
-  { id: '1', name: 'Laboratorio UX', avatar: 'https://i.pravatar.cc/100?img=12', isLive: true },
-  { id: '2', name: 'Dev Backend', avatar: 'https://i.pravatar.cc/100?img=25', isLive: false },
-  { id: '3', name: 'Talento Verde', avatar: 'https://i.pravatar.cc/100?img=33', isLive: true },
-  { id: '4', name: 'MakerLab', avatar: 'https://i.pravatar.cc/100?img=45', isLive: false },
-  { id: '5', name: 'Frontend Squad', avatar: 'https://i.pravatar.cc/100?img=18', isLive: false },
-  { id: '6', name: 'AI Hub', avatar: 'https://i.pravatar.cc/100?img=52', isLive: true }
-];
 
 const composerIcons = [
   { icon: Image, label: 'Imagen', action: 'image' as const },
@@ -212,13 +203,17 @@ export const HomePage = () => {
   const queryClient = useQueryClient();
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [openChatIds, setOpenChatIds] = useState<string[]>([]);
-  const [showStoryModal, setShowStoryModal] = useState(false);
+  const [storyMediaUrls, setStoryMediaUrls] = useState<string[]>([]);
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+  const [isStoryViewerOpen, setIsStoryViewerOpen] = useState(false);
+  const [isStoryMenuOpen, setIsStoryMenuOpen] = useState(false);
   const [composerContent, setComposerContent] = useState('');
   const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([]);
   const [composerSuccessMessage, setComposerSuccessMessage] = useState<string | null>(null);
   const [commentsCache, setCommentsCache] = useState<Record<string, FeedComment[]>>({});
   const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [shareTarget, setShareTarget] = useState<FeedPostAggregate | null>(null);
   const [shareMessage, setShareMessage] = useState('');
   const [shareScope, setShareScope] = useState<ShareScope>('feed');
@@ -240,11 +235,15 @@ export const HomePage = () => {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const storyFileInputRef = useRef<HTMLInputElement | null>(null);
+  const storyUrlsRef = useRef<string[]>([]);
   const postMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const commentMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const commentFileInputsRef = useRef<Record<string, Partial<Record<AttachmentKind, HTMLInputElement | null>>>>({});
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
+  const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const userDisplayName = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'FlorteApp';
   const composerAvatarUrl =
     user?.avatarUrl ??
@@ -264,6 +263,51 @@ export const HomePage = () => {
 
   const handleRemoveAttachment = (id: string) => {
     setComposerAttachments((prev) => prev.filter((attachment) => attachment.id !== id));
+  };
+
+  const handleOpenStoryPicker = () => {
+    storyFileInputRef.current?.click();
+  };
+
+  const handleStoryFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const nextUrl = URL.createObjectURL(file);
+    setStoryMediaUrls((previous) => {
+      const next = [...previous, nextUrl];
+      setCurrentStoryIndex(next.length - 1);
+      return next;
+    });
+    event.target.value = '';
+    setIsStoryViewerOpen(true);
+    setIsStoryMenuOpen(false);
+  };
+
+  const handleStoryClick = () => {
+    if (!storyMediaUrls.length) {
+      handleOpenStoryPicker();
+      return;
+    }
+    setIsStoryViewerOpen(true);
+    setIsStoryMenuOpen(false);
+  };
+
+  const handleDeleteStory = () => {
+    setIsStoryViewerOpen(false);
+    setIsStoryMenuOpen(false);
+    setStoryMediaUrls((previous) => {
+      const toRemove = previous[currentStoryIndex];
+      if (toRemove?.startsWith('blob:')) {
+        URL.revokeObjectURL(toRemove);
+      }
+      const next = previous.filter((_, index) => index !== currentStoryIndex);
+      const nextIndex = Math.max(0, Math.min(currentStoryIndex, next.length - 1));
+      setCurrentStoryIndex(nextIndex);
+      if (!next.length) {
+        setIsStoryViewerOpen(false);
+      }
+      return next;
+    });
   };
 
   const triggerCommentFileInput = (postId: string, kind: AttachmentKind) => {
@@ -334,8 +378,22 @@ export const HomePage = () => {
   };
 
   useEffect(() => {
+    storyUrlsRef.current = storyMediaUrls;
+  }, [storyMediaUrls]);
+
+  useEffect(() => {
+    return () => {
+      storyUrlsRef.current.forEach((url) => {
+        if (url?.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
     if (!composerSuccessMessage) return;
-    const timeout = window.setTimeout(() => setComposerSuccessMessage(null), 3000);
+    const timeout = window.setTimeout(() => setComposerSuccessMessage(null), 2000);
     return () => window.clearTimeout(timeout);
   }, [composerSuccessMessage]);
 
@@ -365,6 +423,15 @@ export const HomePage = () => {
       setEmojiPickerTarget(null);
     }
   }, [emojiPickerTarget, commentModalPost]);
+
+  useEffect(() => {
+    const state = location.state as { openComposer?: boolean } | null;
+    if (state?.openComposer) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.setTimeout(() => composerInputRef.current?.focus(), 120);
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate]);
 
   const registerPostMenuRef = (postId: string, element: HTMLDivElement | null) => {
     postMenuRefs.current[postId] = element;
@@ -465,6 +532,7 @@ export const HomePage = () => {
         existing ? [post, ...existing] : [post]
       );
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
+      void queryClient.invalidateQueries({ queryKey: ['profile', 'recent-posts'] });
       setComposerContent('');
       handleClearAttachments();
       setComposerSuccessMessage('Tu publicacion se ha subido correctamente.');
@@ -669,9 +737,11 @@ export const HomePage = () => {
 
   const handleComposerSubmit = () => {
     const trimmedContent = composerContent.trim();
-    if (!trimmedContent || createPostMutation.isPending) return;
+    if (createPostMutation.isPending) return;
+    const hasAttachments = composerAttachments.length > 0;
+    if (!trimmedContent && !hasAttachments) return;
     createPostMutation.mutate({
-      content: trimmedContent,
+      content: trimmedContent || 'Adjunto multimedia',
       mediaUrl: composerAttachments[0]?.dataUrl ?? undefined,
       attachments: composerAttachments.length
         ? composerAttachments.map(({ dataUrl, mimeType }) => ({ url: dataUrl, mimeType }))
@@ -686,13 +756,14 @@ export const HomePage = () => {
     Array.from(files).forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        if (typeof reader.result !== 'string') return;
+        const dataUrl = reader.result;
+        if (typeof dataUrl !== 'string') return;
         setComposerAttachments((prev) => [
           ...prev,
           {
             id: createAttachmentId(),
             kind,
-            dataUrl: reader.result,
+            dataUrl,
             fileName: file.name,
             mimeType: file.type
           }
@@ -709,12 +780,14 @@ export const HomePage = () => {
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => {
-      if (typeof reader.result !== 'string') return;
+      const dataUrl = reader.result;
+      if (typeof dataUrl !== 'string') return;
       setCommentAttachments((prev) => ({
         ...prev,
         [postId]: {
+          id: createAttachmentId(),
           kind,
-          dataUrl: reader.result,
+          dataUrl,
           fileName: file.name,
           mimeType: file.type
         }
@@ -970,12 +1043,16 @@ export const HomePage = () => {
     const commentInputValue = commentInputs[post.id] ?? '';
     const canSendComment = Boolean(commentInputValue.trim()) || Boolean(commentAttachment);
     const isModal = context === 'modal';
+    const hasReactions = post.reactionCount > 0;
+    const hasComments = post.commentCount > 0;
+    const hasShares = post.shareCount > 0;
+    const showStatsRow = hasReactions || hasComments || hasShares;
 
     return (
       <Card
         key={`${context}-${post.id}`}
         className={classNames(
-          'space-y-4 bg-white/30 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.16)] dark:bg-white/10',
+          'relative overflow-visible space-y-4 bg-white/30 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.16)] dark:bg-white/10',
           isModal && 'bg-white/95 shadow-[0_30px_60px_rgba(18,55,29,0.25)] dark:bg-slate-900/90'
         )}
       >
@@ -1085,39 +1162,49 @@ export const HomePage = () => {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--color-muted)] sm:text-sm">
-          <div className="flex items-center gap-2 text-[var(--color-text)]">
-            <Heart
-              className={classNames('h-4 w-4', viewerHasReaction ? 'text-sena-green' : 'text-rose-500')}
-            />
-            <span>
-              {post.reactionCount} {reactionLabel}
-            </span>
+        {showStatsRow && (
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-muted)] sm:text-sm">
+            {hasReactions && (
+              <div className="flex items-center gap-2 text-[var(--color-text)]">
+                <Heart
+                  className={classNames('h-4 w-4', viewerHasReaction ? 'text-sena-green' : 'text-rose-500')}
+                />
+                <span>
+                  {post.reactionCount} {reactionLabel}
+                </span>
+              </div>
+            )}
+            {(hasComments || hasShares) && (
+              <div className="ml-auto flex items-center gap-4 text-[var(--color-text)]">
+                {hasComments && (
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenCommentsModal(post)}
+                    className={classNames(
+                      'text-left underline-offset-2 transition hover:text-sena-green',
+                      isModal && 'cursor-default text-sena-green'
+                    )}
+                    disabled={isModal}
+                  >
+                    {post.commentCount} {commentLabel}
+                  </button>
+                )}
+                {hasShares && (
+                  <span>
+                    {post.shareCount} {shareLabel}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void handleOpenCommentsModal(post)}
-              className={classNames(
-                'text-left text-[var(--color-text)] underline-offset-2 transition hover:text-sena-green',
-                isModal && 'cursor-default text-sena-green'
-              )}
-              disabled={isModal}
-            >
-              {post.commentCount} {commentLabel}
-            </button>
-            <span>
-              {post.shareCount} {shareLabel}
-            </span>
-          </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between sm:gap-3">
           <div className="relative sm:flex-1" onMouseLeave={handleReactionPickerLeave}>
             <Button
               variant="ghost"
               className={classNames(
-                'w-full justify-center gap-2 text-xs sm:text-sm',
+                'w-full justify-center gap-2 text-xs sm:text-sm min-h-[38px] min-w-[110px]',
                 viewerHasReaction && 'text-sena-green'
               )}
               onMouseEnter={() => handleReactionHover(post.id)}
@@ -1178,7 +1265,7 @@ export const HomePage = () => {
           <Button
             variant="ghost"
             className={classNames(
-              'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
+              'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm min-h-[38px] min-w-[110px]',
               post.isSaved && 'text-sena-green'
             )}
             onClick={() => saveMutation.mutate(post.id)}
@@ -1227,7 +1314,7 @@ export const HomePage = () => {
                             />
                             <div className="flex justify-end gap-2">
                               <Button
-                                size="xs"
+                                size="sm"
                                 onClick={() => handleConfirmEditComment(post.id)}
                                 loading={updateCommentMutation.isPending}
                                 disabled={updateCommentMutation.isPending}
@@ -1235,7 +1322,7 @@ export const HomePage = () => {
                                 Guardar
                               </Button>
                               <Button
-                                size="xs"
+                                size="sm"
                                 variant="ghost"
                                 onClick={handleCancelEditComment}
                                 disabled={updateCommentMutation.isPending}
@@ -1446,7 +1533,7 @@ export const HomePage = () => {
                     return (
                       <div
                         key={`${post.id}-${action}`}
-                        className={classNames('relative', isEmojiAction && 'z-30')}
+                        className={classNames('relative overflow-visible', isEmojiAction && 'z-30')}
                       >
                         <button
                           type="button"
@@ -1458,12 +1545,8 @@ export const HomePage = () => {
                           <Icon className="h-4 w-4" />
                         </button>
                         {isEmojiAction && isEmojiOpen && (
-                          <div className="absolute right-0 top-10 z-50" ref={emojiPickerRef}>
-                            <EmojiPicker
-                              onEmojiSelect={handleEmojiSelect}
-                              onClose={closeEmojiPicker}
-                              className="w-[320px]"
-                            />
+                          <div className="absolute right-0 top-full z-50 mt-2" ref={emojiPickerRef}>
+                            <EmojiPicker onEmojiSelect={handleEmojiSelect} onClose={closeEmojiPicker} />
                           </div>
                         )}
                       </div>
@@ -1504,15 +1587,23 @@ export const HomePage = () => {
   };
 
   const storiesWithAvatars = useMemo(() => {
-    return stories.map((story) =>
-      story.id === 'create'
-        ? {
-            ...story,
-            avatar: user?.avatarUrl ?? 'https://i.pravatar.cc/100?img=5'
-          }
-        : story
-    );
-  }, [user]);
+    if (storyMediaUrls.length) {
+      return [
+        {
+          id: 'uploaded',
+          name: userDisplayName || 'Tu historia',
+          avatar: storyMediaUrls[0]
+        }
+      ];
+    }
+    return [
+      {
+        id: 'create',
+        name: 'Tu historia',
+        avatar: user?.avatarUrl ?? 'https://i.pravatar.cc/100?img=5'
+      }
+    ];
+  }, [storyMediaUrls, user?.avatarUrl, userDisplayName]);
 
   const activeModalPost = commentModalPost
     ? feedPosts.find((post) => post.id === commentModalPost.id) ?? commentModalPost
@@ -1546,7 +1637,7 @@ export const HomePage = () => {
               <motion.div
                 initial={{ width: '100%' }}
                 animate={{ width: 0 }}
-                transition={{ duration: 3, ease: 'linear' }}
+                transition={{ duration: 2, ease: 'linear' }}
                 className="h-full bg-sena-green"
               />
             </div>
@@ -1629,48 +1720,50 @@ export const HomePage = () => {
                 variant="ghost"
                 size="sm"
                 className="px-2 py-1 text-xs text-[var(--color-muted)] hover:text-sena-green"
-                onClick={() => setShowStoryModal(true)}
+                onClick={handleOpenStoryPicker}
               >
-                Crear
+                Subir
               </Button>
             </div>
+            <input
+              ref={storyFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleStoryFileChange}
+            />
             <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
               {storiesWithAvatars.map((story) => (
                 <button
                   key={story.id}
                   type="button"
-                  onClick={() => story.id === 'create' && setShowStoryModal(true)}
+                  onClick={handleStoryClick}
                   className="flex w-20 flex-col items-center gap-2.5 text-xs"
                 >
                   <div
                     className={`relative h-16 w-16 rounded-full p-[3px] ${
-                      story.id === 'create'
+                      storyMediaUrls.length
                         ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500'
-                        : 'bg-sena-green/20'
+                        : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500'
                     }`}
                   >
                     <div className="flex h-full w-full items-center justify-center rounded-full border border-[var(--color-surface)] bg-[var(--color-surface)]">
-                      {story.id === 'create' ? (
-                        <Plus className="h-5 w-5 text-sena-green" />
-                      ) : (
+                      {storyMediaUrls.length ? (
                         <img src={story.avatar} alt={story.name} className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        <Plus className="h-5 w-5 text-sena-green" />
                       )}
                     </div>
-                    {story.isLive && (
-                      <span className="absolute -bottom-1 right-1 rounded-full bg-red-500 px-1.5 py-[1px] text-[9px] font-semibold text-white">
-                        Live
-                      </span>
-                    )}
                   </div>
                   <span className="text-[11px] font-medium text-[var(--color-text)] text-center leading-tight">
-                    {story.id === 'create' ? 'Crear historia' : story.name}
+                    {storyMediaUrls.length ? 'Tus historias' : 'Crear historia'}
                   </span>
                 </button>
               ))}
             </div>
           </Card>
 
-          <Card className="bg-white/30 backdrop-blur-xl shadow-[0_10px_24px_rgba(18,55,29,0.14)] dark:bg-white/10">
+          <Card className="relative z-30 overflow-visible bg-white/30 backdrop-blur-xl shadow-[0_10px_24px_rgba(18,55,29,0.14)] dark:bg-white/10">
             <div className="flex items-start gap-3">
               <img
                 src={composerAvatarUrl}
@@ -1684,6 +1777,7 @@ export const HomePage = () => {
                   value={composerContent}
                   onChange={(event) => setComposerContent(event.target.value)}
                   disabled={isPublishing}
+                  ref={composerInputRef}
                 />
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1692,7 +1786,7 @@ export const HomePage = () => {
                       const isEmojiAction = action === 'emoji';
                       const isEmojiOpen = emojiPickerTarget?.type === 'composer' && isEmojiAction;
                       return (
-                        <div key={action} className={classNames('relative', isEmojiAction && 'z-30')}>
+                        <div key={action} className={classNames('relative overflow-visible', isEmojiAction && 'z-30')}>
                           <button
                             type="button"
                             className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/35 text-sena-green transition hover:shadow-[0_0_18px_rgba(57,169,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
@@ -1703,8 +1797,8 @@ export const HomePage = () => {
                             <Icon className="h-4 w-4" />
                           </button>
                           {isEmojiAction && isEmojiOpen && (
-                            <div className="absolute right-0 top-11 z-50" ref={emojiPickerRef}>
-                              <EmojiPicker onEmojiSelect={handleEmojiSelect} onClose={closeEmojiPicker} className="w-[320px]" />
+                            <div className="absolute right-0 top-full z-[80] mt-3" ref={emojiPickerRef}>
+                              <EmojiPicker onEmojiSelect={handleEmojiSelect} onClose={closeEmojiPicker} />
                             </div>
                           )}
                         </div>
@@ -1959,28 +2053,94 @@ export const HomePage = () => {
         })}
       </AnimatePresence>
 
-      {showStoryModal && (
-        <GlassDialog open={showStoryModal} onClose={() => setShowStoryModal(false)} size="md" contentClassName="p-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-[var(--color-text)]">Crear historia</h3>
-              <p className="text-sm text-[var(--color-muted)]">Comparte un momento con tu comunidad.</p>
+      {isStoryViewerOpen && storyMediaUrls.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+          onClick={() => {
+            setIsStoryViewerOpen(false);
+            setIsStoryMenuOpen(false);
+          }}
+        >
+          <div className="relative flex items-center gap-4" onClick={(event) => event.stopPropagation()}>
+            {storyMediaUrls.length > 1 && (
+              <button
+                type="button"
+                className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
+                onClick={() =>
+                  setCurrentStoryIndex((index) => (index - 1 + storyMediaUrls.length) % storyMediaUrls.length)
+                }
+                aria-label="Anterior"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+            )}
+            <div className="relative">
+              <img
+                src={storyMediaUrls[currentStoryIndex]}
+                alt="Historia subida"
+                className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+              />
+              <button
+                type="button"
+                className="absolute left-4 bottom-4 inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/80"
+                onClick={handleOpenStoryPicker}
+              >
+                <Image className="h-4 w-4" /> Agregar
+              </button>
+              <button
+                type="button"
+                className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur transition hover:bg-black/70"
+                onClick={() => setIsStoryMenuOpen((prev) => !prev)}
+              >
+                <MoreHorizontal className="h-5 w-5" />
+              </button>
+              {isStoryMenuOpen && (
+                <div className="absolute right-3 top-14 z-10 w-44 rounded-2xl border border-white/20 bg-black/80 px-3 py-2 text-sm text-white shadow-xl backdrop-blur">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-white/10"
+                    onClick={handleDeleteStory}
+                  >
+                    <Trash2 className="h-4 w-4 text-rose-400" /> Eliminar historia
+                  </button>
+                </div>
+              )}
+              {storyMediaUrls.length > 1 && (
+                <div className="absolute left-1/2 top-4 flex -translate-x-1/2 gap-2">
+                  {storyMediaUrls.map((_, index) => (
+                    <span
+                      key={`story-dot-${index}`}
+                      className={classNames(
+                        'h-1.5 w-8 rounded-full transition',
+                        index === currentStoryIndex ? 'bg-white' : 'bg-white/40'
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-            <Button variant="ghost" onClick={() => setShowStoryModal(false)}>
-              <X className="h-5 w-5" />
-            </Button>
+            {storyMediaUrls.length > 1 && (
+              <button
+                type="button"
+                className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
+                onClick={() => setCurrentStoryIndex((index) => (index + 1) % storyMediaUrls.length)}
+                aria-label="Siguiente"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            )}
+            <button
+              type="button"
+              className="absolute -top-12 right-0 text-sm text-white/70 underline-offset-4 hover:text-white"
+              onClick={() => {
+                setIsStoryViewerOpen(false);
+                setIsStoryMenuOpen(false);
+              }}
+            >
+              Cerrar
+            </button>
           </div>
-          <div className="space-y-4">
-            <Input type="file" accept="image/*,video/*" />
-            <TextArea rows={4} placeholder="Escribe una descripcion..." />
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setShowStoryModal(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={() => setShowStoryModal(false)}>Publicar historia</Button>
-            </div>
-          </div>
-        </GlassDialog>
+        </div>
       )}
 
       {shareTarget && (
@@ -2164,17 +2324,22 @@ export const HomePage = () => {
           open={Boolean(activeModalPost)}
           onClose={handleCloseCommentsModal}
           size="xl"
-          contentClassName="overflow-visible border-none bg-transparent p-0 shadow-none"
+          frameless
+          contentClassName="relative mx-auto max-w-5xl overflow-visible border-none bg-transparent p-0 shadow-none"
         >
-          <div className="max-h-[85vh] w-full overflow-y-auto rounded-[36px] border border-white/30 bg-white/95 p-6 shadow-[0_30px_80px_rgba(18,55,29,0.25)]">
-            <div className="flex items-center justify-between pb-4">
-              <div>
-                <p className="text-sm uppercase tracking-[0.35em] text-sena-green">Comentarios</p>
-                <h3 className="text-xl font-semibold text-[var(--color-text)]">{activeModalPost.author.fullName}</h3>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleCloseCommentsModal}>
+          <div className="relative mx-auto w-full max-w-3xl overflow-visible rounded-[36px] border border-white/30 bg-white/95 p-6 shadow-[0_30px_80px_rgba(18,55,29,0.25)]">
+            <div className="relative flex flex-col items-center gap-1 pb-4 text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCloseCommentsModal}
+                className="absolute right-0 top-0"
+                aria-label="Cerrar comentarios"
+              >
                 <X className="h-4 w-4" />
               </Button>
+              <p className="text-sm uppercase tracking-[0.35em] text-sena-green">Comentarios</p>
+              <h3 className="text-xl font-semibold text-[var(--color-text)]">{activeModalPost.author.fullName}</h3>
             </div>
             {renderPostCard(activeModalPost, 'modal')}
           </div>

@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { feedRepository } from '../repositories/feedRepository';
 import { AppError } from '../utils/appError';
 import { UserRole } from '../types/user';
@@ -58,9 +60,60 @@ const validateReportTarget = async (input: ReportPostInput): Promise<void> => {
   }
 };
 
+const feedUploadsDir = path.resolve(__dirname, '..', '..', 'uploads', 'feed');
+
+const ensureFeedUploadsDir = () => {
+  if (!fs.existsSync(feedUploadsDir)) {
+    fs.mkdirSync(feedUploadsDir, { recursive: true });
+  }
+};
+
+const persistDataUrl = (dataUrl: string): string => {
+  ensureFeedUploadsDir();
+  const match = dataUrl.match(/^data:(.*?);base64,(.+)$/);
+  if (!match) {
+    throw new AppError('Formato de archivo invalido', 400);
+  }
+  const mimeType = match[1] || 'application/octet-stream';
+  const base64Data = match[2];
+  const buffer = Buffer.from(base64Data, 'base64');
+  const extension = mimeType.split('/')[1] || 'bin';
+  const filename = `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
+  const filePath = path.join(feedUploadsDir, filename);
+  fs.writeFileSync(filePath, buffer);
+  return `/uploads/feed/${filename}`;
+};
+
+const processMediaUrl = (value?: string | null): string | null => {
+  if (!value) return null;
+  if (value.startsWith('data:')) {
+    return persistDataUrl(value);
+  }
+  return value;
+};
+
+const processAttachments = (
+  attachments?: Array<{ url: string; mimeType?: string | null }>
+): Array<{ url: string; mimeType?: string | null }> => {
+  if (!attachments?.length) return [];
+  return attachments.map((attachment) => {
+    const processedUrl = processMediaUrl(attachment.url);
+    return {
+      url: processedUrl ?? attachment.url,
+      mimeType: attachment.mimeType ?? null
+    };
+  });
+};
+
 export const feedService = {
   async createPost(input: CreatePostInput, viewerId: string): Promise<FeedPostAggregate> {
-    const post = await feedRepository.createPost(input);
+    const processedMediaUrl = processMediaUrl(input.mediaUrl);
+    const processedAttachments = processAttachments(input.attachments);
+    const post = await feedRepository.createPost({
+      ...input,
+      mediaUrl: processedMediaUrl,
+      attachments: processedAttachments
+    });
     const aggregate = await feedRepository.findPostWithMeta(post.id, viewerId);
     if (!aggregate) {
       throw new Error('No fue posible cargar la publicacion recien creada');
@@ -104,7 +157,8 @@ export const feedService = {
     viewerReaction: ReactionType | null;
     isSaved: boolean;
   }> {
-    const comment = await feedRepository.addComment(input);
+    const processedAttachmentUrl = processMediaUrl(input.attachmentUrl);
+    const comment = await feedRepository.addComment({ ...input, attachmentUrl: processedAttachmentUrl });
     const metrics = await feedRepository.getPostMetrics(input.postId, viewerId);
     return {
       comment,

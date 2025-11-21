@@ -27,7 +27,7 @@ export const EmojiPicker = forwardRef<HTMLDivElement, EmojiPickerProps>(
     return (
       <div
         ref={ref}
-        className={`rounded-2xl border border-white/30 bg-white/95 p-2 shadow-[0_24px_35px_rgba(18,55,29,0.18)] dark:border-white/10 dark:bg-slate-900/95 ${className ?? ''}`}
+        className={`w-[min(360px,92vw)] max-h-[420px] overflow-hidden rounded-2xl border border-white/60 bg-white p-2 shadow-[0_24px_35px_rgba(18,55,29,0.18)] backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95 ${className ?? ''}`}
       >
         <Picker
           data={data}

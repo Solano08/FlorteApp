@@ -10,6 +10,7 @@ import {
   FeedPost,
   FeedPostAggregate,
   FeedReport,
+  ProfilePostSource,
   ProfileFeedPost,
   ReactionType,
   ReportPostInput,
@@ -437,21 +438,24 @@ export const feedRepository = {
 
     if (rows.length === 0) return [];
 
-    const posts = rows.map((row) => ({
-      base: mapPost(row),
-      aggregate: {
-        reactionCount: Number(row.reaction_count ?? 0),
-        commentCount: Number(row.comment_count ?? 0),
-        shareCount: Number(row.share_count ?? 0),
-        viewerReaction: (row.viewer_reaction as ReactionType | null) ?? null,
-        isSaved: Boolean(row.is_saved ?? 0),
-        author: mapAuthor(row)
-      },
-      source: row.share_id ? 'shared' : 'own',
-      sharedAt: row.shared_at ?? null,
-      shareMessage: row.message ?? null,
-      shareId: row.share_id ?? null
-    }));
+    const posts = rows.map((row) => {
+      const source: ProfilePostSource = row.share_id ? 'shared' : 'own';
+      return {
+        base: mapPost(row),
+        aggregate: {
+          reactionCount: Number(row.reaction_count ?? 0),
+          commentCount: Number(row.comment_count ?? 0),
+          shareCount: Number(row.share_count ?? 0),
+          viewerReaction: (row.viewer_reaction as ReactionType | null) ?? null,
+          isSaved: Boolean(row.is_saved ?? 0),
+          author: mapAuthor(row)
+        },
+        source,
+        sharedAt: row.shared_at ?? null,
+        shareMessage: row.message ?? null,
+        shareId: row.share_id ?? null
+      };
+    });
 
     const postIds = posts.map(({ base }) => base.id);
     const latestComments = await this.getLatestComments(postIds, 3);
