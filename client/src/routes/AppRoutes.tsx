@@ -4,7 +4,6 @@ import { RegisterPage } from '../pages/auth/RegisterPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
 import { HomePage } from '../pages/dashboard/HomePage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
-import { PublicProfilePage } from '../pages/profile/PublicProfilePage';
 import { ChatsPage } from '../pages/chats/ChatsPage';
 import { LibraryPage } from '../pages/library/LibraryPage';
 import { GroupsPage } from '../pages/groups/GroupsPage';
@@ -88,14 +87,6 @@ export const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <ProfilePage />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/profile/:userId"
-      element={
-        <ProtectedRoute>
-          <PublicProfilePage />
         </ProtectedRoute>
       }
     />

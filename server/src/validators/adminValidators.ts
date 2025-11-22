@@ -8,10 +8,6 @@ export const updateStatusSchema = z.object({
   isActive: z.boolean()
 });
 
-export const updateReportStatusSchema = z.object({
-  status: z.enum(['pending', 'reviewed'])
-});
-
 const optionalUrl = z.string().url('Ingresa un enlace valido').max(255).optional().nullable();
 const optionalEmail = z.string().email('Ingresa un correo valido').max(160).optional().nullable();
 
