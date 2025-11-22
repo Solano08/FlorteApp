@@ -150,17 +150,17 @@ export const DashboardLayout = ({
                 />
               </button>
               {isProfileMenuOpen && (
-                <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] rounded-2xl border border-white/25 bg-white/30 p-2.5 text-sm text-[var(--color-text)] shadow-[0_26px_52px_rgba(18,55,29,0.28)] backdrop-blur-2xl dark:border-white/15 dark:bg-slate-900/85">
+                <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] rounded-2xl border border-slate-200 bg-white p-2.5 text-sm text-[var(--color-text)] shadow-[0_26px_52px_rgba(18,55,29,0.28)] dark:border-slate-700 dark:bg-slate-900">
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-white/30 hover:text-sena-green dark:hover:bg-white/10"
+                    className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-slate-800"
                     onClick={handleNavigateProfile}
                   >
                     Perfil
                   </button>
                   <button
                     type="button"
-                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-red-400 transition hover:bg-red-50/60 hover:text-red-500 dark:hover:bg-white/10"
+                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-red-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-slate-800"
                     onClick={handleLogout}
                   >
                     <span>Cerrar sesion</span>

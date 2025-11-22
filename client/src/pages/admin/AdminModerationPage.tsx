@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import classNames from 'classnames';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { adminService } from '../../services/adminService';
+import { feedService } from '../../services/feedService';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { TextArea } from '../../components/ui/TextArea';
@@ -12,7 +14,9 @@ import { Button } from '../../components/ui/Button';
 import { GlassDialog } from '../../components/ui/GlassDialog';
 import { UserRole } from '../../types/auth';
 import { Profile } from '../../types/profile';
-import { Shield, ShieldCheck, ShieldHalf } from 'lucide-react';
+import { FeedPostAggregate, FeedReport, ReportStatus } from '../../types/feed';
+import { Shield, ShieldCheck, ShieldHalf, X } from 'lucide-react';
+import { floatingModalContentClass } from '../../utils/modalStyles';
 
 const roleFilterOptions: Array<{ value: UserRole | 'all'; label: string }> = [
   { value: 'all', label: 'Todos los roles' },
@@ -79,10 +83,44 @@ export const AdminModerationPage = () => {
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [activeReport, setActiveReport] = useState<FeedReport | null>(null);
+  const [activeReportPost, setActiveReportPost] = useState<FeedPostAggregate | null>(null);
+  const [isReportPostLoading, setReportPostLoading] = useState(false);
+  const [reportPostError, setReportPostError] = useState<string | null>(null);
+  const handleCloseReportPost = () => {
+    setActiveReport(null);
+    setActiveReportPost(null);
+    setReportPostError(null);
+    setReportPostLoading(false);
+  };
+  const handleOpenReportPost = async (report: FeedReport) => {
+    setActiveReport(report);
+    setReportPostError(null);
+    setReportPostLoading(true);
+    setActiveReportPost(null);
+    try {
+      const post = await feedService.getPost(report.postId);
+      if (post) {
+        setActiveReportPost(post);
+      } else {
+        setReportPostError('No se encontró la publicación reportada.');
+      }
+    } catch (error) {
+      console.error('No fue posible cargar la publicación', error);
+      setReportPostError('No fue posible cargar la publicación.');
+    } finally {
+      setReportPostLoading(false);
+    }
+  };
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: adminService.listUsers
+  });
+
+  const { data: reports = [], isLoading: isLoadingReports } = useQuery({
+    queryKey: ['admin', 'reports'],
+    queryFn: adminService.listReports
   });
 
   const updateRoleMutation = useMutation({
@@ -97,6 +135,26 @@ export const AdminModerationPage = () => {
       adminService.updateStatus(userId, isActive),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }).catch(() => {});
+    }
+  });
+
+  const updateReportStatusMutation = useMutation({
+    mutationFn: ({ reportId, status }: { reportId: string; status: ReportStatus }) =>
+      adminService.updateReportStatus(reportId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => {});
+    }
+  });
+
+  const deletePostMutation = useMutation({
+    mutationFn: ({ postId }: { postId: string; reportId: string }) => feedService.deletePost(postId),
+    onSuccess: (_data, variables) => {
+      updateReportStatusMutation.mutate({ reportId: variables.reportId, status: 'reviewed' });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => {});
+      handleCloseReportPost();
+    },
+    onError: (error) => {
+      console.error('No fue posible eliminar la publicación', error);
     }
   });
 
@@ -170,6 +228,8 @@ export const AdminModerationPage = () => {
     return { total, active, suspended };
   }, [users]);
 
+  const pendingReports = useMemo(() => reports.filter((report) => report.status === 'pending'), [reports]);
+
   useEffect(() => {
     if (editingUser) {
       reset({
@@ -198,6 +258,19 @@ export const AdminModerationPage = () => {
     return trimmed.length > 0 ? trimmed : null;
   };
 
+  type SocialField = 'instagramUrl' | 'githubUrl' | 'facebookUrl' | 'xUrl';
+  const socialShortcuts: Array<{ field: SocialField; label: string; template: string }> = [
+    { field: 'instagramUrl', label: 'Instagram', template: 'https://www.instagram.com/' },
+    { field: 'facebookUrl', label: 'Facebook', template: 'https://www.facebook.com/' },
+    { field: 'githubUrl', label: 'GitHub', template: 'https://github.com/' },
+    { field: 'xUrl', label: 'X / Twitter', template: 'https://x.com/' }
+  ];
+
+  const handleSocialShortcut = (field: SocialField, template: string) => {
+    if (isSaving) return;
+    setValue(field, template);
+  };
+
   const onSubmit = (values: EditUserValues) => {
     if (!editingUser) return;
     setFormError(null);
@@ -223,6 +296,11 @@ export const AdminModerationPage = () => {
     }
 
     updateUserMutation.mutate({ userId: editingUser.id, payload });
+  };
+
+  const handleDeleteReportedPost = (report: FeedReport) => {
+    if (!window.confirm('¿Deseas eliminar esta publicación?')) return;
+    deletePostMutation.mutate({ postId: report.postId, reportId: report.id });
   };
 
   return (
@@ -359,7 +437,7 @@ export const AdminModerationPage = () => {
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="px-2.5 text-[11px] shadow-[0_10px_20px_rgba(18,55,29,0.18)] backdrop-blur"
+                          className="rounded-full border border-white/40 bg-white/40 px-3 py-1.5 text-[11px] font-semibold text-sena-green shadow-[0_10px_20px_rgba(18,55,29,0.18)] backdrop-blur hover:border-sena-green/60 hover:bg-white/60"
                           onClick={() => setEditingUser(user)}
                         >
                           Editar perfil
@@ -386,7 +464,226 @@ export const AdminModerationPage = () => {
             </table>
           </div>
         </Card>
+
+        <Card className="bg-white/25 p-4 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Moderacion de publicaciones</h3>
+              <p className="text-xs text-[var(--color-muted)]">
+                Gestiona los reportes enviados por la comunidad.
+              </p>
+            </div>
+            <span className="rounded-full bg-rose-100/80 px-3 py-1 text-[11px] font-semibold text-rose-600">
+              {pendingReports.length} pendientes
+            </span>
+          </div>
+
+          {isLoadingReports ? (
+            <p className="mt-4 text-xs text-[var(--color-muted)]">Cargando reportes...</p>
+          ) : reports.length === 0 ? (
+            <p className="mt-4 text-xs text-[var(--color-muted)]">No hay reportes recientes.</p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {reports.map((report) => (
+                <div
+                  key={report.id}
+                  className="rounded-2xl border border-white/20 bg-white/15 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_10px_20px_rgba(18,55,29,0.14)] dark:border-white/10 dark:bg-white/5"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{report.reporter.fullName}</p>
+                      <p className="text-[11px] text-[var(--color-muted)]">
+                        Reporto a {report.postAuthor.fullName} · {new Date(report.createdAt).toLocaleString('es-CO')}
+                      </p>
+                    </div>
+                    <span
+                      className={classNames(
+                        'rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                        report.status === 'pending'
+                          ? 'bg-rose-100/80 text-rose-600'
+                          : 'bg-emerald-100/80 text-emerald-600'
+                      )}
+                    >
+                      {report.status === 'pending' ? 'Pendiente' : 'Revisado'}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-sm font-semibold">Motivo: {report.reason}</p>
+                  {report.details && (
+                    <p className="mt-1 text-xs italic text-[var(--color-muted)]">"{report.details}"</p>
+                  )}
+                  <p className="mt-2 text-xs text-[var(--color-muted)]">
+                    Publicacion: {report.post.content ? report.post.content.slice(0, 140) : 'Sin contenido'}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleOpenReportPost(report)}
+                      className="px-2.5 text-[11px] !text-[var(--color-text)] hover:text-sena-green hover:bg-white/20"
+                    >
+                      Mostrar publicación
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={deletePostMutation.isPending}
+                      onClick={() => handleDeleteReportedPost(report)}
+                      className="px-2.5 text-[11px] text-rose-600 border-rose-200/70 bg-rose-50/60 hover:border-rose-300 hover:text-rose-600"
+                    >
+                      Eliminar publicación
+                    </Button>
+                    {report.status === 'pending' ? (
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          updateReportStatusMutation.mutate({ reportId: report.id, status: 'reviewed' })
+                        }
+                        loading={updateReportStatusMutation.isPending}
+                        className="px-2.5 text-[11px]"
+                      >
+                        Marcar como leído
+                      </Button>
+                    ) : (
+                      <p className="text-[11px] text-[var(--color-muted)]">
+                        Revisado el {report.resolvedAt ? new Date(report.resolvedAt).toLocaleDateString('es-CO') : '-'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
       </div>
+
+      {activeReport && (
+        <GlassDialog
+          open={Boolean(activeReport)}
+          onClose={handleCloseReportPost}
+          size="xl"
+          preventCloseOnBackdrop={deletePostMutation.isPending}
+          contentClassName={floatingModalContentClass}
+        >
+          <div className="space-y-4 sm:space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Reporte reciente</p>
+                <h3 className="text-lg font-semibold text-[var(--color-text)]">Publicacion reportada</h3>
+                <p className="text-xs text-[var(--color-muted)]">
+                  Reportada por {activeReport.reporter.fullName} · motivo: {activeReport.reason}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCloseReportPost}
+                className="rounded-full border border-white/30 px-3 py-1 text-xs text-[var(--color-muted)]"
+              >
+                Cerrar
+              </Button>
+            </div>
+
+            {isReportPostLoading ? (
+              <p className="text-xs text-[var(--color-muted)]">Cargando publicacion...</p>
+            ) : reportPostError ? (
+              <p className="text-xs text-rose-600">{reportPostError}</p>
+            ) : activeReportPost ? (
+              <div className="rounded-2xl border border-white/20 bg-white/15 p-4 text-sm text-[var(--color-text)] shadow-[0_20px_40px_rgba(12,23,14,0.25)]">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{activeReportPost.author.fullName}</p>
+                    <p className="text-[11px] text-[var(--color-muted)]">
+                      {new Date(activeReportPost.createdAt).toLocaleDateString('es-CO')}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-white/30 px-3 py-0.5 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
+                    {activeReportPost.viewerReaction ?? 'Sin reaccion'}
+                  </span>
+                </div>
+                {activeReportPost.content && (
+                  <p className="mt-3 text-[14px] text-[var(--color-text)]">{activeReportPost.content}</p>
+                )}
+                {activeReportPost.mediaUrl && (
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-white/20 bg-black">
+                    <img
+                      src={activeReportPost.mediaUrl}
+                      alt="Contenido adjunto"
+                      className="h-40 w-full object-cover"
+                    />
+                  </div>
+                )}
+                {activeReportPost.attachments?.length ? (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {activeReportPost.attachments.map((attachment) => (
+                      <a
+                        key={attachment.id}
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-[11px] font-semibold text-[var(--color-text)] transition hover:border-sena-green/50"
+                      >
+                        {attachment.mimeType ?? 'Archivo adjunto'}
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--color-muted)]">No se encontro la publicacion.</p>
+            )}
+
+            {activeReport.commentContent && (
+              <div className="rounded-2xl border border-white/25 bg-white/15 p-4 text-xs text-[var(--color-text)]">
+                <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Comentario reportado</p>
+                <p className="mt-2 text-sm">{activeReport.commentContent}</p>
+                {activeReport.commentAuthor && (
+                  <p className="text-[11px] text-[var(--color-muted)]">Autor: {activeReport.commentAuthor.fullName}</p>
+                )}
+                {activeReport.commentAttachmentUrl && (
+                  <a
+                    href={activeReport.commentAttachmentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-sena-green"
+                  >
+                    Ver adjunto
+                  </a>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-end gap-2">
+              {activeReport.status === 'pending' && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() =>
+                    updateReportStatusMutation.mutate({ reportId: activeReport.id, status: 'reviewed' })
+                  }
+                  loading={updateReportStatusMutation.isPending}
+                  className="px-3 text-[11px]"
+                >
+                  Marcar como leido
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={deletePostMutation.isPending}
+                onClick={() => handleDeleteReportedPost(activeReport)}
+                className="px-3 text-[11px] text-rose-600 border-rose-200/70 bg-rose-50/60 hover:border-rose-300 hover:text-rose-600"
+              >
+                Eliminar publicacion
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleCloseReportPost} className="px-3 text-[11px]">
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </GlassDialog>
+      )}
 
       {editingUser && (
         <GlassDialog
@@ -394,7 +691,7 @@ export const AdminModerationPage = () => {
           onClose={handleCloseEditor}
           size="xl"
           preventCloseOnBackdrop={isSaving}
-          contentClassName="p-7"
+          contentClassName={floatingModalContentClass}
         >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -408,10 +705,10 @@ export const AdminModerationPage = () => {
             <Button
               variant="ghost"
               onClick={handleCloseEditor}
-              className="self-start rounded-full bg-white/15 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
+              className="self-start rounded-full border border-white/30 bg-white/70 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
               disabled={isSaving}
             >
-              Cerrar
+              <X className="h-3.5 w-3.5" /> Cerrar
             </Button>
           </div>
 
@@ -421,6 +718,26 @@ export const AdminModerationPage = () => {
                 {formError}
               </div>
             )}
+
+            <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-xs text-[var(--color-text)]">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                Agregar red social
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {socialShortcuts.map((shortcut) => (
+                  <Button
+                    key={shortcut.field}
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full border border-white/20 px-3 py-1 text-[11px]"
+                    onClick={() => handleSocialShortcut(shortcut.field, shortcut.template)}
+                    disabled={isSaving}
+                  >
+                    {shortcut.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <Input
