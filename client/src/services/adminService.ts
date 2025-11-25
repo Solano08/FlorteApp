@@ -1,6 +1,8 @@
 import { apiClient } from './apiClient';
 import { Profile } from '../types/profile';
 import { UserRole } from '../types/auth';
+import { FeedReport, ReportStatus } from '../types/feed';
+import { normalizeFeedReport } from '../utils/media';
 
 export const adminService = {
   async listUsers(): Promise<Profile[]> {
@@ -43,5 +45,18 @@ export const adminService = {
   ): Promise<Profile> {
     const { data } = await apiClient.put<{ success: boolean; user: Profile }>(`/admin/users/${userId}`, payload);
     return data.user;
+  },
+
+  async listReports(): Promise<FeedReport[]> {
+    const { data } = await apiClient.get<{ success: boolean; reports: FeedReport[] }>('/admin/reports');
+    return data.reports.map(normalizeFeedReport);
+  },
+
+  async updateReportStatus(reportId: string, status: ReportStatus): Promise<FeedReport> {
+    const { data } = await apiClient.patch<{ success: boolean; report: FeedReport }>(
+      `/admin/reports/${reportId}/status`,
+      { status }
+    );
+    return normalizeFeedReport(data.report);
   }
 };

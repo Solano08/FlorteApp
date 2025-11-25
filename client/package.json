@@ -9,6 +9,8 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
     "@hookform/resolvers": "^3.4.2",
     "@tanstack/react-query": "^5.51.16",
     "axios": "^1.7.2",

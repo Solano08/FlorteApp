@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import { storage } from '../utils/storage';
+import { normalizeAuthUserMedia } from '../utils/media';
 import { AuthResponse, AuthUser } from '../types/auth';
 
 export interface RegisterPayload {
@@ -14,14 +15,16 @@ export interface LoginPayload {
   password: string;
 }
 
-const handleAuthResponse = (response: AuthResponse) => {
+const handleAuthResponse = (response: AuthResponse): AuthUser => {
   if (response.tokens?.accessToken && response.tokens?.refreshToken) {
     storage.setSession(response.tokens.accessToken, response.tokens.refreshToken);
   }
   if (response.user) {
-    storage.setUser(response.user);
+    const normalizedUser = normalizeAuthUserMedia(response.user);
+    storage.setUser(normalizedUser);
+    return normalizedUser;
   }
-  return response.user;
+  throw new Error('Respuesta de autenticacion invalida');
 };
 
 export const authService = {
