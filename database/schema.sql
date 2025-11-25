@@ -146,6 +146,15 @@ CREATE TABLE IF NOT EXISTS feed_posts (
     FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS feed_post_attachments (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    post_id CHAR(36) NOT NULL,
+    url TEXT NOT NULL,
+    mime_type VARCHAR(100),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS feed_post_reactions (
     post_id CHAR(36) NOT NULL,
     user_id CHAR(36) NOT NULL,
@@ -161,6 +170,7 @@ CREATE TABLE IF NOT EXISTS feed_comments (
     post_id CHAR(36) NOT NULL,
     user_id CHAR(36) NOT NULL,
     content TEXT NOT NULL,
+    attachment_url TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -183,6 +193,21 @@ CREATE TABLE IF NOT EXISTS feed_shares (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS feed_reports (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    post_id CHAR(36) NOT NULL,
+    reporter_id CHAR(36) NOT NULL,
+    comment_id CHAR(36),
+    reason VARCHAR(255) NOT NULL,
+    details TEXT,
+    status ENUM('pending','reviewed') NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP NULL DEFAULT NULL,
+    FOREIGN KEY (post_id) REFERENCES feed_posts (id) ON DELETE CASCADE,
+    FOREIGN KEY (reporter_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (comment_id) REFERENCES feed_comments (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- Seed admin user for initial access (email: admin.testing@florteapp.com / password: Admin!234)
