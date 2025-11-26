@@ -1,2 +1,0 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-export const LoadingScreen = () => (_jsx("div", { className: "grid min-h-screen place-items-center bg-[var(--color-background)]", children: _jsxs("div", { className: "flex flex-col items-center gap-4", children: [_jsx("div", { className: "h-16 w-16 rounded-full border-4 border-sena-green border-b-transparent animate-spin" }), _jsx("p", { className: "text-sm text-[var(--color-muted)]", children: "Cargando FlorteApp..." })] }) }));
