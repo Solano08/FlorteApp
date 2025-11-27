@@ -191,7 +191,7 @@ export const ProjectsPage = () => {
         <div>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-[var(--color-text)]">
-              Proyectos {statusFilter !== 'all' && statusFilter in statusLabels && `- ${statusLabels[statusFilter as keyof typeof statusLabels]}`}
+              Proyectos {statusFilter !== 'all' && statusFilter in statusLabels && - ${statusLabels[statusFilter as keyof typeof statusLabels]}}
             </h2>
             {statusFilter !== 'all' && (
               <Button variant="secondary" size="sm" onClick={() => setStatusFilter('all')}>
