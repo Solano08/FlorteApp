@@ -126,7 +126,7 @@ export const AdminModerationPage = () => {
   const updateRoleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: UserRole }) => adminService.updateRole(userId, role),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }).catch(() => { });
     }
   });
 
@@ -134,7 +134,7 @@ export const AdminModerationPage = () => {
     mutationFn: ({ userId, isActive }: { userId: string; isActive: boolean }) =>
       adminService.updateStatus(userId, isActive),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }).catch(() => { });
     }
   });
 
@@ -142,7 +142,7 @@ export const AdminModerationPage = () => {
     mutationFn: ({ reportId, status }: { reportId: string; status: ReportStatus }) =>
       adminService.updateReportStatus(reportId, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => { });
     }
   });
 
@@ -150,7 +150,7 @@ export const AdminModerationPage = () => {
     mutationFn: ({ postId }: { postId: string; reportId: string }) => feedService.deletePost(postId),
     onSuccess: (_data, variables) => {
       updateReportStatusMutation.mutate({ reportId: variables.reportId, status: 'reviewed' });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => { });
       handleCloseReportPost();
     },
     onError: (error) => {
@@ -162,7 +162,7 @@ export const AdminModerationPage = () => {
     mutationFn: ({ userId, payload }: { userId: string; payload: AdminUpdatePayload }) =>
       adminService.updateUser(userId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }).catch(() => { });
       setEditingUser(null);
     },
     onError: () => {
@@ -312,15 +312,15 @@ export const AdminModerationPage = () => {
         <Card padded={false} className="p-4 md:p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="grid flex-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-white/15 bg-white/12 px-3 py-2 text-xs text-[var(--color-text)] shadow-[0_12px_20px_rgba(18,55,29,0.12)]">
+              <div className="rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
                 <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Total usuarios</p>
                 <p className="mt-1 text-lg font-semibold">{stats.total}</p>
               </div>
-              <div className="rounded-xl border border-white/15 bg-white/12 px-3 py-2 text-xs text-[var(--color-text)] shadow-[0_12px_20px_rgba(18,55,29,0.12)]">
+              <div className="rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
                 <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Activos</p>
                 <p className="mt-1 text-lg font-semibold text-sena-green">{stats.active}</p>
               </div>
-              <div className="rounded-xl border border-white/15 bg-white/12 px-3 py-2 text-xs text-[var(--color-text)] shadow-[0_12px_20px_rgba(18,55,29,0.12)]">
+              <div className="rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
                 <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Suspendidos</p>
                 <p className="mt-1 text-lg font-semibold text-rose-500">{stats.suspended}</p>
               </div>
@@ -338,7 +338,7 @@ export const AdminModerationPage = () => {
               <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]">
                 Filtrar por rol
                 <select
-                  className="rounded-xl border border-white/20 bg-white/15 px-3 py-2 text-xs text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30 dark:border-white/10 dark:bg-white/10"
+                  className="rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
                   value={roleFilter}
                   onChange={(event) => setRoleFilter(event.target.value as UserRole | 'all')}
                 >
@@ -354,7 +354,7 @@ export const AdminModerationPage = () => {
         </Card>
 
         <Card padded={false} className="overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto hide-scrollbar">
             <table className="min-w-full divide-y divide-white/10 text-xs text-[var(--color-text)]">
               <thead className="bg-white/5 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
                 <tr>
@@ -437,7 +437,7 @@ export const AdminModerationPage = () => {
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="rounded-full border border-white/40 bg-white/40 px-3 py-1.5 text-[11px] font-semibold text-sena-green shadow-[0_10px_20px_rgba(18,55,29,0.18)] backdrop-blur hover:border-sena-green/60 hover:bg-white/60"
+                          className="rounded-full px-3 py-1.5 text-[11px] font-semibold text-sena-green glass-liquid hover:bg-white/60"
                           onClick={() => setEditingUser(user)}
                         >
                           Editar perfil
@@ -465,7 +465,7 @@ export const AdminModerationPage = () => {
           </div>
         </Card>
 
-        <Card className="bg-white/25 p-4 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+        <Card className="p-4 glass-liquid-strong">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-base font-semibold text-[var(--color-text)]">Moderacion de publicaciones</h3>
@@ -487,7 +487,7 @@ export const AdminModerationPage = () => {
               {reports.map((report) => (
                 <div
                   key={report.id}
-                  className="rounded-2xl border border-white/20 bg-white/15 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_10px_20px_rgba(18,55,29,0.14)] dark:border-white/10 dark:bg-white/5"
+                  className="rounded-2xl glass-liquid px-4 py-3 text-sm text-[var(--color-text)]"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -590,7 +590,7 @@ export const AdminModerationPage = () => {
             ) : reportPostError ? (
               <p className="text-xs text-rose-600">{reportPostError}</p>
             ) : activeReportPost ? (
-              <div className="rounded-2xl border border-white/20 bg-white/15 p-4 text-sm text-[var(--color-text)] shadow-[0_20px_40px_rgba(12,23,14,0.25)]">
+              <div className="rounded-2xl glass-liquid p-4 text-sm text-[var(--color-text)]">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold">{activeReportPost.author.fullName}</p>
@@ -635,7 +635,7 @@ export const AdminModerationPage = () => {
             )}
 
             {activeReport.commentContent && (
-              <div className="rounded-2xl border border-white/25 bg-white/15 p-4 text-xs text-[var(--color-text)]">
+              <div className="rounded-2xl glass-liquid p-4 text-xs text-[var(--color-text)]">
                 <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Comentario reportado</p>
                 <p className="mt-2 text-sm">{activeReport.commentContent}</p>
                 {activeReport.commentAuthor && (
@@ -705,7 +705,7 @@ export const AdminModerationPage = () => {
             <Button
               variant="ghost"
               onClick={handleCloseEditor}
-              className="self-start rounded-full border border-white/30 bg-white/70 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
+              className="self-start rounded-full px-3 py-1 text-xs text-[var(--color-muted)] glass-liquid hover:text-sena-green"
               disabled={isSaving}
             >
               <X className="h-3.5 w-3.5" /> Cerrar
@@ -719,7 +719,7 @@ export const AdminModerationPage = () => {
               </div>
             )}
 
-            <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-xs text-[var(--color-text)]">
+            <div className="rounded-2xl glass-liquid px-4 py-3 text-xs text-[var(--color-text)]">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
                 Agregar red social
               </p>
@@ -765,7 +765,7 @@ export const AdminModerationPage = () => {
               <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-text)]">
                 Rol
                 <select
-                  className="rounded-xl border border-white/30 bg-white/25 px-3 py-2 text-xs text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30 dark:border-white/10 dark:bg-white/10"
+                  className="rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
                   disabled={isSaving}
                   {...register('role')}
                 >
@@ -778,7 +778,7 @@ export const AdminModerationPage = () => {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-[24px] border border-white/25 bg-white/25 px-4 py-4 text-xs text-[var(--color-text)] shadow-[0_24px_54px_rgba(18,55,29,0.24)] backdrop-blur-md">
+              <div className="rounded-[24px] px-4 py-4 text-xs text-[var(--color-text)] glass-liquid">
                 <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Estado de la cuenta</p>
                 <p className="mt-1 text-sm font-semibold">{isActiveValue ? 'Activo' : 'Suspendido'}</p>
                 <p className="mt-1 text-[11px] text-[var(--color-muted)]">

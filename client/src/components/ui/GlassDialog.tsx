@@ -77,7 +77,7 @@ export const GlassDialog = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className={classNames(
-            'fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-slate-900/30 px-4 py-10 backdrop-blur-[28px]',
+            'fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-slate-900/30 px-4 py-10 backdrop-blur-[28px] hide-scrollbar',
             overlayClassName
           )}
           onClick={handleOverlayClick}
@@ -92,7 +92,7 @@ export const GlassDialog = ({
               'relative w-full',
               frameless
                 ? 'rounded-none border-none bg-transparent p-0 shadow-none backdrop-blur-none'
-                : 'rounded-[32px] border border-white/25 bg-white/85 p-6 shadow-[0_44px_110px_rgba(15,38,25,0.25)] backdrop-blur-[12px] dark:border-white/10 dark:bg-slate-900/85',
+                : 'rounded-[32px] glass-liquid-strong p-6',
               frameless ? '' : sizeClasses[size],
               contentClassName,
               motionClassName
@@ -101,9 +101,9 @@ export const GlassDialog = ({
           >
             {!frameless && (
               <>
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.52),_transparent_58%)] opacity-80 dark:opacity-35" />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/28 via-white/14 to-white/20 dark:from-white/10 dark:via-white/6 dark:to-white/14" />
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-white/24 via-transparent to-transparent opacity-40 dark:from-white/8" />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.3),_transparent_60%)] opacity-70 dark:opacity-20 mix-blend-overlay" />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.2),_transparent_60%)] opacity-60 dark:opacity-10 mix-blend-overlay" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 dark:from-white/5 dark:to-transparent opacity-50" />
               </>
             )}
             <div className="relative z-10 space-y-6">{children}</div>

@@ -10,30 +10,48 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { TextArea } from '../../components/ui/TextArea';
-import { FolderKanban, GitBranch, Sparkles, Milestone, Rocket } from 'lucide-react';
+import { ClipboardList, Hammer, CheckCircle, FolderKanban, GitBranch, Rocket } from 'lucide-react';
 
 const projectSchema = z.object({
-  title: z.string().min(3, 'El título es obligatorio'),
+  title: z.string().min(3, 'El titulo es obligatorio'),
   description: z.string().max(600).optional(),
-  repositoryUrl: z.string().url('Ingresa un repositorio válido').optional(),
+  repositoryUrl: z.string().url('Ingresa un repositorio valido').optional(),
   status: z.enum(['draft', 'in_progress', 'completed']).optional()
 });
 
 type ProjectValues = z.infer<typeof projectSchema>;
 
 const statusLabels: Record<'draft' | 'in_progress' | 'completed', string> = {
-  draft: 'Planificación',
+  draft: 'Planificacion',
   in_progress: 'En progreso',
   completed: 'Completado'
 };
 
 const statusOrder: Array<'draft' | 'in_progress' | 'completed'> = ['draft', 'in_progress', 'completed'];
 
-const milestoneTips = [
-  'Define un objetivo claro y entregables medibles.',
-  'Comparte avances con tu grupo al menos una vez por semana.',
-  'Documenta aprendizajes clave en la biblioteca del proyecto.'
-];
+const statusDisplay: Record<
+  'draft' | 'in_progress' | 'completed',
+  { icon: typeof ClipboardList; accent: string; helper: string; badge: string }
+> = {
+  draft: {
+    icon: ClipboardList,
+    accent: 'text-amber-600',
+    helper: 'Define requerimientos y objetivos clave.',
+    badge: 'bg-amber-50 text-amber-700'
+  },
+  in_progress: {
+    icon: Hammer,
+    accent: 'text-blue-500',
+    helper: 'Coordina tareas, commits y avances.',
+    badge: 'bg-blue-50/60 text-blue-600'
+  },
+  completed: {
+    icon: CheckCircle,
+    accent: 'text-sena-green',
+    helper: 'Comparte resultados y aprendizajes.',
+    badge: 'bg-sena-green/15 text-sena-green'
+  }
+};
 
 export const ProjectsPage = () => {
   const queryClient = useQueryClient();
@@ -64,6 +82,8 @@ export const ProjectsPage = () => {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting }
   } = useForm<ProjectValues>({
     resolver: zodResolver(projectSchema),
@@ -80,57 +100,71 @@ export const ProjectsPage = () => {
     return projects.filter((project: Project) => project.status === statusFilter);
   }, [projects, statusFilter]);
 
-  const stats = useMemo(() => {
-    return statusOrder.reduce(
-      (acc, status) => ({
-        ...acc,
-        [status]: projects.filter((project: Project) => project.status === status).length
-      }),
-      { draft: 0, in_progress: 0, completed: 0 }
-    );
-  }, [projects]);
+  const stats = useMemo(
+    () =>
+      statusOrder.reduce(
+        (acc, status) => ({
+          ...acc,
+          [status]: projects.filter((project: Project) => project.status === status).length
+        }),
+        { draft: 0, in_progress: 0, completed: 0 }
+      ),
+    [projects]
+  );
+
+  const currentStatus = watch('status') ?? 'draft';
 
   return (
-    <DashboardLayout
-      title="Proyectos"
-      subtitle="Gestiona tus iniciativas, conecta repositorios y da seguimiento a su progreso."
-    >
+    <DashboardLayout title="Proyectos" subtitle="Gestiona tus iniciativas y su avance real en un solo lugar.">
       <div className="space-y-6">
-        {/* Header con información y estadísticas */}
         <Card>
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-            <div>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
               <p className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green">
                 <Rocket className="h-4 w-4" /> Laboratorio de proyectos
               </p>
-              <h2 className="mt-3 text-2xl font-semibold text-[var(--color-text)]">
-                Impulsa tu proyecto desde la idea hasta la demo final
-              </h2>
-              <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Centraliza requerimientos, tareas y repositorios para trabajar con tu equipo de forma ágil.
+              <h2 className="text-2xl font-semibold text-[var(--color-text)]">Planifica, ejecuta y cierra con foco.</h2>
+              <p className="text-sm text-[var(--color-muted)]">
+                Visualiza el estado de cada iniciativa y cambia de fase con un clic.
               </p>
             </div>
-            <div className="grid w-full max-w-xl gap-4 sm:grid-cols-3">
-              {statusOrder.map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => setStatusFilter((prev: 'all' | 'draft' | 'in_progress' | 'completed') => (prev === status ? 'all' : status))}
-                  className={`rounded-2xl border px-4 py-3 text-left transition ${
-                    statusFilter === status
-                      ? 'border-sena-green bg-sena-green/10 text-sena-green'
-                      : 'border-[var(--color-border)] text-[var(--color-text)] hover:border-sena-green/50'
-                  }`}
-                >
-                  <p className="text-xs uppercase tracking-wide">{statusLabels[status]}</p>
-                  <p className="mt-1 text-2xl font-semibold">{stats[status]}</p>
-                </button>
-              ))}
+
+            <div className="grid w-full max-w-xl gap-3 sm:grid-cols-3">
+              {statusOrder.map((status) => {
+                const { icon: Icon, accent, helper, badge } = statusDisplay[status];
+                const isActive = statusFilter === status;
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() =>
+                      setStatusFilter((prev) => (prev === status ? 'all' : status))
+                    }
+                    className={`group flex h-full flex-col rounded-2xl border px-4 py-3 text-left transition ${
+                      isActive
+                        ? 'border-sena-green bg-sena-green/10 shadow-[0_12px_24px_rgba(18,55,29,0.14)]'
+                        : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-sena-green/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${badge}`}>
+                        <Icon className={`h-4 w-4 ${accent}`} />
+                      </span>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">
+                          {statusLabels[status]}
+                        </p>
+                        <p className="text-xl font-semibold text-[var(--color-text)]">{stats[status]}</p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[11px] text-[var(--color-muted)] leading-relaxed">{helper}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </Card>
 
-        {/* Formulario de creación de proyecto */}
         <Card>
           <h2 className="text-lg font-semibold text-[var(--color-text)]">Registrar nuevo proyecto</h2>
           <p className="mt-1 text-sm text-[var(--color-muted)]">
@@ -153,10 +187,10 @@ export const ProjectsPage = () => {
             })}
           >
             <div className="sm:col-span-2">
-              <Input label="Título" error={errors.title?.message} {...register('title')} />
+              <Input label="Titulo" error={errors.title?.message} {...register('title')} />
             </div>
             <div className="sm:col-span-2">
-              <TextArea label="Descripción" rows={3} error={errors.description?.message} {...register('description')} />
+              <TextArea label="Descripcion" rows={3} error={errors.description?.message} {...register('description')} />
             </div>
             <div className="sm:col-span-2">
               <Input
@@ -173,7 +207,7 @@ export const ProjectsPage = () => {
                   className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm"
                   {...register('status')}
                 >
-                  <option value="draft">Planificación</option>
+                  <option value="draft">Planificacion</option>
                   <option value="in_progress">En progreso</option>
                   <option value="completed">Completado</option>
                 </select>
@@ -187,11 +221,10 @@ export const ProjectsPage = () => {
           </form>
         </Card>
 
-        {/* Sección de proyectos en cuadrícula */}
         <div>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-[var(--color-text)]">
-              Proyectos {statusFilter !== 'all' && statusFilter in statusLabels && `- ${statusLabels[statusFilter as keyof typeof statusLabels]}`}
+ origin/Test
             </h2>
             {statusFilter !== 'all' && (
               <Button variant="secondary" size="sm" onClick={() => setStatusFilter('all')}>
@@ -209,7 +242,7 @@ export const ProjectsPage = () => {
           {!isLoading && filteredProjects.length === 0 && (
             <Card>
               <p className="text-sm text-[var(--color-muted)]">
-                No hay proyectos en este estado todavía. Crea uno nuevo o cambia el filtro.
+                No hay proyectos en este estado todavia. Crea uno nuevo o cambia el filtro.
               </p>
             </Card>
           )}
@@ -217,23 +250,23 @@ export const ProjectsPage = () => {
           {!isLoading && filteredProjects.length > 0 && (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredProjects.map((project: Project) => (
-                <Card key={project.id} className="flex flex-col space-y-4 hover:shadow-lg transition-shadow">
+                <Card key={project.id} className="flex flex-col space-y-4 transition-shadow hover:shadow-lg">
                   <div className="flex items-start gap-3">
-                    <div className="rounded-full bg-sena-green/10 p-2 text-sena-green flex-shrink-0">
+                    <div className="flex-shrink-0 rounded-full bg-sena-green/10 p-2 text-sena-green">
                       <FolderKanban className="h-5 w-5" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-[var(--color-text)] truncate">{project.title}</h3>
-                      <p className="text-xs text-[var(--color-muted)] mt-1">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-lg font-semibold text-[var(--color-text)]">{project.title}</h3>
+                      <p className="mt-1 text-xs text-[var(--color-muted)]">
                         Actualizado el {new Date(project.updatedAt).toLocaleDateString('es-CO')}
                       </p>
                     </div>
-                    <span className="ml-auto rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green flex-shrink-0">
+                    <span className="ml-auto flex-shrink-0 rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green">
                       {statusLabels[project.status]}
                     </span>
                   </div>
 
-                  <p className="text-sm text-[var(--color-muted)] line-clamp-3 flex-1">
+                  <p className="flex-1 text-sm text-[var(--color-muted)] line-clamp-3">
                     {project.description ?? 'Describe el objetivo y el alcance del proyecto para alinear a tu equipo.'}
                   </p>
 
@@ -249,8 +282,8 @@ export const ProjectsPage = () => {
                     </a>
                   )}
 
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-[var(--color-border)]">
-                    {statusOrder.map((status: 'draft' | 'in_progress' | 'completed') => (
+                  <div className="flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-2">
+                    {statusOrder.map((status) => (
                       <Button
                         key={status}
                         variant={project.status === status ? 'primary' : 'secondary'}
@@ -270,38 +303,6 @@ export const ProjectsPage = () => {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Cards informativos en la parte inferior */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Hitos recomendados</h3>
-              <Milestone className="h-4 w-4 text-sena-green" />
-            </div>
-            <div className="mt-4 space-y-3">
-              {milestoneTips.map((tip, index) => (
-                <div key={tip} className="rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text)]">
-                  <span className="mr-2 rounded-full bg-sena-green/10 px-2 py-0.5 text-xs font-semibold text-sena-green">
-                    Hito {index + 1}
-                  </span>
-                  {tip}
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Eventos del proyecto</h3>
-              <Sparkles className="h-4 w-4 text-sena-green" />
-            </div>
-            <div className="mt-4 space-y-3 text-sm text-[var(--color-muted)]">
-              <p>📅 Demo Day proyectos SENA · 05 Nov · 5:00 PM</p>
-              <p>🧪 Testing colaborativo · 12 Nov · 3:00 PM</p>
-              <p>🎯 Retrospectiva de aprendizajes · 22 Nov · 10:00 AM</p>
-            </div>
-          </Card>
         </div>
       </div>
     </DashboardLayout>

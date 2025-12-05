@@ -1,83 +1,113 @@
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { BadgePlus, CalendarRange, Compass, Filter, Users } from 'lucide-react';
+import { Compass, Filter, Users } from 'lucide-react';
+import { feedService } from '../../services/feedService';
+import { projectService } from '../../services/projectService';
+import { groupService } from '../../services/groupService';
+import { FeedPostAggregate } from '../../types/feed';
+import { Project } from '../../types/project';
+import { Group } from '../../types/group';
 
-const trendingTopics = [
-  { tag: '#InnovaciónSENA', posts: 128 },
-  { tag: '#TalentoVerde', posts: 96 },
-  { tag: '#FrontendChallenge', posts: 74 },
-  { tag: '#AIHub', posts: 51 }
-];
+type TrendingTag = { tag: string; count: number };
 
-const recommendedGroups = [
-  {
-    name: 'Laboratorio de Innovación',
-    members: 48,
-    description: 'Experimenta con prototipos y comparte tus ideas con mentores.'
-  },
-  {
-    name: 'Front-End Lovers',
-    members: 63,
-    description: 'Retos semanales, revisiones de código y mentorías 1:1.'
-  },
-  {
-    name: 'Talento Verde',
-    members: 32,
-    description: 'Proyectos sostenibles y comunidades de impacto ambiental.'
-  }
-];
-
-const recommendedProjects = [
-  {
-    title: 'SenaConnect',
-    status: 'En progreso',
-    description: 'Aplicación móvil para conectar aprendices con instructores.'
-  },
-  {
-    title: 'GreenLab',
-    status: 'Buscando colaboradores',
-    description: 'Plataforma para monitorear huertas urbanas en tiempo real.'
-  },
-  {
-    title: 'VR Workshop',
-    status: 'Recién iniciado',
-    description: 'Experiencias inmersivas para el aula de formación.'
-  }
-];
+const statusLabels: Record<Project['status'], string> = {
+  draft: 'Planeacion',
+  in_progress: 'En progreso',
+  completed: 'Completado'
+};
 
 export const ExplorePage = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const { data: feedPosts = [], isLoading: isLoadingFeed } = useQuery<FeedPostAggregate[]>({
+    queryKey: ['feed', 'explore'],
+    queryFn: () => feedService.listPosts({ limit: 50 })
+  });
+
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: projectService.listProjects
+  });
+
+  const { data: groups = [], isLoading: isLoadingGroups } = useQuery<Group[]>({
+    queryKey: ['groups'],
+    queryFn: groupService.listGroups
+  });
+
+  const trendingTags = useMemo<TrendingTag[]>(() => {
+    const counts = new Map<string, { tag: string; count: number }>();
+    const term = searchTerm.trim().toLowerCase();
+
+    feedPosts.forEach((post) => {
+      (post.tags ?? []).forEach((rawTag) => {
+        const normalized = rawTag.trim();
+        if (!normalized) return;
+        const key = normalized.startsWith('#') ? normalized.toLowerCase() : `#${normalized.toLowerCase()}`;
+        const label = normalized.startsWith('#') ? normalized : `#${normalized}`;
+        const current = counts.get(key) ?? { tag: label, count: 0 };
+        counts.set(key, { tag: current.tag, count: current.count + 1 });
+      });
+    });
+
+    return Array.from(counts.values())
+      .filter((entry) => (!term ? true : entry.tag.toLowerCase().includes(term)))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+  }, [feedPosts, searchTerm]);
+
+  const filteredProjects = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const sorted = [...projects].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+    const filtered = term
+      ? sorted.filter(
+          (project) =>
+            project.title.toLowerCase().includes(term) ||
+            (project.description ?? '').toLowerCase().includes(term)
+        )
+      : sorted;
+    return filtered.slice(0, 3);
+  }, [projects, searchTerm]);
+
+  const filteredGroups = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const filtered = term
+      ? groups.filter(
+          (group) =>
+            group.name.toLowerCase().includes(term) || (group.description ?? '').toLowerCase().includes(term)
+        )
+      : groups;
+    return filtered.slice(0, 3);
+  }, [groups, searchTerm]);
+
   return (
-    <DashboardLayout
-      title="Explorar"
-      subtitle="Descubre nuevas tendencias, grupos y proyectos para inspirarte."
-    >
+    <DashboardLayout>
       <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">Explorar</h2>
+        </div>
+
         <Card>
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green">
-                <Compass className="h-4 w-4" /> Tendencias
-              </p>
-              <h2 className="mt-3 text-2xl font-semibold text-[var(--color-text)]">
-                Encuentra lo próximo que quieres aprender
-              </h2>
-              <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Explora cursos, comunidades, retos y nuevos proyectos impulsados por aprendices SENA.
-              </p>
-            </div>
-            <div className="flex w-full flex-col gap-3 md:max-w-sm">
-              <Input placeholder="Buscar proyectos, grupos o temas..." />
-              <div className="flex gap-3">
-                <Button variant="secondary" className="flex-1" leftIcon={<Filter className="h-4 w-4" />}>
-                  Filtros
-                </Button>
-                <Button className="flex-1" leftIcon={<BadgePlus className="h-4 w-4" />}>
-                  Crear publicación
-                </Button>
-              </div>
-            </div>
+          <div className="relative mx-auto w-full max-w-3xl">
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Buscar proyectos, grupos o hashtags..."
+              className="pr-24 text-center placeholder:text-center"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              className="absolute bottom-2 right-2 px-3 py-2 text-xs shadow-[0_10px_20px_rgba(18,55,29,0.15)]"
+              leftIcon={<Filter className="h-4 w-4" />}
+            >
+              Filtros
+            </Button>
           </div>
         </Card>
 
@@ -85,54 +115,34 @@ export const ExplorePage = () => {
           <div className="space-y-6">
             <Card>
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-[var(--color-text)]">Tendencias de hoy</h3>
-                <span className="text-xs uppercase tracking-wide text-[var(--color-muted)]">
-                  Actualizado cada 10 minutos
-                </span>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {trendingTopics.map((topic) => (
-                  <button
-                    key={topic.tag}
-                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-left transition hover:border-sena-green/50 hover:bg-[var(--color-accent-soft)]"
-                  >
-                    <p className="text-sm font-semibold text-sena-green">{topic.tag}</p>
-                    <p className="text-xs text-[var(--color-muted)]">{topic.posts} publicaciones</p>
-                  </button>
-                ))}
-              </div>
-            </Card>
-
-            <Card>
-              <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-[var(--color-text)]">Proyectos recomendados</h3>
-                <Button variant="ghost" size="sm">
-                  Ver todos
-                </Button>
+                <span className="text-xs text-[var(--color-muted)]">Datos reales del aplicativo</span>
               </div>
               <div className="mt-4 space-y-4">
-                {recommendedProjects.map((project) => (
-                  <div
-                    key={project.title}
-                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-base font-semibold text-[var(--color-text)]">{project.title}</p>
-                      <span className="rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green">
-                        {project.status}
-                      </span>
+                {isLoadingProjects ? (
+                  <p className="text-sm text-[var(--color-muted)]">Cargando proyectos...</p>
+                ) : filteredProjects.length === 0 ? (
+                  <p className="text-sm text-[var(--color-muted)]">
+                    No hay proyectos publicados por ahora. Sube el primero desde la seccion Proyectos.
+                  </p>
+                ) : (
+                  filteredProjects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-base font-semibold text-[var(--color-text)]">{project.title}</p>
+                        <span className="rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green">
+                          {statusLabels[project.status]}
+                        </span>
+                      </div>
+                      {project.description && (
+                        <p className="mt-2 text-sm text-[var(--color-muted)] line-clamp-3">{project.description}</p>
+                      )}
                     </div>
-                    <p className="mt-2 text-sm text-[var(--color-muted)]">{project.description}</p>
-                    <div className="mt-4 flex gap-3">
-                      <Button size="sm" variant="primary">
-                        Ver detalles
-                      </Button>
-                      <Button size="sm" variant="secondary">
-                        Guardar
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </Card>
           </div>
@@ -140,22 +150,27 @@ export const ExplorePage = () => {
           <div className="space-y-6">
             <Card>
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-[var(--color-text)]">Eventos destacados</h3>
-                <CalendarRange className="h-4 w-4 text-sena-green" />
+                <h3 className="text-base font-semibold text-[var(--color-text)]">Tendencias</h3>
+                <Compass className="h-4 w-4 text-sena-green" />
               </div>
-              <div className="mt-4 space-y-4 text-sm">
-                <div className="rounded-xl border border-[var(--color-border)] px-4 py-3">
-                  <p className="font-semibold text-[var(--color-text)]">Bootcamp de innovación digital</p>
-                  <p className="text-xs text-[var(--color-muted)]">25 de Octubre · 9:00 AM</p>
-                </div>
-                <div className="rounded-xl border border-[var(--color-border)] px-4 py-3">
-                  <p className="font-semibold text-[var(--color-text)]">Taller de UI Design con Figma</p>
-                  <p className="text-xs text-[var(--color-muted)]">28 de Octubre · 2:00 PM</p>
-                </div>
-                <div className="rounded-xl border border-[var(--color-border)] px-4 py-3">
-                  <p className="font-semibold text-[var(--color-text)]">Demo Day proyectos SENA</p>
-                  <p className="text-xs text-[var(--color-muted)]">2 de Noviembre · 4:30 PM</p>
-                </div>
+              <div className="mt-4 space-y-3">
+                {isLoadingFeed ? (
+                  <p className="text-sm text-[var(--color-muted)]">Cargando tendencias...</p>
+                ) : trendingTags.length === 0 ? (
+                  <p className="text-sm text-[var(--color-muted)]">
+                    No hay tendencias todavia. Usa # en tus publicaciones para comenzar a verlas aqui.
+                  </p>
+                ) : (
+                  trendingTags.map((topic) => (
+                    <div
+                      key={topic.tag}
+                      className="rounded-xl border border-[var(--color-border)] px-4 py-3"
+                    >
+                      <p className="font-semibold text-[var(--color-text)]">{topic.tag}</p>
+                      <p className="text-xs text-[var(--color-muted)]">{topic.count} publicaciones</p>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
 
@@ -165,16 +180,25 @@ export const ExplorePage = () => {
                 <Users className="h-4 w-4 text-sena-green" />
               </div>
               <div className="mt-4 space-y-4">
-                {recommendedGroups.map((group) => (
-                  <div key={group.name} className="rounded-xl border border-[var(--color-border)] px-4 py-3">
-                    <p className="text-sm font-semibold text-[var(--color-text)]">{group.name}</p>
-                    <p className="text-xs text-[var(--color-muted)]">{group.members} miembros · Activo ahora</p>
-                    <p className="mt-2 text-xs text-[var(--color-text)]">{group.description}</p>
-                    <Button size="sm" className="mt-3 w-full">
-                      Solicitar acceso
-                    </Button>
-                  </div>
-                ))}
+                {isLoadingGroups ? (
+                  <p className="text-sm text-[var(--color-muted)]">Cargando grupos...</p>
+                ) : filteredGroups.length === 0 ? (
+                  <p className="text-sm text-[var(--color-muted)]">
+                    No hay grupos registrados todavia. Crea uno nuevo o busca mas tarde.
+                  </p>
+                ) : (
+                  filteredGroups.map((group) => (
+                    <div
+                      key={group.id}
+                      className="rounded-xl border border-[var(--color-border)] px-4 py-3"
+                    >
+                      <p className="text-sm font-semibold text-[var(--color-text)]">{group.name}</p>
+                      {group.description && (
+                        <p className="mt-2 text-xs text-[var(--color-text)] line-clamp-3">{group.description}</p>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
           </div>

@@ -63,7 +63,7 @@ export const NotificationBell = () => {
     <div className="relative">
       <Button
         variant="ghost"
-        className="h-11 w-11 rounded-full bg-white/20 text-[var(--color-text)] shadow-[0_12px_24px_rgba(18,55,29,0.18)] backdrop-blur-md hover:bg-white/30"
+        className="h-11 w-11 rounded-full text-[var(--color-text)] glass-liquid hover:bg-white/30"
         onClick={handleToggle}
         aria-label="Notificaciones"
       >
@@ -79,7 +79,7 @@ export const NotificationBell = () => {
             transition={{ duration: 0.2 }}
             className="absolute right-0 mt-3 w-80"
           >
-            <div className={`${floatingModalContentClass} relative space-y-4`}>
+            <div className="p-6 rounded-[32px] glass-liquid-strong relative space-y-4">
               <div className="flex items-start justify-between gap-4 border-b border-white/30 pb-4">
                 <div>
                   <p className="text-sm font-semibold text-[var(--color-text)]">Notificaciones</p>
@@ -89,17 +89,17 @@ export const NotificationBell = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setOpen(false)}
-                  className="rounded-full bg-white/30 text-[var(--color-muted)] backdrop-blur hover:text-sena-green"
+                  className="rounded-full text-[var(--color-muted)] glass-liquid hover:text-sena-green"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
 
-              <div className="max-h-72 space-y-3 overflow-y-auto">
+              <div className="max-h-72 space-y-3 overflow-y-auto hide-scrollbar">
                 {notifications.map(({ id, title, description, icon: Icon, time }) => (
                   <div
                     key={id}
-                    className="flex gap-3 rounded-2xl border border-white/45 bg-white/65 px-4 py-3 text-left shadow-[0_20px_42px_rgba(18,55,29,0.18)] backdrop-blur-[20px] transition hover:border-sena-green/60 hover:bg-white/80 dark:border-white/15 dark:bg-white/10"
+                    className="flex gap-3 rounded-2xl px-4 py-3 text-left glass-liquid transition hover:bg-white/80"
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sena-green/18 text-sena-green shadow-[0_20px_38px_rgba(18,55,29,0.2)]">
                       <Icon className="h-5 w-5" />
@@ -116,7 +116,7 @@ export const NotificationBell = () => {
               <div className="border-t border-white/30 pt-4">
                 <Button
                   variant="secondary"
-                  className="w-full rounded-2xl bg-white/60 py-2.5 text-sm font-semibold text-sena-green shadow-[0_18px_30px_rgba(18,55,29,0.25)] backdrop-blur hover:bg-white/80 dark:bg-white/10 dark:text-white"
+                  className="w-full rounded-2xl py-2.5 text-sm font-semibold text-sena-green glass-liquid hover:bg-white/80 dark:text-white"
                   onClick={handleViewAll}
                 >
                   Ver todas las notificaciones
@@ -143,17 +143,17 @@ export const NotificationBell = () => {
               <Button
                 variant="ghost"
                 onClick={() => setShowAll(false)}
-                className="self-start rounded-full bg-white/15 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
+                className="self-start rounded-full px-3 py-1 text-xs text-[var(--color-muted)] glass-liquid hover:text-sena-green"
               >
                 Cerrar
               </Button>
             </div>
 
-            <div className="mt-4 max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+            <div className="mt-4 max-h-[60vh] space-y-4 overflow-y-auto pr-1 hide-scrollbar">
               {notifications.map(({ id, title, description, icon: Icon, time }) => (
                 <div
                   key={`modal-${id}`}
-                  className="flex gap-4 rounded-[24px] border border-white/25 bg-white/40 px-4 py-4 text-left shadow-[0_28px_60px_rgba(18,55,29,0.22)] backdrop-blur transition hover:border-sena-green/50 dark:border-white/15 dark:bg-white/10"
+                  className="flex gap-4 rounded-[24px] px-4 py-4 text-left glass-liquid transition hover:border-sena-green/50"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-sena-green/18 text-sena-green shadow-[0_20px_38px_rgba(18,55,29,0.2)]">
                     <Icon className="h-5 w-5" />

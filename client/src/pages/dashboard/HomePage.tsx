@@ -41,6 +41,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { FeedAttachment, FeedComment, FeedPostAggregate, ReactionType } from '../../types/feed';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { floatingModalContentClass } from '../../utils/modalStyles';
+import { resolveAssetUrl } from '../../utils/media';
 
 interface ChatWindowProps {
   chat: Chat;
@@ -68,7 +69,7 @@ interface ComposerAttachment {
 }
 
 const reactionOptions = [
-  { type: 'like' as ReactionType, label: 'Me gusta', icon: ThumbsUp, color: 'text-blue-500' },
+  { type: 'like' as ReactionType, label: 'Me gusta', icon: ThumbsUp, color: 'text-blue-400' },
   { type: 'love' as ReactionType, label: 'Me encanta', icon: Heart, color: 'text-rose-500' },
   { type: 'insightful' as ReactionType, label: 'Me asombra', icon: Sparkles, color: 'text-amber-500' },
   { type: 'celebrate' as ReactionType, label: 'Me divierte', icon: Laugh, color: 'text-emerald-500' }
@@ -156,7 +157,12 @@ const createAttachmentId = (): string => {
 type AnyAttachment = ComposerAttachment | FeedAttachment;
 
 const getAttachmentUrl = (attachment: AnyAttachment): string => {
-  return 'dataUrl' in attachment ? attachment.dataUrl : attachment.url;
+  if ('dataUrl' in attachment) {
+    return attachment.dataUrl;
+  }
+  // Resolver la URL del attachment para asegurar que sea una URL completa
+  const resolved = resolveAssetUrl(attachment.url);
+  return resolved ?? attachment.url;
 };
 
 const getAttachmentLabel = (attachment: AnyAttachment): string => {
@@ -246,7 +252,7 @@ export const HomePage = () => {
   const location = useLocation();
   const userDisplayName = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'FlorteApp';
   const composerAvatarUrl =
-    user?.avatarUrl ??
+    resolveAssetUrl(user?.avatarUrl) ??
     `https://avatars.dicebear.com/api/initials/${encodeURIComponent(userDisplayName)}.svg`;
 
   const appendEmoji = (value: string, emoji: string) => {
@@ -727,7 +733,7 @@ export const HomePage = () => {
       setReportDetails('');
       setReportReason(reportReasons[0]);
       setReportError(null);
-      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => { });
     },
     onError: (error) => {
       console.error('No fue posible enviar el reporte', error);
@@ -1014,7 +1020,7 @@ export const HomePage = () => {
     const viewerHasReaction = Boolean(post.viewerReaction);
     const formattedTime = formatTimeAgo(post.createdAt);
     const authorAvatar =
-      post.author.avatarUrl ??
+      resolveAssetUrl(post.author.avatarUrl) ??
       `https://avatars.dicebear.com/api/initials/${encodeURIComponent(post.author.fullName)}.svg`;
     const reactionLabel = post.reactionCount === 1 ? 'reaccion' : 'reacciones';
     const commentLabel = post.commentCount === 1 ? 'comentario' : 'comentarios';
@@ -1023,7 +1029,7 @@ export const HomePage = () => {
       post.attachments?.length
         ? post.attachments
         : post.mediaUrl
-        ? [
+          ? [
             {
               id: `${post.id}-legacy`,
               postId: post.id,
@@ -1032,7 +1038,7 @@ export const HomePage = () => {
               createdAt: post.createdAt
             }
           ]
-        : [];
+          : [];
     const canManagePost = user?.role === 'admin' || user?.id === post.authorId;
     const viewerReactionType = post.viewerReaction === 'support' ? 'celebrate' : post.viewerReaction;
     const selectedReaction = reactionOptions.find((option) => option.type === viewerReactionType);
@@ -1052,15 +1058,15 @@ export const HomePage = () => {
       <Card
         key={`${context}-${post.id}`}
         className={classNames(
-          'relative overflow-visible space-y-4 bg-white/30 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.16)] dark:bg-white/10',
-          isModal && 'bg-white/95 shadow-[0_30px_60px_rgba(18,55,29,0.25)] dark:bg-slate-900/90'
+          'relative overflow-visible space-y-4 glass-liquid',
+          isModal && 'glass-liquid-strong'
         )}
       >
         <div className="flex items-start gap-3">
           <button
             type="button"
             onClick={() => handleNavigateToProfile(post.authorId)}
-            className="h-11 w-11 overflow-hidden rounded-full border border-white/20 bg-white/40 p-[1px] transition hover:border-sena-green/50"
+            className="h-11 w-11 overflow-hidden rounded-full glass-liquid p-[1px] transition hover:border-sena-green/50"
           >
             <img src={authorAvatar} alt={post.author.fullName} className="h-full w-full rounded-full object-cover" />
           </button>
@@ -1091,7 +1097,7 @@ export const HomePage = () => {
               <MoreHorizontal className="h-5 w-5" />
             </button>
             {postMenuOpenId === post.id && (
-              <div className="absolute right-0 top-9 z-20 w-48 rounded-2xl border border-white/20 bg-white/95 p-2 text-sm text-[var(--color-text)] shadow-[0_18px_35px_rgba(18,55,29,0.18)] dark:bg-slate-900/95">
+              <div className="absolute right-0 top-9 z-20 w-48 rounded-2xl glass-liquid-strong p-2 text-sm text-[var(--color-text)]">
                 {canManagePost && (
                   <button
                     type="button"
@@ -1139,7 +1145,7 @@ export const HomePage = () => {
               <div
                 key={attachment.id}
                 className={classNames(
-                  'relative overflow-hidden rounded-2xl border border-white/15 bg-white/5',
+                  'relative overflow-hidden rounded-2xl glass-liquid',
                   attachmentsFromPost.length === 1 ? 'w-full' : 'w-full sm:w-[calc(50%-4px)]'
                 )}
               >
@@ -1222,10 +1228,10 @@ export const HomePage = () => {
             </Button>
             {reactionPickerPost === post.id && (
               <div
-                className="absolute bottom-full left-1/2 z-10 -translate-x-1/2 translate-y-2 rounded-2xl border border-white/40 bg-white/95 px-4 py-3 shadow-[0_18px_35px_rgba(18,55,29,0.25)] dark:border-white/20 dark:bg-slate-900/95"
+                className="absolute bottom-full left-1/2 z-10 -translate-x-1/2 translate-y-2 rounded-2xl glass-liquid-strong px-4 py-3"
                 onMouseEnter={() => handleReactionHover(post.id)}
               >
-                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap sm:gap-3">
+                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap sm:gap-3 hide-scrollbar">
                   {reactionOptions.map(({ type, label, icon: Icon, color }) => (
                     <button
                       key={type}
@@ -1277,7 +1283,7 @@ export const HomePage = () => {
         </div>
 
         {isModal && (
-          <div className="space-y-3 rounded-2xl border border-white/15 bg-white/12 px-3 py-3">
+          <div className="space-y-3 rounded-2xl glass-liquid px-3 py-3">
             {loadingComments[post.id] ? (
               <p className="text-xs text-[var(--color-muted)]">Cargando comentarios...</p>
             ) : comments.length === 0 ? (
@@ -1288,10 +1294,11 @@ export const HomePage = () => {
               <div className="space-y-3">
                 {comments.map((comment) => {
                   const commentAvatar =
-                    comment.author.avatarUrl ??
+                    resolveAssetUrl(comment.author.avatarUrl) ??
                     `https://avatars.dicebear.com/api/initials/${encodeURIComponent(comment.author.fullName)}.svg`;
-                  const commentAttachmentType = comment.attachmentUrl ? detectMediaType(comment.attachmentUrl) : null;
-                  const commentAttachmentName = comment.attachmentUrl ? extractFileName(comment.attachmentUrl) : '';
+                  const resolvedCommentAttachmentUrl = comment.attachmentUrl ? resolveAssetUrl(comment.attachmentUrl) : null;
+                  const commentAttachmentType = resolvedCommentAttachmentUrl ? detectMediaType(resolvedCommentAttachmentUrl) : null;
+                  const commentAttachmentName = resolvedCommentAttachmentUrl ? extractFileName(resolvedCommentAttachmentUrl) : '';
                   const isEditingComment = editingCommentId === comment.id;
                   const canManageComment = user?.role === 'admin' || user?.id === comment.userId;
                   return (
@@ -1299,18 +1306,18 @@ export const HomePage = () => {
                       <button
                         type="button"
                         onClick={() => handleNavigateToProfile(comment.userId)}
-                        className="h-8 w-8 overflow-hidden rounded-full border border-white/20 bg-white/40 p-[1px] transition hover:border-sena-green/50"
+                        className="h-8 w-8 overflow-hidden rounded-full glass-liquid p-[1px] transition hover:border-sena-green/50"
                       >
                         <img src={commentAvatar} alt={comment.author.fullName} className="h-full w-full rounded-full object-cover" />
                       </button>
-                      <div className="relative flex-1 rounded-2xl bg-white/18 px-3 py-2 text-xs text-[var(--color-text)]">
+                      <div className="relative flex-1 rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
                         {isEditingComment ? (
                           <div className="space-y-3">
                             <textarea
                               rows={3}
                               value={editingCommentContent}
                               onChange={(event) => setEditingCommentContent(event.target.value)}
-                              className="w-full resize-none rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-xs text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                              className="w-full resize-none rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
                             />
                             <div className="flex justify-end gap-2">
                               <Button
@@ -1357,7 +1364,7 @@ export const HomePage = () => {
                                   <MoreHorizontal className="h-4 w-4" />
                                 </button>
                                 {commentMenuOpenId === comment.id && (
-                                  <div className="absolute right-0 top-8 z-20 w-48 rounded-2xl border border-white/20 bg-white/95 p-2 text-sm text-[var(--color-text)] shadow-[0_18px_35px_rgba(18,55,29,0.18)] dark:bg-slate-900/95">
+                                  <div className="absolute right-0 top-8 z-20 w-48 rounded-2xl glass-liquid-strong p-2 text-sm text-[var(--color-text)]">
                                     {canManageComment && (
                                       <button
                                         type="button"
@@ -1388,18 +1395,18 @@ export const HomePage = () => {
                               </div>
                             </div>
                             <p className="mt-1 leading-relaxed">{comment.content}</p>
-                            {comment.attachmentUrl && (
+                            {resolvedCommentAttachmentUrl && (
                               <div className="mt-2 overflow-hidden rounded-xl border border-white/20 bg-white/10">
                                 {commentAttachmentType === 'image' && (
                                   <img
-                                    src={comment.attachmentUrl}
+                                    src={resolvedCommentAttachmentUrl}
                                     alt="Adjunto del comentario"
                                     className="max-h-32 w-full object-cover"
                                   />
                                 )}
                                 {commentAttachmentType === 'video' && (
                                   <video
-                                    src={comment.attachmentUrl}
+                                    src={resolvedCommentAttachmentUrl}
                                     controls
                                     className="max-h-32 w-full bg-black"
                                     preload="metadata"
@@ -1509,7 +1516,7 @@ export const HomePage = () => {
                   value={commentInputValue}
                   onChange={(event) => handleCommentInputChange(post.id, event.target.value)}
                   placeholder="Escribe un comentario..."
-                  className="flex-1 resize-none rounded-2xl border border-white/20 bg-white/15 px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                  className="flex-1 resize-none rounded-2xl glass-liquid px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
                   disabled={isCommenting}
                 />
                 <Button
@@ -1600,7 +1607,7 @@ export const HomePage = () => {
       {
         id: 'create',
         name: 'Tu historia',
-        avatar: user?.avatarUrl ?? 'https://i.pravatar.cc/100?img=5'
+        avatar: resolveAssetUrl(user?.avatarUrl) ?? 'https://i.pravatar.cc/100?img=5'
       }
     ];
   }, [storyMediaUrls, user?.avatarUrl, userDisplayName]);
@@ -1622,7 +1629,7 @@ export const HomePage = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
-            className="pointer-events-auto fixed inset-x-0 top-24 z-40 mx-auto w-[min(88vw,360px)] rounded-2xl border border-white/50 bg-white/95 px-5 pb-4 pt-5 text-center text-sm text-[var(--color-text)] shadow-[0_18px_30px_rgba(18,55,29,0.18)] dark:border-white/20 dark:bg-slate-900/95"
+            className="pointer-events-auto fixed inset-x-0 top-24 z-40 mx-auto w-[min(88vw,360px)] rounded-2xl glass-liquid-strong px-5 pb-4 pt-5 text-center text-sm text-[var(--color-text)]"
           >
             <button
               type="button"
@@ -1647,7 +1654,7 @@ export const HomePage = () => {
 
       <div className="mx-auto grid w-full gap-4 pb-20 md:grid-cols-[minmax(0,1fr)_minmax(0,280px)] lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)_minmax(0,260px)] xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,320px)]">
         <aside className="hidden w-full flex-col gap-3 lg:flex">
-          <Card className="bg-white/25 p-4 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+          <Card className="glass-liquid p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rapida</h3>
               <Sparkles className="h-3.5 w-3.5 text-sena-green" />
@@ -1686,7 +1693,7 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          <Card className="bg-white/25 p-3 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+          <Card className="glass-liquid p-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-[var(--color-text)]">Avances destacados</h3>
               <Sparkles className="h-3.5 w-3.5 text-sena-green" />
@@ -1700,7 +1707,7 @@ export const HomePage = () => {
               {learningHighlights.map((project) => (
                 <div
                   key={project.id}
-                  className="rounded-xl border border-white/30 bg-white/20 px-3 py-2.5 transition hover:border-sena-green/40 hover:bg-white/30 dark:border-white/15 dark:bg-white/10"
+                  className="rounded-xl glass-liquid px-3 py-2.5 transition hover:border-sena-green/40 hover:bg-white/30 dark:hover:bg-white/10"
                 >
                   <p className="text-sm font-semibold text-[var(--color-text)] truncate">{project.title}</p>
                   <p className="text-[11px] text-[var(--color-muted)] capitalize">{project.status}</p>
@@ -1713,7 +1720,7 @@ export const HomePage = () => {
 
 
         <section className="mx-auto flex min-w-0 w-full max-w-3xl flex-col gap-5">
-          <Card className="overflow-hidden bg-white/30 backdrop-blur-xl shadow-[0_10px_24px_rgba(18,55,29,0.14)] dark:bg-white/10">
+          <Card className="overflow-hidden glass-liquid">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-[var(--color-text)] sm:text-base">Historias</h2>
               <Button
@@ -1732,7 +1739,7 @@ export const HomePage = () => {
               className="hidden"
               onChange={handleStoryFileChange}
             />
-            <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+            <div className="mt-3 flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
               {storiesWithAvatars.map((story) => (
                 <button
                   key={story.id}
@@ -1741,11 +1748,10 @@ export const HomePage = () => {
                   className="flex w-20 flex-col items-center gap-2.5 text-xs"
                 >
                   <div
-                    className={`relative h-16 w-16 rounded-full p-[3px] ${
-                      storyMediaUrls.length
-                        ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500'
-                        : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500'
-                    }`}
+                    className={`relative h-16 w-16 rounded-full p-[3px] ${storyMediaUrls.length
+                      ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500'
+                      : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500'
+                      }`}
                   >
                     <div className="flex h-full w-full items-center justify-center rounded-full border border-[var(--color-surface)] bg-[var(--color-surface)]">
                       {storyMediaUrls.length ? (
@@ -1763,7 +1769,7 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          <Card className="relative z-30 overflow-visible bg-white/30 backdrop-blur-xl shadow-[0_10px_24px_rgba(18,55,29,0.14)] dark:bg-white/10">
+          <Card className="relative z-30 overflow-visible glass-liquid">
             <div className="flex items-start gap-3">
               <img
                 src={composerAvatarUrl}
@@ -1789,7 +1795,7 @@ export const HomePage = () => {
                         <div key={action} className={classNames('relative overflow-visible', isEmojiAction && 'z-30')}>
                           <button
                             type="button"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/35 text-sena-green transition hover:shadow-[0_0_18px_rgba(57,169,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-sena-green transition hover:shadow-[0_0_18px_rgba(57,169,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
                             aria-label={label}
                             onClick={() => handleComposerToolClick(action)}
                             disabled={isPublishing}
@@ -1818,7 +1824,7 @@ export const HomePage = () => {
                 </div>
 
                 {composerAttachments.length > 0 && (
-                  <div className="space-y-3 rounded-2xl border border-white/20 bg-white/20 p-3 text-sm text-[var(--color-text)]">
+                  <div className="space-y-3 rounded-2xl glass-liquid p-3 text-sm text-[var(--color-text)]">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">
@@ -1837,11 +1843,11 @@ export const HomePage = () => {
                       </button>
                     </div>
 
-                    <div className="flex gap-2 overflow-x-auto px-1">
+                    <div className="flex gap-2 overflow-x-auto px-1 hide-scrollbar">
                       {composerAttachments.map((attachment) => (
                         <div
                           key={attachment.id}
-                          className="relative flex h-24 w-24 flex-col overflow-hidden rounded-2xl border border-white/20 bg-white/10 text-[var(--color-text)] shadow-[0_6px_18px_rgba(18,55,29,0.12)]"
+                          className="relative flex h-24 w-24 flex-col overflow-hidden rounded-2xl glass-liquid text-[var(--color-text)]"
                         >
                           <button
                             type="button"
@@ -1892,13 +1898,13 @@ export const HomePage = () => {
           </Card>
 
           {isLoadingFeed && (
-            <Card className="bg-white/25 p-4 text-sm text-[var(--color-muted)] backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+            <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)]">
               Cargando publicaciones...
             </Card>
           )}
 
           {!isLoadingFeed && feedPosts.length === 0 && (
-            <Card className="bg-white/25 p-4 text-sm text-[var(--color-muted)] backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+            <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)]">
               Aun no hay publicaciones en tu comunidad. Comparte la primera para iniciar la conversacion.
             </Card>
           )}
@@ -1907,7 +1913,7 @@ export const HomePage = () => {
         </section>
 
         <aside className="hidden flex-col gap-4 md:flex">
-          <Card className="bg-white/25 p-4 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+          <Card className="glass-liquid p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-[var(--color-text)]">Tendencias</h3>
               <Button variant="ghost" size="sm" className="px-2 py-1 text-xs">
@@ -1918,7 +1924,7 @@ export const HomePage = () => {
               {resources.slice(0, 5).map((resource) => (
                 <div
                   key={resource.id}
-                  className="rounded-xl border border-white/30 bg-white/25 px-3 py-2.5 transition hover:border-sena-green/40 hover:bg-white/35 dark:border-white/15 dark:bg-white/10"
+                  className="rounded-xl glass-liquid px-3 py-2.5 transition hover:border-sena-green/40 hover:bg-white/35 dark:hover:bg-white/10"
                 >
                   <p className="text-sm font-semibold text-[var(--color-text)] truncate">{resource.title}</p>
                   <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wide">
@@ -1932,7 +1938,7 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          <Card className="bg-white/25 p-4 backdrop-blur-xl shadow-[0_12px_24px_rgba(18,55,29,0.12)] dark:bg-white/10">
+          <Card className="glass-liquid p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-[var(--color-text)]">Anuncios</h3>
               <Sparkles className="h-3.5 w-3.5 text-sena-green" />
@@ -1969,7 +1975,7 @@ export const HomePage = () => {
                   onClick={() => setActiveAnnouncement(index)}
                   className={classNames(
                     'h-2 w-6 rounded-full transition',
-                    index === activeAnnouncement ? 'bg-sena-green' : 'bg-white/40'
+                    index === activeAnnouncement ? 'bg-sena-green' : 'glass-liquid'
                   )}
                   aria-label={`Mostrar anuncio ${index + 1}`}
                 />
@@ -1981,403 +1987,403 @@ export const HomePage = () => {
 
 
 
-      
-      <Button
-        className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full shadow-[0_18px_30px_rgba(57,169,0,0.3)]"
-        variant="primary"
-        onClick={() => setMessagesOpen((prev) => !prev)}
-      >
-        <MessageCircle className="h-5 w-5" />
-      </Button>
 
-      <AnimatePresence>
-        {messagesOpen && (
-          <motion.div
-            key="message-list"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.2 }}
-            className="fixed bottom-24 right-6 z-40 w-80"
-          >
-            <Card padded={false} className="overflow-hidden rounded-3xl border-white/30 bg-white/25 shadow-[0_25px_45px_rgba(18,55,29,0.25)] backdrop-blur-2xl dark:border-white/15 dark:bg-white/10">
-              <div className="flex items-center justify-between border-b border-white/20 px-5 py-4">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--color-text)]">Mensajes</p>
-                  <p className="text-xs text-[var(--color-muted)]">{chats.length} conversaciones activas</p>
+        <Button
+          className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full shadow-[0_18px_30px_rgba(57,169,0,0.3)]"
+          variant="primary"
+          onClick={() => setMessagesOpen((prev) => !prev)}
+        >
+          <MessageCircle className="h-5 w-5" />
+        </Button>
+
+        <AnimatePresence>
+          {messagesOpen && (
+            <motion.div
+              key="message-list"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="fixed bottom-24 right-6 z-40 w-80"
+            >
+              <Card padded={false} className="overflow-hidden rounded-3xl glass-liquid-strong">
+                <div className="flex items-center justify-between border-b border-white/20 px-5 py-4">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text)]">Mensajes</p>
+                    <p className="text-xs text-[var(--color-muted)]">{chats.length} conversaciones activas</p>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setMessagesOpen(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setMessagesOpen(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="max-h-72 space-y-2 overflow-y-auto px-4 py-3">
-                {chats.length === 0 && (
-                  <p className="text-sm text-[var(--color-muted)]">An no tienes conversaciones activas.</p>
-                )}
-                {chats.map((chat) => (
-                  <button
-                    key={chat.id}
-                    type="button"
-                    onClick={() => handleOpenChat(chat.id)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-left transition hover:border-sena-green/50 hover:bg-white/30 dark:hover:bg-white/15"
-                  >
-                    <img
-                      src={`https://avatars.dicebear.com/api/initials/${encodeURIComponent(chat.name ?? 'Chat')}.svg`}
-                      alt={chat.name ?? 'Chat'}
-                      className="h-9 w-9 rounded-full object-cover"
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--color-text)]">{chat.name ?? 'Chat sin ttulo'}</p>
-                      <p className="text-xs text-[var(--color-muted)]">
-                        {chat.lastMessageAt
-                          ? new Date(chat.lastMessageAt).toLocaleTimeString('es-CO', {
+                <div className="max-h-72 space-y-2 overflow-y-auto px-4 py-3 hide-scrollbar">
+                  {chats.length === 0 && (
+                    <p className="text-sm text-[var(--color-muted)]">An no tienes conversaciones activas.</p>
+                  )}
+                  {chats.map((chat) => (
+                    <button
+                      key={chat.id}
+                      type="button"
+                      onClick={() => handleOpenChat(chat.id)}
+                      className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-left transition hover:border-sena-green/50 hover:bg-white/30 dark:hover:bg-white/15"
+                    >
+                      <img
+                        src={`https://avatars.dicebear.com/api/initials/${encodeURIComponent(chat.name ?? 'Chat')}.svg`}
+                        alt={chat.name ?? 'Chat'}
+                        className="h-9 w-9 rounded-full object-cover"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--color-text)]">{chat.name ?? 'Chat sin ttulo'}</p>
+                        <p className="text-xs text-[var(--color-muted)]">
+                          {chat.lastMessageAt
+                            ? new Date(chat.lastMessageAt).toLocaleTimeString('es-CO', {
                               hour: '2-digit',
                               minute: '2-digit'
                             })
-                          : 'Sin mensajes'}
-                      </p>
-                    </div>
+                            : 'Sin mensajes'}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {openChatIds.map((chatId, index) => {
+            const chat = chats.find((c) => c.id === chatId);
+            if (!chat) return null;
+            return <ChatWindow key={chat.id} chat={chat} index={index} onClose={handleCloseChat} />;
+          })}
+        </AnimatePresence>
+
+        {isStoryViewerOpen && storyMediaUrls.length > 0 && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+            onClick={() => {
+              setIsStoryViewerOpen(false);
+              setIsStoryMenuOpen(false);
+            }}
+          >
+            <div className="relative flex items-center gap-4" onClick={(event) => event.stopPropagation()}>
+              {storyMediaUrls.length > 1 && (
+                <button
+                  type="button"
+                  className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
+                  onClick={() =>
+                    setCurrentStoryIndex((index) => (index - 1 + storyMediaUrls.length) % storyMediaUrls.length)
+                  }
+                  aria-label="Anterior"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+              )}
+              <div className="relative">
+                <img
+                  src={storyMediaUrls[currentStoryIndex]}
+                  alt="Historia subida"
+                  className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+                />
+                <button
+                  type="button"
+                  className="absolute left-4 bottom-4 inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/80"
+                  onClick={handleOpenStoryPicker}
+                >
+                  <Image className="h-4 w-4" /> Agregar
+                </button>
+                <button
+                  type="button"
+                  className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur transition hover:bg-black/70"
+                  onClick={() => setIsStoryMenuOpen((prev) => !prev)}
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+                {isStoryMenuOpen && (
+                  <div className="absolute right-3 top-14 z-10 w-44 rounded-2xl glass-liquid-strong px-3 py-2 text-sm text-white">
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-white/10"
+                      onClick={handleDeleteStory}
+                    >
+                      <Trash2 className="h-4 w-4 text-rose-400" /> Eliminar historia
+                    </button>
+                  </div>
+                )}
+                {storyMediaUrls.length > 1 && (
+                  <div className="absolute left-1/2 top-4 flex -translate-x-1/2 gap-2">
+                    {storyMediaUrls.map((_, index) => (
+                      <span
+                        key={`story-dot-${index}`}
+                        className={classNames(
+                          'h-1.5 w-8 rounded-full transition',
+                          index === currentStoryIndex ? 'bg-white' : 'bg-white/40'
+                        )}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+              {storyMediaUrls.length > 1 && (
+                <button
+                  type="button"
+                  className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
+                  onClick={() => setCurrentStoryIndex((index) => (index + 1) % storyMediaUrls.length)}
+                  aria-label="Siguiente"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+              )}
+              <button
+                type="button"
+                className="absolute -top-12 right-0 text-sm text-white/70 underline-offset-4 hover:text-white"
+                onClick={() => {
+                  setIsStoryViewerOpen(false);
+                  setIsStoryMenuOpen(false);
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {shareTarget && (
+          <GlassDialog
+            open={Boolean(shareTarget)}
+            onClose={handleCloseShareModal}
+            size="lg"
+            preventCloseOnBackdrop={isSharing}
+            contentClassName={floatingModalContentClass}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--color-text)]">Compartir publicacion</h3>
+                <p className="text-sm text-[var(--color-muted)]">
+                  Comparte como en Facebook: elige donde quieres que la vean y añade tu mensaje personal.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                onClick={handleCloseShareModal}
+                disabled={isSharing}
+                className="self-start rounded-full glass-liquid px-3 py-1 text-xs text-[var(--color-muted)] hover:text-sena-green"
+              >
+                <X className="h-4 w-4" /> Cerrar
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {shareAudienceOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setShareScope(option.id)}
+                    className={classNames(
+                      'rounded-full px-3 py-1 text-xs font-semibold transition',
+                      shareScope === option.id
+                        ? 'bg-sena-green text-white shadow-[0_10px_20px_rgba(57,169,0,0.25)]'
+                        : 'glass-liquid text-[var(--color-text)]'
+                    )}
+                  >
+                    {option.label}
                   </button>
                 ))}
               </div>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      <AnimatePresence>
-        {openChatIds.map((chatId, index) => {
-          const chat = chats.find((c) => c.id === chatId);
-          if (!chat) return null;
-          return <ChatWindow key={chat.id} chat={chat} index={index} onClose={handleCloseChat} />;
-        })}
-      </AnimatePresence>
-
-      {isStoryViewerOpen && storyMediaUrls.length > 0 && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
-          onClick={() => {
-            setIsStoryViewerOpen(false);
-            setIsStoryMenuOpen(false);
-          }}
-        >
-          <div className="relative flex items-center gap-4" onClick={(event) => event.stopPropagation()}>
-            {storyMediaUrls.length > 1 && (
-              <button
-                type="button"
-                className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
-                onClick={() =>
-                  setCurrentStoryIndex((index) => (index - 1 + storyMediaUrls.length) % storyMediaUrls.length)
-                }
-                aria-label="Anterior"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-            )}
-            <div className="relative">
-              <img
-                src={storyMediaUrls[currentStoryIndex]}
-                alt="Historia subida"
-                className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
-              />
-              <button
-                type="button"
-                className="absolute left-4 bottom-4 inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/80"
-                onClick={handleOpenStoryPicker}
-              >
-                <Image className="h-4 w-4" /> Agregar
-              </button>
-              <button
-                type="button"
-                className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur transition hover:bg-black/70"
-                onClick={() => setIsStoryMenuOpen((prev) => !prev)}
-              >
-                <MoreHorizontal className="h-5 w-5" />
-              </button>
-              {isStoryMenuOpen && (
-                <div className="absolute right-3 top-14 z-10 w-44 rounded-2xl border border-white/20 bg-black/80 px-3 py-2 text-sm text-white shadow-xl backdrop-blur">
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-white/10"
-                    onClick={handleDeleteStory}
-                  >
-                    <Trash2 className="h-4 w-4 text-rose-400" /> Eliminar historia
-                  </button>
+              <div className="rounded-2xl glass-liquid px-4 py-4 text-sm text-[var(--color-text)]">
+                <div className="flex items-start gap-3">
+                  <img
+                    src={
+                      resolveAssetUrl(shareTarget.author.avatarUrl) ??
+                      `https://avatars.dicebear.com/api/initials/${encodeURIComponent(shareTarget.author.fullName)}.svg`
+                    }
+                    alt={shareTarget.author.fullName}
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-semibold">{shareTarget.author.fullName}</p>
+                    <p className="text-xs text-[var(--color-muted)]">{formatTimeAgo(shareTarget.createdAt)}</p>
+                  </div>
                 </div>
-              )}
-              {storyMediaUrls.length > 1 && (
-                <div className="absolute left-1/2 top-4 flex -translate-x-1/2 gap-2">
-                  {storyMediaUrls.map((_, index) => (
-                    <span
-                      key={`story-dot-${index}`}
-                      className={classNames(
-                        'h-1.5 w-8 rounded-full transition',
-                        index === currentStoryIndex ? 'bg-white' : 'bg-white/40'
-                      )}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            {storyMediaUrls.length > 1 && (
-              <button
-                type="button"
-                className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
-                onClick={() => setCurrentStoryIndex((index) => (index + 1) % storyMediaUrls.length)}
-                aria-label="Siguiente"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-            )}
-            <button
-              type="button"
-              className="absolute -top-12 right-0 text-sm text-white/70 underline-offset-4 hover:text-white"
-              onClick={() => {
-                setIsStoryViewerOpen(false);
-                setIsStoryMenuOpen(false);
-              }}
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {shareTarget && (
-        <GlassDialog
-          open={Boolean(shareTarget)}
-          onClose={handleCloseShareModal}
-          size="lg"
-          preventCloseOnBackdrop={isSharing}
-          contentClassName={floatingModalContentClass}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-[var(--color-text)]">Compartir publicacion</h3>
-              <p className="text-sm text-[var(--color-muted)]">
-                Comparte como en Facebook: elige donde quieres que la vean y añade tu mensaje personal.
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              onClick={handleCloseShareModal}
-              disabled={isSharing}
-              className="self-start rounded-full border border-white/30 bg-white/70 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
-            >
-              <X className="h-4 w-4" /> Cerrar
-            </Button>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {shareAudienceOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setShareScope(option.id)}
-                  className={classNames(
-                    'rounded-full px-3 py-1 text-xs font-semibold transition',
-                    shareScope === option.id
-                      ? 'bg-sena-green text-white shadow-[0_10px_20px_rgba(57,169,0,0.25)]'
-                      : 'bg-white/20 text-[var(--color-text)] hover:bg-white/30'
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="rounded-2xl border border-white/20 bg-white/12 px-4 py-4 text-sm text-[var(--color-text)]">
-              <div className="flex items-start gap-3">
-                <img
-                  src={
-                    shareTarget.author.avatarUrl ??
-                    `https://avatars.dicebear.com/api/initials/${encodeURIComponent(shareTarget.author.fullName)}.svg`
-                  }
-                  alt={shareTarget.author.fullName}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-                <div className="min-w-0">
-                  <p className="font-semibold">{shareTarget.author.fullName}</p>
-                  <p className="text-xs text-[var(--color-muted)]">{formatTimeAgo(shareTarget.createdAt)}</p>
-                </div>
+                {shareTarget.content && (
+                  <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">{shareTarget.content}</p>
+                )}
+                {shareTarget.mediaUrl && (
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-white/15">
+                    <img src={shareTarget.mediaUrl} alt="Vista previa" className="max-h-40 w-full object-cover" />
+                  </div>
+                )}
               </div>
-              {shareTarget.content && (
-                <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">{shareTarget.content}</p>
-              )}
-              {shareTarget.mediaUrl && (
-                <div className="mt-3 overflow-hidden rounded-2xl border border-white/15">
-                  <img src={shareTarget.mediaUrl} alt="Vista previa" className="max-h-40 w-full object-cover" />
-                </div>
-              )}
+
+              <TextArea
+                rows={4}
+                placeholder={
+                  shareScope === 'feed'
+                    ? 'Di algo a tu comunidad...'
+                    : shareScope === 'chat'
+                      ? 'Escribe un mensaje para tus amigos...'
+                      : 'Comparte un mensaje con tu grupo...'
+                }
+                value={shareMessage}
+                onChange={(event) => setShareMessage(event.target.value)}
+                disabled={isSharing}
+              />
+
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={handleCloseShareModal} disabled={isSharing}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleShareSubmit} loading={isSharing} disabled={isSharing}>
+                  Compartir
+                </Button>
+              </div>
             </div>
+          </GlassDialog>
+        )}
 
-            <TextArea
-              rows={4}
-              placeholder={
-                shareScope === 'feed'
-                  ? 'Di algo a tu comunidad...'
-                  : shareScope === 'chat'
-                    ? 'Escribe un mensaje para tus amigos...'
-                    : 'Comparte un mensaje con tu grupo...'
-              }
-              value={shareMessage}
-              onChange={(event) => setShareMessage(event.target.value)}
-              disabled={isSharing}
-            />
-
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={handleCloseShareModal} disabled={isSharing}>
-                Cancelar
-              </Button>
-              <Button onClick={handleShareSubmit} loading={isSharing} disabled={isSharing}>
-                Compartir
-              </Button>
-            </div>
-          </div>
-        </GlassDialog>
-      )}
-
-      {reportTarget && (
-        <GlassDialog
-          open={Boolean(reportTarget)}
-          onClose={handleCloseReportModal}
-          size="md"
-          preventCloseOnBackdrop={reportMutation.isPending}
-          contentClassName={floatingModalContentClass}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-[var(--color-text)]">Reportar publicacion</h3>
-              <p className="text-sm text-[var(--color-muted)]">
-                Cuéntanos qué sucede para alertar al equipo de moderacion.
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              onClick={handleCloseReportModal}
-              disabled={reportMutation.isPending}
-              className="self-start rounded-full border border-white/30 bg-white/70 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
-            >
-              <X className="h-4 w-4" /> Cerrar
-            </Button>
-          </div>
-
-          <div className="mt-4 space-y-4">
-            <div className="rounded-2xl border border-rose-200/40 bg-rose-50/80 px-3 py-3 text-xs text-rose-900">
-              <p className="text-sm font-semibold text-rose-600">
-                {reportTarget?.type === 'comment' ? 'Estás reportando un comentario de' : 'Estás reportando una publicación de'}
-              </p>
-              <p className="mt-1 text-base text-rose-900">
-                {reportTarget?.type === 'comment'
-                  ? reportTarget.comment.author.fullName
-                  : reportTarget?.post.author.fullName}
-              </p>
-              <p className="text-[11px] text-rose-500">
-                {(reportTarget?.type === 'comment' ? reportTarget.comment.content : reportTarget?.post.content ?? '')
-                  .slice(0, 120)}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {reportReasons.map((reason) => (
-                <button
-                  key={reason}
-                  type="button"
-                  onClick={() => {
-                    setReportReason(reason);
-                    setReportError(null);
-                  }}
-                  className={classNames(
-                    'rounded-full px-3 py-1 text-xs font-semibold transition',
-                    reportReason === reason ? 'bg-rose-500 text-white' : 'bg-white/20 text-[var(--color-text)]'
-                  )}
-                >
-                  {reason}
-                </button>
-              ))}
-            </div>
-
-            <TextArea
-              rows={3}
-              placeholder="Describe por que consideras que infringe las normas (opcional)"
-              value={reportDetails}
-              onChange={(event) => setReportDetails(event.target.value)}
-              disabled={reportMutation.isPending}
-            />
-            {reportError && <p className="text-xs font-semibold text-rose-500">{reportError}</p>}
-
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={handleCloseReportModal} disabled={reportMutation.isPending}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSubmitReport} loading={reportMutation.isPending} disabled={reportMutation.isPending}>
-                Enviar reporte
-              </Button>
-            </div>
-          </div>
-        </GlassDialog>
-      )}
-
-      {activeModalPost && (
-        <GlassDialog
-          open={Boolean(activeModalPost)}
-          onClose={handleCloseCommentsModal}
-          size="xl"
-          frameless
-          contentClassName="relative mx-auto max-w-5xl overflow-visible border-none bg-transparent p-0 shadow-none"
-        >
-          <div className="relative mx-auto w-full max-w-3xl overflow-visible rounded-[36px] border border-white/30 bg-white/95 p-6 shadow-[0_30px_80px_rgba(18,55,29,0.25)]">
-            <div className="relative flex flex-col items-center gap-1 pb-4 text-center">
+        {reportTarget && (
+          <GlassDialog
+            open={Boolean(reportTarget)}
+            onClose={handleCloseReportModal}
+            size="md"
+            preventCloseOnBackdrop={reportMutation.isPending}
+            contentClassName={floatingModalContentClass}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--color-text)]">Reportar publicacion</h3>
+                <p className="text-sm text-[var(--color-muted)]">
+                  Cuéntanos qué sucede para alertar al equipo de moderacion.
+                </p>
+              </div>
               <Button
                 variant="ghost"
-                size="sm"
-                onClick={handleCloseCommentsModal}
-                className="absolute right-0 top-0"
-                aria-label="Cerrar comentarios"
+                onClick={handleCloseReportModal}
+                disabled={reportMutation.isPending}
+                className="self-start rounded-full border border-white/30 bg-white/70 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" /> Cerrar
               </Button>
-              <p className="text-sm uppercase tracking-[0.35em] text-sena-green">Comentarios</p>
-              <h3 className="text-xl font-semibold text-[var(--color-text)]">{activeModalPost.author.fullName}</h3>
             </div>
-            {renderPostCard(activeModalPost, 'modal')}
-          </div>
-        </GlassDialog>
-      )}
 
-      {editingPost && (
-        <GlassDialog
-          open={Boolean(editingPost)}
-          onClose={handleCancelEditPost}
-          size="md"
-          preventCloseOnBackdrop={updatePostMutation.isPending}
-          contentClassName={floatingModalContentClass}
-        >
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-[var(--color-text)]">Editar publicación</h3>
-              <p className="text-sm text-[var(--color-muted)]">
-                Ajusta el contenido antes de compartir el cambio con tu comunidad.
-              </p>
+            <div className="mt-4 space-y-4">
+              <div className="rounded-2xl border border-rose-200/40 bg-rose-50/80 px-3 py-3 text-xs text-rose-900">
+                <p className="text-sm font-semibold text-rose-600">
+                  {reportTarget?.type === 'comment' ? 'Estás reportando un comentario de' : 'Estás reportando una publicación de'}
+                </p>
+                <p className="mt-1 text-base text-rose-900">
+                  {reportTarget?.type === 'comment'
+                    ? reportTarget.comment.author.fullName
+                    : reportTarget?.post.author.fullName}
+                </p>
+                <p className="text-[11px] text-rose-500">
+                  {(reportTarget?.type === 'comment' ? reportTarget.comment.content : reportTarget?.post.content ?? '')
+                    .slice(0, 120)}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {reportReasons.map((reason) => (
+                  <button
+                    key={reason}
+                    type="button"
+                    onClick={() => {
+                      setReportReason(reason);
+                      setReportError(null);
+                    }}
+                    className={classNames(
+                      'rounded-full px-3 py-1 text-xs font-semibold transition',
+                      reportReason === reason ? 'bg-rose-500 text-white' : 'glass-liquid text-[var(--color-text)]'
+                    )}
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+
+              <TextArea
+                rows={3}
+                placeholder="Describe por que consideras que infringe las normas (opcional)"
+                value={reportDetails}
+                onChange={(event) => setReportDetails(event.target.value)}
+                disabled={reportMutation.isPending}
+              />
+              {reportError && <p className="text-xs font-semibold text-rose-500">{reportError}</p>}
+
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={handleCloseReportModal} disabled={reportMutation.isPending}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSubmitReport} loading={reportMutation.isPending} disabled={reportMutation.isPending}>
+                  Enviar reporte
+                </Button>
+              </div>
             </div>
-            <TextArea
-              rows={4}
-              value={editingPostContent}
-              onChange={(event) => setEditingPostContent(event.target.value)}
-              disabled={updatePostMutation.isPending}
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={handleCancelEditPost} disabled={updatePostMutation.isPending}>
-                Cancelar
-              </Button>
-              <Button onClick={handleConfirmEditPost} loading={updatePostMutation.isPending} disabled={updatePostMutation.isPending}>
-                Guardar cambios
-              </Button>
+          </GlassDialog>
+        )}
+
+        {activeModalPost && (
+          <GlassDialog
+            open={Boolean(activeModalPost)}
+            onClose={handleCloseCommentsModal}
+            size="xl"
+            frameless
+            contentClassName="relative mx-auto max-w-5xl overflow-visible border-none bg-transparent p-0 shadow-none"
+          >
+            <div className="relative mx-auto w-full max-w-3xl overflow-visible rounded-[36px] glass-liquid-strong p-6">
+              <div className="relative flex flex-col items-center gap-1 pb-4 text-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseCommentsModal}
+                  className="absolute right-0 top-0"
+                  aria-label="Cerrar comentarios"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <p className="text-sm uppercase tracking-[0.35em] text-sena-green">Comentarios</p>
+                <h3 className="text-xl font-semibold text-[var(--color-text)]">{activeModalPost.author.fullName}</h3>
+              </div>
+              {renderPostCard(activeModalPost, 'modal')}
             </div>
-          </div>
-        </GlassDialog>
-      )}
+          </GlassDialog>
+        )}
+
+        {editingPost && (
+          <GlassDialog
+            open={Boolean(editingPost)}
+            onClose={handleCancelEditPost}
+            size="md"
+            preventCloseOnBackdrop={updatePostMutation.isPending}
+            contentClassName={floatingModalContentClass}
+          >
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--color-text)]">Editar publicación</h3>
+                <p className="text-sm text-[var(--color-muted)]">
+                  Ajusta el contenido antes de compartir el cambio con tu comunidad.
+                </p>
+              </div>
+              <TextArea
+                rows={4}
+                value={editingPostContent}
+                onChange={(event) => setEditingPostContent(event.target.value)}
+                disabled={updatePostMutation.isPending}
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={handleCancelEditPost} disabled={updatePostMutation.isPending}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleConfirmEditPost} loading={updatePostMutation.isPending} disabled={updatePostMutation.isPending}>
+                  Guardar cambios
+                </Button>
+              </div>
+            </div>
+          </GlassDialog>
+        )}
       </div>
     </DashboardLayout>
   );
@@ -2427,7 +2433,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3 hide-scrollbar">
           {isLoading && <p className="text-xs text-[var(--color-muted)]">Cargando mensajes...</p>}
           {!isLoading && messages.length === 0 && (
             <p className="text-xs text-[var(--color-muted)]">An no hay mensajes en este chat.</p>
