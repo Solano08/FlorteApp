@@ -1057,10 +1057,7 @@ export const HomePage = () => {
     return (
       <Card
         key={`${context}-${post.id}`}
-        className={classNames(
-          'relative overflow-visible space-y-4 glass-liquid',
-          isModal && 'glass-liquid-strong'
-        )}
+        className="relative overflow-visible space-y-4 glass-liquid"
       >
         <div className="flex items-start gap-3">
           <button
@@ -1396,7 +1393,7 @@ export const HomePage = () => {
                             </div>
                             <p className="mt-1 leading-relaxed">{comment.content}</p>
                             {resolvedCommentAttachmentUrl && (
-                              <div className="mt-2 overflow-hidden rounded-xl border border-white/20 bg-white/10">
+                              <div className="mt-2 overflow-hidden rounded-xl glass-liquid">
                                 {commentAttachmentType === 'image' && (
                                   <img
                                     src={resolvedCommentAttachmentUrl}
@@ -1460,7 +1457,7 @@ export const HomePage = () => {
 
             <div className="space-y-3">
               {commentAttachment && (
-                <div className="space-y-2 rounded-2xl border border-white/20 bg-white/15 px-3 py-2 text-xs text-[var(--color-text)]">
+                <div className="space-y-2 rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
@@ -1652,65 +1649,65 @@ export const HomePage = () => {
         )}
       </AnimatePresence>
 
-      <div className="mx-auto grid w-full gap-4 pb-20 md:grid-cols-[minmax(0,1fr)_minmax(0,280px)] lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)_minmax(0,260px)] xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,320px)]">
-        <aside className="hidden w-full flex-col gap-3 lg:flex">
-          <Card className="glass-liquid p-4">
+      <div className="mx-auto grid w-full gap-4 pb-20 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,300px)] xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_minmax(0,360px)]">
+        <aside className="hidden w-full flex-col gap-5 lg:flex">
+          <Card className="glass-liquid p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rapida</h3>
-              <Sparkles className="h-3.5 w-3.5 text-sena-green" />
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Actividad rapida</h3>
+              <Sparkles className="h-4 w-4 text-sena-green" />
             </div>
-            <p className="mt-3 text-xs text-[var(--color-muted)]">
+            <p className="mt-4 text-sm text-[var(--color-muted)]">
               Accede en segundos a proyectos, grupos y espacios clave de tu comunidad.
             </p>
-            <div className="mt-4 space-y-2">
+            <div className="mt-5 space-y-3">
               <Button
                 size="sm"
                 variant="secondary"
-                className="w-full justify-between px-3"
+                className="w-full justify-between px-4 py-2.5"
                 onClick={() => navigate('/explore')}
               >
                 Explorar proyectos
-                <ArrowUpRight className="h-4 w-4" />
+                <ArrowUpRight className="h-5 w-5" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                className="w-full justify-between px-3"
+                className="w-full justify-between px-4 py-2.5"
                 onClick={() => navigate('/groups')}
               >
                 Encontrar grupos
-                <Users className="h-4 w-4" />
+                <Users className="h-5 w-5" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                className="w-full justify-between px-3"
+                className="w-full justify-between px-4 py-2.5"
                 onClick={() => navigate('/projects')}
               >
                 Revisar mis proyectos
-                <FolderKanban className="h-4 w-4" />
+                <FolderKanban className="h-5 w-5" />
               </Button>
             </div>
           </Card>
 
-          <Card className="glass-liquid p-3">
+          <Card className="glass-liquid p-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">Avances destacados</h3>
-              <Sparkles className="h-3.5 w-3.5 text-sena-green" />
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Avances destacados</h3>
+              <Sparkles className="h-4 w-4 text-sena-green" />
             </div>
-            <div className="mt-2 space-y-2.5">
+            <div className="mt-4 space-y-3">
               {learningHighlights.length === 0 && (
-                <p className="text-xs text-[var(--color-muted)]">
+                <p className="text-sm text-[var(--color-muted)]">
                   Registra tus proyectos para seguir tu progreso.
                 </p>
               )}
               {learningHighlights.map((project) => (
                 <div
                   key={project.id}
-                  className="rounded-xl glass-liquid px-3 py-2.5 transition hover:border-sena-green/40 hover:bg-white/30 dark:hover:bg-white/10"
+                  className="rounded-xl glass-liquid px-4 py-3 transition hover:border-sena-green/40 hover:bg-white/30 dark:hover:bg-white/10"
                 >
-                  <p className="text-sm font-semibold text-[var(--color-text)] truncate">{project.title}</p>
-                  <p className="text-[11px] text-[var(--color-muted)] capitalize">{project.status}</p>
+                  <p className="text-base font-semibold text-[var(--color-text)] truncate">{project.title}</p>
+                  <p className="text-xs text-[var(--color-muted)] capitalize mt-1">{project.status}</p>
                 </div>
               ))}
             </div>
@@ -1912,38 +1909,38 @@ export const HomePage = () => {
           {feedPosts.map((post) => renderPostCard(post, 'list'))}
         </section>
 
-        <aside className="hidden flex-col gap-4 md:flex">
-          <Card className="glass-liquid p-4">
+        <aside className="hidden flex-col gap-5 md:flex">
+          <Card className="glass-liquid p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">Tendencias</h3>
-              <Button variant="ghost" size="sm" className="px-2 py-1 text-xs">
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Tendencias</h3>
+              <Button variant="ghost" size="sm" className="px-3 py-1.5 text-sm">
                 Ver todo
               </Button>
             </div>
-            <div className="mt-3 space-y-2.5">
+            <div className="mt-4 space-y-3">
               {resources.slice(0, 5).map((resource) => (
                 <div
                   key={resource.id}
-                  className="rounded-xl glass-liquid px-3 py-2.5 transition hover:border-sena-green/40 hover:bg-white/35 dark:hover:bg-white/10"
+                  className="rounded-xl glass-liquid px-4 py-3 transition hover:border-sena-green/40 hover:bg-white/35 dark:hover:bg-white/10"
                 >
-                  <p className="text-sm font-semibold text-[var(--color-text)] truncate">{resource.title}</p>
-                  <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wide">
+                  <p className="text-base font-semibold text-[var(--color-text)] truncate">{resource.title}</p>
+                  <p className="text-xs text-[var(--color-muted)] uppercase tracking-wide mt-1">
                     {resource.resourceType}
                   </p>
                 </div>
               ))}
               {resources.length === 0 && (
-                <p className="text-xs text-[var(--color-muted)]">An no hay recursos recientes.</p>
+                <p className="text-sm text-[var(--color-muted)]">An no hay recursos recientes.</p>
               )}
             </div>
           </Card>
 
-          <Card className="glass-liquid p-4">
+          <Card className="glass-liquid p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">Anuncios</h3>
-              <Sparkles className="h-3.5 w-3.5 text-sena-green" />
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Anuncios</h3>
+              <Sparkles className="h-4 w-4 text-sena-green" />
             </div>
-            <div className="mt-4 h-64 overflow-hidden rounded-3xl">
+            <div className="mt-5 h-80 overflow-hidden rounded-3xl">
               <AnimatePresence initial={false} mode="wait">
                 {announcementSlides.map(
                   (slide, index) =>
@@ -1967,14 +1964,14 @@ export const HomePage = () => {
                 )}
               </AnimatePresence>
             </div>
-            <div className="mt-4 flex justify-center gap-2">
+            <div className="mt-5 flex justify-center gap-2">
               {announcementSlides.map((slide, index) => (
                 <button
                   key={slide.id}
                   type="button"
                   onClick={() => setActiveAnnouncement(index)}
                   className={classNames(
-                    'h-2 w-6 rounded-full transition',
+                    'h-2.5 w-8 rounded-full transition',
                     index === activeAnnouncement ? 'bg-sena-green' : 'glass-liquid'
                   )}
                   aria-label={`Mostrar anuncio ${index + 1}`}
@@ -2168,7 +2165,7 @@ export const HomePage = () => {
                 variant="ghost"
                 onClick={handleCloseShareModal}
                 disabled={isSharing}
-                className="self-start rounded-full glass-liquid px-3 py-1 text-xs text-[var(--color-muted)] hover:text-sena-green"
+                className="self-start rounded-full glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
               >
                 <X className="h-4 w-4" /> Cerrar
               </Button>
@@ -2212,7 +2209,7 @@ export const HomePage = () => {
                   <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">{shareTarget.content}</p>
                 )}
                 {shareTarget.mediaUrl && (
-                  <div className="mt-3 overflow-hidden rounded-2xl border border-white/15">
+                  <div className="mt-3 overflow-hidden rounded-2xl glass-liquid">
                     <img src={shareTarget.mediaUrl} alt="Vista previa" className="max-h-40 w-full object-cover" />
                   </div>
                 )}
@@ -2263,14 +2260,14 @@ export const HomePage = () => {
                 variant="ghost"
                 onClick={handleCloseReportModal}
                 disabled={reportMutation.isPending}
-                className="self-start rounded-full border border-white/30 bg-white/70 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
+                className="self-start rounded-full glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
               >
                 <X className="h-4 w-4" /> Cerrar
               </Button>
             </div>
 
             <div className="mt-4 space-y-4">
-              <div className="rounded-2xl border border-rose-200/40 bg-rose-50/80 px-3 py-3 text-xs text-rose-900">
+              <div className="rounded-2xl glass-liquid border-rose-200/40 bg-rose-50/80 px-3 py-3 text-xs text-rose-900 dark:border-rose-500/20 dark:bg-rose-900/20">
                 <p className="text-sm font-semibold text-rose-600">
                   {reportTarget?.type === 'comment' ? 'Estás reportando un comentario de' : 'Estás reportando una publicación de'}
                 </p>
@@ -2333,7 +2330,13 @@ export const HomePage = () => {
             frameless
             contentClassName="relative mx-auto max-w-5xl overflow-visible border-none bg-transparent p-0 shadow-none"
           >
-            <div className="relative mx-auto w-full max-w-3xl overflow-visible rounded-[36px] glass-liquid-strong p-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 32 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 28 }}
+              transition={{ type: 'spring', stiffness: 170, damping: 24 }}
+              className="relative mx-auto w-full max-w-3xl overflow-visible rounded-[36px] glass-liquid-strong p-6"
+            >
               <div className="relative flex flex-col items-center gap-1 pb-4 text-center">
                 <Button
                   variant="ghost"
@@ -2348,7 +2351,7 @@ export const HomePage = () => {
                 <h3 className="text-xl font-semibold text-[var(--color-text)]">{activeModalPost.author.fullName}</h3>
               </div>
               {renderPostCard(activeModalPost, 'modal')}
-            </div>
+            </motion.div>
           </GlassDialog>
         )}
 
@@ -2416,7 +2419,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
       className="fixed bottom-28 z-50 w-80"
       style={{ right: 24 + index * 320 }}
     >
-      <Card padded={false} className="flex h-96 flex-col overflow-hidden rounded-3xl border-white/30 bg-white/20 shadow-[0_25px_45px_rgba(18,55,29,0.28)] backdrop-blur-2xl dark:border-white/15 dark:bg-white/10">
+      <Card padded={false} className="flex h-96 flex-col overflow-hidden rounded-3xl glass-liquid-strong">
         <div className="flex items-center justify-between border-b border-white/20 px-4 py-3">
           <div className="flex items-center gap-3">
             <img
@@ -2439,7 +2442,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
             <p className="text-xs text-[var(--color-muted)]">An no hay mensajes en este chat.</p>
           )}
           {messages.map((msg) => (
-            <div key={msg.id} className="rounded-2xl bg-white/30 px-3 py-2 text-sm text-[var(--color-text)] dark:bg-white/10">
+            <div key={msg.id} className="rounded-2xl glass-liquid px-3 py-2 text-sm text-[var(--color-text)]">
               <p>{msg.content}</p>
               <p className="text-xs text-[var(--color-muted)]">
                 {new Date(msg.createdAt).toLocaleTimeString('es-CO', {
@@ -2463,7 +2466,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               placeholder="Escribe un mensaje..."
-              className="flex-1 rounded-2xl border border-white/25 bg-white/15 px-4 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+              className="flex-1 rounded-2xl glass-liquid px-4 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
             />
             <Button type="submit" size="sm" loading={sendMessageMutation.isPending}>
               Enviar
