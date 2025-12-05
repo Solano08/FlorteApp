@@ -61,12 +61,12 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
     const interactiveProps = showTriggerButton
       ? {}
       : ({
-          role: 'button',
-          tabIndex: 0,
-          onClick: handleOpenPicker,
-          onKeyDown: handleKeyDown,
-          'aria-label': 'Actualizar foto de perfil'
-        } as const);
+        role: 'button',
+        tabIndex: 0,
+        onClick: handleOpenPicker,
+        onKeyDown: handleKeyDown,
+        'aria-label': 'Actualizar foto de perfil'
+      } as const);
 
     return (
       <div className="relative inline-block">
@@ -76,7 +76,7 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
             'h-28 w-28 overflow-hidden rounded-full border-[6px] border-white/30 shadow-[0_18px_38px_rgba(18,55,29,0.22)] dark:border-white/15',
             loading && 'opacity-70',
             !showTriggerButton &&
-              'cursor-pointer focus:outline-none focus:ring-2 focus:ring-sena-green/40 focus:ring-offset-2 focus:ring-offset-white/10'
+            'cursor-pointer focus:outline-none focus:ring-2 focus:ring-sena-green/40 focus:ring-offset-2 focus:ring-offset-white/10'
           )}
         >
           <img
@@ -89,7 +89,7 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
           <button
             type="button"
             onClick={handleOpenPicker}
-            className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-sena-green shadow-[0_14px_24px_rgba(18,55,29,0.22)] backdrop-blur transition hover:bg-white"
+            className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-2xl text-sena-green glass-liquid transition hover:bg-white"
           >
             <Camera className="h-4 w-4" />
           </button>
