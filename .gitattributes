@@ -1,0 +1,12 @@
+# Configuración de finales de línea
+* text=auto
+*.{cmd,[cC][mM][dD]} text eol=crlf
+*.{bat,[bB][aA][tT]} text eol=crlf
+*.{sh,[sS][hH]} text eol=lf
+
+# Archivos de código fuente
+*.{js,jsx,ts,tsx,json,css,scss,html,md} text eol=lf
+
+# Archivos binarios
+*.{png,jpg,jpeg,gif,ico,svg,woff,woff2,ttf,eot} binary
+

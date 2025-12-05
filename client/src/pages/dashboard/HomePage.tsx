@@ -69,7 +69,7 @@ interface ComposerAttachment {
 }
 
 const reactionOptions = [
-  { type: 'like' as ReactionType, label: 'Me gusta', icon: ThumbsUp, color: 'text-blue-500' },
+  { type: 'like' as ReactionType, label: 'Me gusta', icon: ThumbsUp, color: 'text-blue-400' },
   { type: 'love' as ReactionType, label: 'Me encanta', icon: Heart, color: 'text-rose-500' },
   { type: 'insightful' as ReactionType, label: 'Me asombra', icon: Sparkles, color: 'text-amber-500' },
   { type: 'celebrate' as ReactionType, label: 'Me divierte', icon: Laugh, color: 'text-emerald-500' }

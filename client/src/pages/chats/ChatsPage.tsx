@@ -103,7 +103,7 @@ const getChatName = (name: string | null | undefined, isGroup: boolean) =>
 
 const avatarGradientPalette = [
   'from-sena-green/90 to-emerald-400/80',
-  'from-blue-500/90 to-cyan-400/80',
+  'from-blue-400/75 to-cyan-300/70',
   'from-amber-500/90 to-orange-400/80',
   'from-purple-500/90 to-indigo-400/80'
 ];

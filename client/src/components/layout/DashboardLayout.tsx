@@ -98,11 +98,11 @@ export const DashboardLayout = ({
         <header className="sticky top-0 z-40 grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-2.5 glass-liquid transition-[padding] duration-150 md:px-5">
           <div className="flex items-center gap-2">
             <img
-              src="/florte-logo.svg"
+              src="/logoFlorte.png"
               alt="Florte"
-              className="h-9 w-9 rounded-xl glass-liquid object-cover md:h-10 md:w-10"
+              className="h-9 w-9 object-cover md:h-10 md:w-10"
             />
-            <span className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)] md:text-base">
+            <span className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)] md:text-base" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
               Florte
             </span>
           </div>

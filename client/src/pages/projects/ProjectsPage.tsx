@@ -41,9 +41,9 @@ const statusDisplay: Record<
   },
   in_progress: {
     icon: Hammer,
-    accent: 'text-blue-600',
+    accent: 'text-blue-500',
     helper: 'Coordina tareas, commits y avances.',
-    badge: 'bg-blue-50 text-blue-700'
+    badge: 'bg-blue-50/60 text-blue-600'
   },
   completed: {
     icon: CheckCircle,
