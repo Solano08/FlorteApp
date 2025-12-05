@@ -364,7 +364,7 @@ export const ProfilePage = () => {
           </div>
           <p className="mt-2 text-[12px] text-[var(--color-muted)] line-clamp-2">{snippet}</p>
           {showMedia && post.mediaUrl && (
-            <div className="mt-3 overflow-hidden rounded-xl border border-white/30">
+            <div className="mt-3 overflow-hidden rounded-xl glass-liquid">
               <img src={resolveAssetUrl(post.mediaUrl) ?? post.mediaUrl} alt="Vista previa de la publicacion" className="h-32 w-full object-cover" />
             </div>
           )}
@@ -1395,13 +1395,13 @@ export const ProfilePage = () => {
 
           <div className="space-y-6">
 
-            <Card className="relative overflow-visible rounded-[32px] border border-white/25 bg-white/45 p-0 shadow-[0_14px_30px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
+            <Card className="relative overflow-visible rounded-[32px] glass-liquid-strong p-0">
 
               <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[38px] bg-[radial-gradient(circle_at_center,_rgba(18,55,29,0.06)_0%,_rgba(18,55,29,0.025)_38%,_transparent_70%)] blur-xl" />
 
               <div className="relative h-48 w-full overflow-visible rounded-t-[32px] sm:h-52 md:h-56">
 
-                <div className="relative h-full overflow-hidden rounded-t-[32px] border border-white/20 shadow-[0_16px_28px_rgba(18,55,29,0.12)]">
+                <div className="relative h-full overflow-hidden rounded-t-[32px] glass-liquid">
 
                   <img
 
@@ -1537,7 +1537,7 @@ export const ProfilePage = () => {
 
                       title={rawValue}
 
-                      className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/95 px-4 py-1.5 text-xs font-semibold text-sena-green shadow-[0_10px_20px_rgba(18,55,29,0.16)] transition hover:bg-white"
+                      className="inline-flex items-center gap-2 rounded-full glass-liquid px-4 py-1.5 text-xs font-semibold text-sena-green transition hover:opacity-80"
 
                     >
 
@@ -1557,7 +1557,7 @@ export const ProfilePage = () => {
 
 
 
-            <Card className="border border-white/30 bg-white/60 shadow-[0_10px_22px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
+            <Card className="glass-liquid">
 
               <h3 className="text-base font-semibold text-[var(--color-text)]">Acerca de mi</h3>
 
@@ -1571,7 +1571,7 @@ export const ProfilePage = () => {
 
 
 
-            <Card className="border border-white/30 bg-white/60 shadow-[0_10px_22px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
+            <Card className="glass-liquid">
 
               <div className="flex items-center justify-between">
 
@@ -1615,7 +1615,7 @@ export const ProfilePage = () => {
 
                     >
 
-                      <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
+                      <div className="rounded-2xl glass-liquid px-4 py-3 text-sm text-[var(--color-text)] transition hover:border-sena-green/60">
 
                         <div className="flex items-center justify-between gap-3">
 
@@ -1703,7 +1703,7 @@ export const ProfilePage = () => {
                   {activityStats.map(({ id, label, value, icon: Icon, accent }) => (
                     <div
                       key={id}
-                      className="group relative flex min-h-[110px] flex-col items-center justify-center gap-3 rounded-2xl border border-white/25 bg-white/35 px-4 py-5 text-center shadow-[0_16px_28px_rgba(18,55,29,0.14)]"
+                      className="group relative flex min-h-[110px] flex-col items-center justify-center gap-3 rounded-2xl glass-liquid px-4 py-5 text-center"
                       role="figure"
                       title={label}
                       aria-label={label}
@@ -1825,9 +1825,9 @@ export const ProfilePage = () => {
 
 
 
-                  <div className="rounded-[24px] border border-white/30 bg-white/60 p-4 shadow-[0_26px_56px_rgba(18,55,29,0.12)] backdrop-blur-[20px] dark:border-white/10 dark:bg-white/10">
+                  <div className="rounded-[24px] glass-liquid p-4">
 
-                    <div className="relative h-36 overflow-hidden rounded-3xl border border-white/30 sm:h-40 md:h-44">
+                    <div className="relative h-36 overflow-hidden rounded-3xl glass-liquid sm:h-40 md:h-44">
                       <img src={displayCoverImage} alt="Portada actual" className="h-full w-full object-cover" />
 
                       <div className="absolute inset-0 bg-gradient-to-t from-black/22 via-transparent to-black/8" />
@@ -1854,7 +1854,7 @@ export const ProfilePage = () => {
 
                           aria-expanded={isCoverEditorMenuOpen}
 
-                          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-sena-green shadow-[0_12px_28px_rgba(18,55,29,0.2)] backdrop-blur transition hover:bg-white"
+                          className="flex h-10 w-10 items-center justify-center rounded-2xl glass-liquid text-sena-green transition hover:opacity-80"
 
                         >
 
@@ -1870,7 +1870,7 @@ export const ProfilePage = () => {
 
                             role="menu"
 
-                            className="absolute right-0 top-full mt-2 w-48 transform -translate-x-full rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left text-[var(--color-text)] shadow-[0_22px_50px_rgba(18,55,29,0.22)] backdrop-blur"
+                            className="absolute right-0 top-full mt-2 w-48 transform -translate-x-full rounded-2xl glass-liquid-strong p-1.5 text-left text-[var(--color-text)]"
 
                           >
 
@@ -1946,7 +1946,7 @@ export const ProfilePage = () => {
 
                               aria-expanded={isAvatarMenuOpen}
 
-                              className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/70 bg-white/95 text-sena-green shadow-[0_12px_28px_rgba(18,55,29,0.2)] backdrop-blur transition hover:bg-white"
+                              className="flex h-9 w-9 items-center justify-center rounded-2xl glass-liquid text-sena-green transition hover:opacity-80"
 
                             >
 
@@ -1962,7 +1962,7 @@ export const ProfilePage = () => {
 
                                 role="menu"
 
-                                className="absolute left-full top-0 mt-0 w-48 translate-x-2 rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left shadow-[0_22px_50px_rgba(18,55,29,0.22)] backdrop-blur"
+                                className="absolute left-full top-0 mt-0 w-48 translate-x-2 rounded-2xl glass-liquid-strong p-1.5 text-left"
 
                               >
 
@@ -2120,7 +2120,7 @@ export const ProfilePage = () => {
 
                                 onClick={() => handleActivateLinkField(name)}
 
-                                className="flex h-32 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/35 bg-white/25 px-4 text-center text-sm font-semibold text-[var(--color-muted)] shadow-[0_18px_36px_rgba(18,55,29,0.14)] transition hover:border-sena-green/60 hover:text-sena-green dark:border-white/10 dark:bg-white/10"
+                                className="flex h-32 flex-col items-center justify-center gap-2 rounded-2xl glass-liquid border-dashed px-4 text-center text-sm font-semibold text-[var(--color-muted)] transition hover:border-sena-green/60 hover:text-sena-green"
 
                               >
 
@@ -2146,7 +2146,7 @@ export const ProfilePage = () => {
 
                               key={name}
 
-                              className="rounded-2xl border border-white/30 bg-white/30 p-4 shadow-[0_20px_40px_rgba(18,55,29,0.16)] backdrop-blur-[14px] dark:border-white/10 dark:bg-white/10"
+                              className="rounded-2xl glass-liquid p-4"
 
                             >
 
@@ -2164,7 +2164,7 @@ export const ProfilePage = () => {
 
                                       onClick={() => handleClearLinkField(name)}
 
-                                      className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/20 text-[var(--color-muted)] transition hover:border-red-300 hover:text-red-400 dark:border-white/10 dark:bg-white/5"
+                                      className="flex h-7 w-7 items-center justify-center rounded-full glass-liquid text-[var(--color-muted)] transition hover:border-red-300 hover:text-red-400"
 
                                       aria-label={`Eliminar ${label}`}
 
@@ -2182,7 +2182,7 @@ export const ProfilePage = () => {
 
                                     onClick={() => handleCollapseLinkField(name)}
 
-                                    className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/20 text-[var(--color-muted)] transition hover:border-sena-green/60 hover:text-sena-green dark:border-white/10 dark:bg-white/5"
+                                    className="flex h-7 w-7 items-center justify-center rounded-full glass-liquid text-[var(--color-muted)] transition hover:border-sena-green/60 hover:text-sena-green"
 
                                     aria-label={`Cerrar ${label}`}
 
@@ -2318,7 +2318,7 @@ export const ProfilePage = () => {
               </Button>
             </div>
             {selectedSavedPost.mediaUrl && (
-              <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/10">
+              <div className="overflow-hidden rounded-2xl glass-liquid">
                 <img
                   src={resolveAssetUrl(selectedSavedPost.mediaUrl) ?? selectedSavedPost.mediaUrl}
                   alt="Vista previa de la publicacion guardada"
@@ -2419,7 +2419,7 @@ export const ProfilePage = () => {
 
               >
 
-                <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
+                <div className="rounded-2xl glass-liquid px-4 py-3 text-sm text-[var(--color-text)] transition hover:border-sena-green/60">
 
                   <div className="flex items-center justify-between gap-3">
 
@@ -2475,7 +2475,7 @@ export const ProfilePage = () => {
 
           <div className="space-y-5">
             {selectedProfilePost.source === 'shared' && (
-              <div className="rounded-2xl border border-white/20 bg-white/25 p-3 shadow-[0_16px_30px_rgba(18,55,29,0.18)] backdrop-blur">
+              <div className="rounded-2xl glass-liquid p-3">
                 <div className="flex items-start gap-3">
                   <div className="h-10 w-10 overflow-hidden rounded-full border border-white/30 bg-white/70 p-[2px]">
                     <img
@@ -2505,7 +2505,7 @@ export const ProfilePage = () => {
               </div>
             )}
 
-            <div className="space-y-4 rounded-3xl border border-white/25 bg-white/40 p-4 text-[var(--color-text)] shadow-[0_24px_45px_rgba(18,55,29,0.2)] backdrop-blur-xl dark:border-white/15 dark:bg-white/10">
+            <div className="space-y-4 rounded-3xl glass-liquid p-4 text-[var(--color-text)]">
               <div className="flex items-start gap-3">
                 <div className="h-11 w-11 overflow-hidden rounded-full border border-white/30 bg-white/70 p-[2px]">
                   <img
@@ -2534,7 +2534,7 @@ export const ProfilePage = () => {
               )}
 
               {selectedProfilePost.mediaUrl && (
-                <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/10">
+                <div className="overflow-hidden rounded-2xl glass-liquid">
                   <img
                     src={resolveAssetUrl(selectedProfilePost.mediaUrl) ?? selectedProfilePost.mediaUrl}
                     alt="Contenido de la publicacion"
@@ -2551,7 +2551,7 @@ export const ProfilePage = () => {
                     return (
                       <div
                         key={attachment.id}
-                        className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/12 shadow-sm"
+                        className="relative overflow-hidden rounded-2xl glass-liquid"
                       >
                         {mediaType === 'image' && (
                           <img src={resolvedUrl} alt="Adjunto" className="h-full w-full object-cover" />

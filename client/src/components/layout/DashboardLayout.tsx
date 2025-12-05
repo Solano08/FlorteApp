@@ -175,11 +175,16 @@ export const DashboardLayout = ({
         <main className="flex-1 overflow-hidden">
           <div
             className={classNames(
-              'h-full w-full overflow-y-auto py-4 hide-scrollbar',
-              fluid
-                ? 'mx-0 px-4 sm:px-6 lg:px-10 xl:px-16'
-                : 'mx-auto max-w-5xl px-4 sm:px-6',
+              'h-full w-full',
+              // Si hay contentClassName personalizado, no aplicar estilos por defecto
               contentClassName
+                ? contentClassName
+                : classNames(
+                    'overflow-y-auto py-4 hide-scrollbar',
+                    fluid
+                      ? 'mx-0 px-4 sm:px-6 lg:px-10 xl:px-16'
+                      : 'mx-auto max-w-5xl px-4 sm:px-6'
+                  )
             )}
           >
             {(title || subtitle) && (

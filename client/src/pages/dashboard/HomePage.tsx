@@ -1057,10 +1057,7 @@ export const HomePage = () => {
     return (
       <Card
         key={`${context}-${post.id}`}
-        className={classNames(
-          'relative overflow-visible space-y-4 glass-liquid',
-          isModal && 'glass-liquid-strong'
-        )}
+        className="relative overflow-visible space-y-4 glass-liquid"
       >
         <div className="flex items-start gap-3">
           <button
@@ -1396,7 +1393,7 @@ export const HomePage = () => {
                             </div>
                             <p className="mt-1 leading-relaxed">{comment.content}</p>
                             {resolvedCommentAttachmentUrl && (
-                              <div className="mt-2 overflow-hidden rounded-xl border border-white/20 bg-white/10">
+                              <div className="mt-2 overflow-hidden rounded-xl glass-liquid">
                                 {commentAttachmentType === 'image' && (
                                   <img
                                     src={resolvedCommentAttachmentUrl}
@@ -1460,7 +1457,7 @@ export const HomePage = () => {
 
             <div className="space-y-3">
               {commentAttachment && (
-                <div className="space-y-2 rounded-2xl border border-white/20 bg-white/15 px-3 py-2 text-xs text-[var(--color-text)]">
+                <div className="space-y-2 rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
@@ -2168,7 +2165,7 @@ export const HomePage = () => {
                 variant="ghost"
                 onClick={handleCloseShareModal}
                 disabled={isSharing}
-                className="self-start rounded-full glass-liquid px-3 py-1 text-xs text-[var(--color-muted)] hover:text-sena-green"
+                className="self-start rounded-full glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
               >
                 <X className="h-4 w-4" /> Cerrar
               </Button>
@@ -2212,7 +2209,7 @@ export const HomePage = () => {
                   <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">{shareTarget.content}</p>
                 )}
                 {shareTarget.mediaUrl && (
-                  <div className="mt-3 overflow-hidden rounded-2xl border border-white/15">
+                  <div className="mt-3 overflow-hidden rounded-2xl glass-liquid">
                     <img src={shareTarget.mediaUrl} alt="Vista previa" className="max-h-40 w-full object-cover" />
                   </div>
                 )}
@@ -2263,14 +2260,14 @@ export const HomePage = () => {
                 variant="ghost"
                 onClick={handleCloseReportModal}
                 disabled={reportMutation.isPending}
-                className="self-start rounded-full border border-white/30 bg-white/70 px-3 py-1 text-xs text-[var(--color-muted)] shadow-[0_10px_24px_rgba(18,55,29,0.18)] backdrop-blur hover:text-sena-green"
+                className="self-start rounded-full glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
               >
                 <X className="h-4 w-4" /> Cerrar
               </Button>
             </div>
 
             <div className="mt-4 space-y-4">
-              <div className="rounded-2xl border border-rose-200/40 bg-rose-50/80 px-3 py-3 text-xs text-rose-900">
+              <div className="rounded-2xl glass-liquid border-rose-200/40 bg-rose-50/80 px-3 py-3 text-xs text-rose-900 dark:border-rose-500/20 dark:bg-rose-900/20">
                 <p className="text-sm font-semibold text-rose-600">
                   {reportTarget?.type === 'comment' ? 'Estás reportando un comentario de' : 'Estás reportando una publicación de'}
                 </p>
@@ -2333,7 +2330,13 @@ export const HomePage = () => {
             frameless
             contentClassName="relative mx-auto max-w-5xl overflow-visible border-none bg-transparent p-0 shadow-none"
           >
-            <div className="relative mx-auto w-full max-w-3xl overflow-visible rounded-[36px] glass-liquid-strong p-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 32 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 28 }}
+              transition={{ type: 'spring', stiffness: 170, damping: 24 }}
+              className="relative mx-auto w-full max-w-3xl overflow-visible rounded-[36px] glass-liquid-strong p-6"
+            >
               <div className="relative flex flex-col items-center gap-1 pb-4 text-center">
                 <Button
                   variant="ghost"
@@ -2348,7 +2351,7 @@ export const HomePage = () => {
                 <h3 className="text-xl font-semibold text-[var(--color-text)]">{activeModalPost.author.fullName}</h3>
               </div>
               {renderPostCard(activeModalPost, 'modal')}
-            </div>
+            </motion.div>
           </GlassDialog>
         )}
 
@@ -2416,7 +2419,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
       className="fixed bottom-28 z-50 w-80"
       style={{ right: 24 + index * 320 }}
     >
-      <Card padded={false} className="flex h-96 flex-col overflow-hidden rounded-3xl border-white/30 bg-white/20 shadow-[0_25px_45px_rgba(18,55,29,0.28)] backdrop-blur-2xl dark:border-white/15 dark:bg-white/10">
+      <Card padded={false} className="flex h-96 flex-col overflow-hidden rounded-3xl glass-liquid-strong">
         <div className="flex items-center justify-between border-b border-white/20 px-4 py-3">
           <div className="flex items-center gap-3">
             <img
@@ -2439,7 +2442,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
             <p className="text-xs text-[var(--color-muted)]">An no hay mensajes en este chat.</p>
           )}
           {messages.map((msg) => (
-            <div key={msg.id} className="rounded-2xl bg-white/30 px-3 py-2 text-sm text-[var(--color-text)] dark:bg-white/10">
+            <div key={msg.id} className="rounded-2xl glass-liquid px-3 py-2 text-sm text-[var(--color-text)]">
               <p>{msg.content}</p>
               <p className="text-xs text-[var(--color-muted)]">
                 {new Date(msg.createdAt).toLocaleTimeString('es-CO', {
@@ -2463,7 +2466,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               placeholder="Escribe un mensaje..."
-              className="flex-1 rounded-2xl border border-white/25 bg-white/15 px-4 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+              className="flex-1 rounded-2xl glass-liquid px-4 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
             />
             <Button type="submit" size="sm" loading={sendMessageMutation.isPending}>
               Enviar
