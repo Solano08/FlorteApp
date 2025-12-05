@@ -11,48 +11,24 @@ const authVideo = import.meta.env.VITE_AUTH_VIDEO_URL as string | undefined;
 
 export const AuthLayout = ({ title, description, children }: AuthLayoutProps) => {
   return (
-    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden lg:block">
-        {authVideo ? (
-          <video
-            className="absolute inset-0 h-full w-full object-cover"
-            src={authVideo}
-            autoPlay
-            muted
-            loop
-          />
-        ) : (
-          <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-sena-green via-sena-light to-emerald-400" />
-        )}
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="relative z-10 flex h-full flex-col justify-between p-10 text-white">
-          <div>
-            <p className="text-sm uppercase tracking-widest text-white/70">Bienvenido a</p>
-            <h1 className="text-4xl font-bold">FlorteApp</h1>
-            <p className="mt-4 max-w-md text-white/80">
-              Conecta con aprendices del SENA, comparte proyectos, organiza grupos de estudio y lleva tus ideas a otro nivel.
-            </p>
-          </div>
-          <div className="space-y-2 text-sm text-white/70">
-            <p>Modo dual claro/oscuro · Chats colaborativos · Biblioteca de recursos · Gestión de proyectos</p>
-            <p className="font-semibold text-white">#OrgulloSENA</p>
-          </div>
-        </div>
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden p-6 auth-background">
+      {/* Decorative background elements */}
+      <div className="absolute top-[-10%] left-[-10%] h-[50vh] w-[50vh] rounded-full bg-sena-green/10 blur-[100px] animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] h-[50vh] w-[50vh] rounded-full bg-emerald-400/10 blur-[100px] animate-pulse delay-700" />
+
+      <div className="absolute top-6 right-6 z-50">
+        <ThemeToggle />
       </div>
 
-      <div className="relative flex min-h-screen items-center justify-center bg-[var(--color-background)] px-6 py-12">
-        <div className="absolute top-6 right-6">
-          <ThemeToggle />
+      <div className="glass-liquid relative z-10 w-full max-w-md rounded-3xl p-8 shadow-2xl transition-all duration-300 hover:shadow-sena-green/20">
+        <div className="mb-8 text-center">
+          <h1 className="mb-2 bg-gradient-to-r from-sena-green to-emerald-600 bg-clip-text text-4xl font-bold text-transparent">
+            FlorteApp
+          </h1>
+          <h2 className="text-2xl font-semibold text-[var(--color-text)]">{title}</h2>
+          <p className="mt-2 text-sm text-[var(--color-muted)]">{description}</p>
         </div>
-        <div className="w-full max-w-md">
-          <div className="mb-8">
-            <h2 className="text-3xl font-semibold text-[var(--color-text)]">{title}</h2>
-            <p className="mt-2 text-sm text-[var(--color-muted)]">{description}</p>
-          </div>
-          <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 shadow-card">
-            {children}
-          </div>
-        </div>
+        {children}
       </div>
     </div>
   );

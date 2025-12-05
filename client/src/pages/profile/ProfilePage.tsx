@@ -54,6 +54,14 @@ import {
 
   RefreshCcw,
 
+  Bookmark,
+
+  Heart,
+
+  MessageCircle,
+
+  Share2,
+
   Trash2,
 
   Twitter,
@@ -71,6 +79,8 @@ import { Profile } from '../../types/profile';
 import { ActivityOverview } from '../../types/activity';
 
 import { floatingModalContentClass } from '../../utils/modalStyles';
+import { resolveAssetUrl } from '../../utils/media';
+import { FileText } from 'lucide-react';
 
 
 
@@ -121,6 +131,20 @@ type ProfileValues = z.infer<typeof profileSchema>;
 
 
 const defaultSkills: string[] = ['UI/UX', 'React', 'Innovacion', 'Trabajo colaborativo', 'Aprendiz SENA'];
+
+const detectMediaType = (url: string, mimeType?: string | null): 'image' | 'video' | 'pdf' | 'other' => {
+  if (mimeType) {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType === 'application/pdf') return 'pdf';
+  }
+  const lowerUrl = url.toLowerCase();
+  const extension = lowerUrl.includes('.') ? lowerUrl.substring(lowerUrl.lastIndexOf('.') + 1).split('?')[0] : '';
+  if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension)) return 'image';
+  if (['mp4', 'webm', 'ogg', 'mov', 'm4v'].includes(extension)) return 'video';
+  if (extension === 'pdf') return 'pdf';
+  return 'other';
+};
 
 
 
@@ -341,7 +365,7 @@ export const ProfilePage = () => {
           <p className="mt-2 text-[12px] text-[var(--color-muted)] line-clamp-2">{snippet}</p>
           {showMedia && post.mediaUrl && (
             <div className="mt-3 overflow-hidden rounded-xl border border-white/30">
-              <img src={post.mediaUrl} alt="Vista previa de la publicacion" className="h-32 w-full object-cover" />
+              <img src={resolveAssetUrl(post.mediaUrl) ?? post.mediaUrl} alt="Vista previa de la publicacion" className="h-32 w-full object-cover" />
             </div>
           )}
         </div>
@@ -844,6 +868,28 @@ export const ProfilePage = () => {
 
   };
 
+  const formatRelativeTime = (timestamp?: string | null) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const diffMs = Date.now() - date.getTime();
+    const diffMinutes = Math.max(Math.floor(diffMs / 60000), 0);
+    if (diffMinutes < 1) return 'Justo ahora';
+    if (diffMinutes < 60) return `hace ${diffMinutes} min`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `hace ${diffHours} h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `hace ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`;
+    return date.toLocaleDateString('es-CO', {
+      day: '2-digit',
+      month: 'short'
+    });
+  };
+
+  const getAvatarUrl = (fullName: string, avatarUrl?: string | null) =>
+    resolveAssetUrl(avatarUrl) ?? `https://avatars.dicebear.com/api/initials/${encodeURIComponent(fullName || 'Usuario')}.svg`;
+
 
 
   const onSubmit = (values: ProfileValues) => {
@@ -1063,7 +1109,7 @@ export const ProfilePage = () => {
 
     coverPreview ??
 
-    coverImageUrl ??
+    resolveAssetUrl(coverImageUrl) ??
 
     'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80';
 
@@ -1385,7 +1431,7 @@ export const ProfilePage = () => {
 
                   <AvatarUploader
 
-                    imageUrl={profile?.avatarUrl}
+                    imageUrl={resolveAssetUrl(profile?.avatarUrl)}
 
                     loading={isAvatarBusy}
 
@@ -1734,7 +1780,7 @@ export const ProfilePage = () => {
 
               exit={{ opacity: 0 }}
 
-              className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/30 px-4 py-6 backdrop-blur-[18px] sm:px-6 md:py-10"
+              className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/30 px-4 py-6 backdrop-blur-[28px] sm:px-6 md:py-10 hide-scrollbar"
             >
 
               <motion.div
@@ -1747,14 +1793,14 @@ export const ProfilePage = () => {
 
                 transition={{ duration: 0.25, ease: 'easeInOut' }}
 
-                className="relative w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/40 bg-white/85 shadow-[0_32px_90px_rgba(15,38,25,0.28)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/85"
+                className="relative w-full max-w-3xl overflow-hidden rounded-[32px] glass-liquid-strong"
               >
 
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.5),_transparent_70%)] opacity-90 dark:opacity-40" />
 
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/15 to-white/10 dark:from-white/5 dark:via-white/0 dark:to-white/5" />
 
-                <div className="relative z-10 max-h-[88vh] overflow-y-auto p-6 sm:p-8 space-y-6">
+                <div className="relative z-10 max-h-[88vh] overflow-y-auto p-6 sm:p-8 space-y-6 hide-scrollbar">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 
                     <div>
@@ -1874,7 +1920,7 @@ export const ProfilePage = () => {
 
                             ref={avatarUploaderRef}
 
-                            imageUrl={profile?.avatarUrl}
+                            imageUrl={resolveAssetUrl(profile?.avatarUrl)}
 
                             loading={isAvatarBusy}
 
@@ -2242,7 +2288,7 @@ export const ProfilePage = () => {
             Cerrar
           </Button>
         </div>
-        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
           {savedPosts.length === 0 ? (
             <p className="text-xs text-[var(--color-muted)]">Aun no tienes publicaciones guardadas.</p>
           ) : (
@@ -2274,7 +2320,7 @@ export const ProfilePage = () => {
             {selectedSavedPost.mediaUrl && (
               <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/10">
                 <img
-                  src={selectedSavedPost.mediaUrl}
+                  src={resolveAssetUrl(selectedSavedPost.mediaUrl) ?? selectedSavedPost.mediaUrl}
                   alt="Vista previa de la publicacion guardada"
                   className="max-h-56 w-full object-cover"
                 />
@@ -2285,12 +2331,31 @@ export const ProfilePage = () => {
             )}
             {selectedSavedPost.attachments?.length ? (
               <div className="grid gap-2 md:grid-cols-2">
-                {selectedSavedPost.attachments.map((attachment) => (
-                  <div key={attachment.id} className="rounded-2xl border border-white/20 bg-white/10 p-3 text-[11px]">
-                    <p className="font-semibold text-[var(--color-text)] truncate">{attachment.url}</p>
-                    <p className="text-[10px] text-[var(--color-muted)]">{attachment.mimeType ?? 'Archivo adjunto'}</p>
-                  </div>
-                ))}
+                {selectedSavedPost.attachments.map((attachment) => {
+                  const resolvedUrl = resolveAssetUrl(attachment.url) ?? attachment.url;
+                  const mediaType = detectMediaType(resolvedUrl, attachment.mimeType);
+                  return (
+                    <div key={attachment.id} className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/10">
+                      {mediaType === 'image' && (
+                        <img src={resolvedUrl} alt="Adjunto" className="h-full w-full object-cover" />
+                      )}
+                      {mediaType === 'video' && (
+                        <video src={resolvedUrl} controls className="h-full w-full bg-black object-cover" preload="metadata" />
+                      )}
+                      {(mediaType === 'pdf' || mediaType === 'other') && (
+                        <div className="flex items-center gap-2 p-3 text-[11px]">
+                          <FileText className="h-6 w-6 text-sena-green" />
+                          <div className="min-w-0">
+                            <p className="font-semibold text-[var(--color-text)] truncate">
+                              {mediaType === 'pdf' ? 'Documento PDF' : 'Archivo adjunto'}
+                            </p>
+                            <p className="text-[10px] text-[var(--color-muted)]">{attachment.mimeType ?? 'Archivo adjunto'}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : null}
           </div>
@@ -2332,7 +2397,7 @@ export const ProfilePage = () => {
 
         </div>
 
-        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
 
           {profilePosts.length === 0 ? (
 
@@ -2408,80 +2473,132 @@ export const ProfilePage = () => {
 
         >
 
-          <div className="space-y-4">
-
-            <div>
-
-              <p className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-
-                {selectedProfilePost.source === 'shared' ? 'Compartido' : 'Propio'}
-
-              </p>
-
-              <h3 className="text-lg font-semibold text-[var(--color-text)]">
-
-                {selectedProfilePost.author.fullName}
-
-              </h3>
-
-              <p className="text-xs text-[var(--color-muted)]">
-
-                {new Date(selectedProfilePost.createdAt).toLocaleDateString('es-CO')}
-
-              </p>
-
-            </div>
-
-            {selectedProfilePost.mediaUrl && (
-
-              <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/10">
-
-                <img
-
-                  src={selectedProfilePost.mediaUrl}
-
-                  alt="Vista previa de la publicacion"
-
-                  className="max-h-56 w-full object-cover"
-
-                />
-
+          <div className="space-y-5">
+            {selectedProfilePost.source === 'shared' && (
+              <div className="rounded-2xl border border-white/20 bg-white/25 p-3 shadow-[0_16px_30px_rgba(18,55,29,0.18)] backdrop-blur">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 overflow-hidden rounded-full border border-white/30 bg-white/70 p-[2px]">
+                    <img
+                      src={getAvatarUrl(
+                        `${profile?.firstName ?? user?.firstName ?? 'Tu'} ${profile?.lastName ?? user?.lastName ?? 'perfil'}`,
+                        profile?.avatarUrl ?? user?.avatarUrl
+                      )}
+                      alt="Quien compartio"
+                      className="h-full w-full rounded-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--color-text)]">
+                      Compartido por {profile ? `${profile.firstName} ${profile.lastName}` : 'tu perfil'}
+                    </p>
+                    <p className="text-[11px] uppercase tracking-wide text-sena-green">Compartido</p>
+                    <p className="text-[11px] text-[var(--color-muted)]">
+                      {formatRelativeTime(selectedProfilePost.sharedAt ?? selectedProfilePost.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                {selectedProfilePost.shareMessage && (
+                  <p className="mt-3 text-sm text-[var(--color-text)] whitespace-pre-line">
+                    {selectedProfilePost.shareMessage}
+                  </p>
+                )}
               </div>
-
             )}
 
-            <p className="text-sm text-[var(--color-text)]">{selectedProfilePost.content}</p>
-
-            {selectedProfilePost.attachments?.length ? (
-
-              <div className="grid gap-2 md:grid-cols-2">
-
-                {selectedProfilePost.attachments.map((attachment) => (
-
-                  <div key={attachment.id} className="rounded-2xl border border-white/20 bg-white/10 p-3 text-[11px]">
-
-                    <p className="font-semibold text-[var(--color-text)] truncate">{attachment.url}</p>
-
-                    <p className="text-[10px] text-[var(--color-muted)]">{attachment.mimeType ?? 'Archivo adjunto'}</p>
-
-                  </div>
-
-                ))}
-
+            <div className="space-y-4 rounded-3xl border border-white/25 bg-white/40 p-4 text-[var(--color-text)] shadow-[0_24px_45px_rgba(18,55,29,0.2)] backdrop-blur-xl dark:border-white/15 dark:bg-white/10">
+              <div className="flex items-start gap-3">
+                <div className="h-11 w-11 overflow-hidden rounded-full border border-white/30 bg-white/70 p-[2px]">
+                  <img
+                    src={getAvatarUrl(selectedProfilePost.author.fullName, selectedProfilePost.author.avatarUrl)}
+                    alt={selectedProfilePost.author.fullName}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[var(--color-text)]">
+                    {selectedProfilePost.author.fullName}
+                  </p>
+                  {selectedProfilePost.author.headline && (
+                    <p className="text-xs text-[var(--color-muted)] truncate">{selectedProfilePost.author.headline}</p>
+                  )}
+                  <p className="text-[11px] text-[var(--color-muted)]">
+                    {formatRelativeTime(selectedProfilePost.createdAt)}
+                  </p>
+                </div>
               </div>
 
-            ) : null}
+              {selectedProfilePost.content && (
+                <p className="text-sm leading-relaxed text-[var(--color-text)] whitespace-pre-line">
+                  {selectedProfilePost.content}
+                </p>
+              )}
 
-            <div className="flex justify-end">
+              {selectedProfilePost.mediaUrl && (
+                <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/10">
+                  <img
+                    src={resolveAssetUrl(selectedProfilePost.mediaUrl) ?? selectedProfilePost.mediaUrl}
+                    alt="Contenido de la publicacion"
+                    className="max-h-72 w-full object-cover"
+                  />
+                </div>
+              )}
 
-              <Button variant="ghost" onClick={handleCloseProfilePost} className="text-xs">
+              {selectedProfilePost.attachments?.length ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {selectedProfilePost.attachments.map((attachment) => {
+                    const resolvedUrl = resolveAssetUrl(attachment.url) ?? attachment.url;
+                    const mediaType = detectMediaType(resolvedUrl, attachment.mimeType);
+                    return (
+                      <div
+                        key={attachment.id}
+                        className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/12 shadow-sm"
+                      >
+                        {mediaType === 'image' && (
+                          <img src={resolvedUrl} alt="Adjunto" className="h-full w-full object-cover" />
+                        )}
+                        {mediaType === 'video' && (
+                          <video src={resolvedUrl} controls className="h-full w-full bg-black object-cover" preload="metadata" />
+                        )}
+                        {(mediaType === 'pdf' || mediaType === 'other') && (
+                          <div className="flex items-center gap-2 p-3 text-[11px]">
+                            <FileText className="h-6 w-6 text-sena-green" />
+                            <div className="min-w-0">
+                              <p className="font-semibold text-[var(--color-text)] truncate">
+                                {mediaType === 'pdf' ? 'Documento PDF' : 'Archivo adjunto'}
+                              </p>
+                              <p className="text-[10px] text-[var(--color-muted)]">
+                                {attachment.mimeType ?? 'Archivo adjunto'}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
 
-                Cerrar
-
-              </Button>
-
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <Button type="button" variant="ghost" disabled className="justify-center gap-2 text-xs sm:text-sm">
+                  <Heart className="h-4 w-4 text-rose-500" /> Reaccionar
+                </Button>
+                <Button type="button" variant="ghost" disabled className="justify-center gap-2 text-xs sm:text-sm">
+                  <MessageCircle className="h-4 w-4 text-[var(--color-text)]" /> Comentar
+                </Button>
+                <Button type="button" variant="ghost" disabled className="justify-center gap-2 text-xs sm:text-sm">
+                  <Share2 className="h-4 w-4 text-[var(--color-text)]" /> Compartir
+                </Button>
+                <Button type="button" variant="ghost" disabled className="justify-center gap-2 text-xs sm:text-sm">
+                  <Bookmark className="h-4 w-4 text-[var(--color-text)]" /> Guardar
+                </Button>
+              </div>
             </div>
 
+            <div className="flex justify-end">
+              <Button variant="ghost" onClick={handleCloseProfilePost} className="text-xs">
+                Cerrar
+              </Button>
+            </div>
           </div>
 
         </GlassDialog>

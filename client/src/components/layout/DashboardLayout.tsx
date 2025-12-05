@@ -95,19 +95,19 @@ export const DashboardLayout = ({
   return (
     <div className="flex min-h-screen bg-[var(--color-background)]">
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="sticky top-0 z-40 grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-white/10 bg-transparent px-3 py-2.5 backdrop-blur-xl transition-[padding] duration-150 dark:border-white/5 md:px-5">
-          <div className="flex items-center gap-1.5">
+        <header className="sticky top-0 z-40 grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-2.5 glass-liquid transition-[padding] duration-150 md:px-5">
+          <div className="flex items-center gap-2">
             <img
-              src="https://avatars.dicebear.com/api/initials/FL.svg"
-              alt="Florte logo"
-              className="h-5 w-5 rounded-2xl bg-white/30 p-0.5 shadow-[0_6px_14px_rgba(18,55,29,0.16)] md:h-6 md:w-6"
+              src="/florte-logo.svg"
+              alt="Florte"
+              className="h-9 w-9 rounded-xl glass-liquid object-cover md:h-10 md:w-10"
             />
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text)] md:text-xs">
+            <span className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)] md:text-base">
               Florte
             </span>
           </div>
           <nav className="flex justify-center">
-            <div className="flex items-center gap-1 overflow-x-auto rounded-full px-2.5 py-1.5 sm:gap-1.5 sm:px-3">
+            <div className="flex items-center gap-1 overflow-x-auto rounded-full px-2.5 py-3 sm:gap-1.5 sm:px-3 sm:py-3.5 hide-scrollbar">
               {navigation.map(({ to, label, icon: Icon }) => (
                 <NavLink
                   key={`nav-${to}`}
@@ -116,12 +116,12 @@ export const DashboardLayout = ({
                     classNames(
                       'flex items-center gap-1 rounded-2xl px-2 py-1 text-[10px] font-semibold transition-all sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[11px]',
                       isActive
-                        ? 'bg-white text-sena-green shadow-[0_8px_16px_rgba(57,169,0,0.25)]'
+                        ? 'bg-white text-sena-green shadow-[0_4px_12px_rgba(57,169,0,0.3)]'
                         : 'text-[var(--color-muted)] hover:bg-white/60 hover:text-sena-green dark:hover:bg-white/15'
                     )
                   }
                 >
-                  <span className="flex h-6 w-6 items-center justify-center rounded-2xl bg-white/40 text-sena-green shadow-[0_6px_12px_rgba(18,55,29,0.16)] sm:h-7 sm:w-7">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-2xl bg-white/40 text-sena-green shadow-[0_4px_8px_rgba(18,55,29,0.2)] sm:h-7 sm:w-7">
                     <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </span>
                   <span>{label}</span>
@@ -136,7 +136,7 @@ export const DashboardLayout = ({
               <button
                 type="button"
                 onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                className="flex items-center justify-between gap-2.5 rounded-2xl border border-white/15 bg-white/10 px-2.5 py-1.5 text-left transition hover:border-sena-green/30 hover:bg-white/20 shadow-[0_8px_18px_rgba(18,55,29,0.14)] backdrop-blur"
+                className="flex items-center justify-between gap-2.5 rounded-2xl px-2.5 py-1.5 text-left transition hover:bg-white/20 glass-liquid"
               >
                 <div className="flex flex-1 flex-col items-start justify-center">
                   <p className="text-xs font-semibold text-[var(--color-text)] leading-tight md:text-sm">
@@ -150,7 +150,7 @@ export const DashboardLayout = ({
                 />
               </button>
               {isProfileMenuOpen && (
-                <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] rounded-2xl border border-slate-200 bg-white p-2.5 text-sm text-[var(--color-text)] shadow-[0_26px_52px_rgba(18,55,29,0.28)] dark:border-slate-700 dark:bg-slate-900">
+                <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] rounded-2xl p-2.5 text-sm text-[var(--color-text)] glass-liquid-strong">
                   <button
                     type="button"
                     className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-slate-800"
@@ -175,7 +175,7 @@ export const DashboardLayout = ({
         <main className="flex-1 overflow-hidden">
           <div
             className={classNames(
-              'h-full w-full overflow-y-auto py-4',
+              'h-full w-full overflow-y-auto py-4 hide-scrollbar',
               fluid
                 ? 'mx-0 px-4 sm:px-6 lg:px-10 xl:px-16'
                 : 'mx-auto max-w-5xl px-4 sm:px-6',
@@ -192,11 +192,11 @@ export const DashboardLayout = ({
           </div>
         </main>
 
-        <footer className="flex flex-col items-center gap-3 border-t border-white/15 bg-white/20 px-6 py-5 text-xs text-[var(--color-muted)] backdrop-blur-xl dark:border-white/10 dark:bg-white/10 lg:hidden">
+        <footer className="flex flex-col items-center gap-3 px-6 py-5 text-xs text-[var(--color-muted)] glass-liquid lg:hidden">
           <button
             type="button"
             onClick={() => navigate('/profile')}
-            className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/20 bg-white/20 px-3 py-2 text-left transition hover:border-sena-green/40 hover:bg-white/30 shadow-[0_12px_24px_rgba(18,55,29,0.18)]"
+            className="flex w-full items-center justify-between gap-3 rounded-2xl glass-liquid px-3 py-2 text-left transition hover:border-sena-green/40 hover:bg-white/30"
           >
             <div className="flex flex-col">
               <p className="text-sm font-semibold text-[var(--color-text)] leading-tight md:text-base">

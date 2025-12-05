@@ -171,7 +171,7 @@ export const ChatsPage = () => {
   const createChatMutation = useMutation({
     mutationFn: chatService.createChat,
     onSuccess: (chat) => {
-      queryClient.invalidateQueries({ queryKey: ['chats'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['chats'] }).catch(() => { });
       setSelectedChatId(chat.id);
     }
   });
@@ -181,7 +181,7 @@ export const ChatsPage = () => {
       chatService.sendMessage(payload.chatId, { content: payload.content }),
     onSuccess: () => {
       if (!selectedChatId) return;
-      queryClient.invalidateQueries({ queryKey: ['chats', selectedChatId, 'messages'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['chats', selectedChatId, 'messages'] }).catch(() => { });
     }
   });
 
@@ -280,7 +280,7 @@ export const ChatsPage = () => {
       <div className="grid min-h-[75vh] gap-5 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)]">
         <Card
           padded={false}
-          className="relative flex max-h-[80vh] flex-col overflow-hidden rounded-[32px] border-white/25 bg-white/20 shadow-[0_40px_90px_rgba(15,38,25,0.24)]"
+          className="relative flex max-h-[80vh] flex-col overflow-hidden rounded-[32px] shadow-[0_40px_90px_rgba(15,38,25,0.24)]"
         >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.45),_transparent_60%)] opacity-70 dark:opacity-25" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/12 to-white/18 dark:from-white/8 dark:via-white/5 dark:to-white/10" />
@@ -296,14 +296,14 @@ export const ChatsPage = () => {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/15 text-[var(--color-muted)] transition hover:text-sena-green"
+                  className="flex h-10 w-10 items-center justify-center rounded-full glass-liquid text-[var(--color-muted)] transition hover:text-sena-green"
                   aria-label="Preferencias de chat"
                 >
                   <Settings2 className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/15 text-[var(--color-muted)] transition hover:text-sena-green"
+                  className="flex h-10 w-10 items-center justify-center rounded-full glass-liquid text-[var(--color-muted)] transition hover:text-sena-green"
                   aria-label="Mas opciones"
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -321,7 +321,7 @@ export const ChatsPage = () => {
             </header>
 
             <div className="space-y-4 border-b border-white/15 px-6 py-4">
-              <div className="flex items-center gap-2 rounded-[22px] border border-white/25 bg-white/18 px-3 py-2 shadow-[0_16px_28px_rgba(18,55,29,0.18)] focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
+              <div className="flex items-center gap-2 rounded-[22px] glass-liquid px-3 py-2 transition focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
                 <Search className="h-4 w-4 text-[var(--color-muted)]" />
                 <input
                   type="text"
@@ -364,7 +364,7 @@ export const ChatsPage = () => {
 
               {showNewChat && (
                 <form
-                  className="space-y-4 rounded-[24px] border border-white/25 bg-white/22 px-4 py-4 text-xs text-[var(--color-text)] shadow-[0_24px_56px_rgba(18,55,29,0.2)] backdrop-blur-lg"
+                  className="space-y-4 rounded-[24px] px-4 py-4 text-xs text-[var(--color-text)] glass-liquid-strong"
                   onSubmit={handleCreateChat}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
@@ -415,7 +415,7 @@ export const ChatsPage = () => {
                       <input
                         type="text"
                         placeholder="Proyecto de innovacion"
-                        className="rounded-xl border border-white/25 bg-white/18 px-3 py-2 text-xs outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                        className="rounded-xl glass-liquid px-3 py-2 text-xs outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
                         {...register('name')}
                       />
                       {errors.name && <span className="text-[11px] text-rose-400">{errors.name.message}</span>}
@@ -427,7 +427,7 @@ export const ChatsPage = () => {
                     <textarea
                       rows={chatType === 'group' ? 3 : 2}
                       placeholder={chatType === 'group' ? 'ID1, ID2, ID3...' : 'ID del destinatario'}
-                      className="resize-none rounded-xl border border-white/25 bg-white/18 px-3 py-2 text-xs outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                      className="resize-none rounded-xl glass-liquid px-3 py-2 text-xs outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
                       {...register('memberIds')}
                     />
                     {errors.memberIds && <span className="text-[11px] text-rose-400">{errors.memberIds.message}</span>}
@@ -455,7 +455,7 @@ export const ChatsPage = () => {
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 py-4">
+            <div className="flex-1 overflow-y-auto px-4 py-4 hide-scrollbar">
               {isLoadingChats ? (
                 <div className="mt-8 text-center text-xs text-[var(--color-muted)]">Cargando conversaciones...</div>
               ) : filteredChats.length === 0 ? (
@@ -521,8 +521,8 @@ export const ChatsPage = () => {
                               {chat.isGroup
                                 ? 'Grupo colaborativo'
                                 : hasUnread
-                                ? 'Sin mensajes nuevos aun'
-                                : 'Mensaje directo'}
+                                  ? 'Sin mensajes nuevos aun'
+                                  : 'Mensaje directo'}
                             </p>
                           </div>
                         </button>
@@ -537,7 +537,7 @@ export const ChatsPage = () => {
 
         <Card
           padded={false}
-          className="relative flex min-h-[75vh] flex-col overflow-hidden rounded-[36px] border-white/25 bg-white/25 shadow-[0_44px_110px_rgba(15,38,25,0.32)]"
+          className="relative flex min-h-[75vh] flex-col overflow-hidden rounded-[36px] shadow-[0_44px_110px_rgba(15,38,25,0.32)]"
         >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.55),_transparent_55%)] opacity-75 dark:opacity-30" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/20 via-white/10 to-white/18 dark:from-white/8 dark:via-white/5 dark:to-white/10" />
@@ -565,21 +565,21 @@ export const ChatsPage = () => {
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/15 text-[var(--color-text)] transition hover:border-sena-green/60 hover:text-sena-green"
+                      className="flex h-11 w-11 items-center justify-center rounded-full glass-liquid text-[var(--color-text)] transition hover:border-sena-green/60 hover:text-sena-green"
                       aria-label="Llamada de voz"
                     >
                       <Phone className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
-                      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/15 text-[var(--color-text)] transition hover:border-sena-green/60 hover:text-sena-green"
+                      className="flex h-11 w-11 items-center justify-center rounded-full glass-liquid text-[var(--color-text)] transition hover:border-sena-green/60 hover:text-sena-green"
                       aria-label="Videollamada"
                     >
                       <Video className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
-                      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/15 text-[var(--color-text)] transition hover:border-sena-green/60 hover:text-sena-green"
+                      className="flex h-11 w-11 items-center justify-center rounded-full glass-liquid text-[var(--color-text)] transition hover:border-sena-green/60 hover:text-sena-green"
                       aria-label="Detalles del chat"
                     >
                       <Info className="h-4 w-4" />
@@ -587,9 +587,9 @@ export const ChatsPage = () => {
                   </div>
                 </header>
 
-                <div ref={messageListRef} className="flex-1 overflow-y-auto px-6 py-5">
+                <div ref={messageListRef} className="flex-1 overflow-y-auto px-6 py-5 hide-scrollbar">
                   <div className="mx-auto flex max-w-2xl flex-col gap-5">
-                    <div className="flex flex-col items-center gap-3 rounded-3xl border border-white/20 bg-white/12 px-6 py-6 text-center shadow-[0_28px_64px_rgba(18,55,29,0.22)] dark:bg-white/10">
+                    <div className="flex flex-col items-center gap-3 rounded-3xl glass-liquid px-6 py-6 text-center">
                       <span
                         className={classNames(
                           'flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold text-white shadow-[0_22px_44px_rgba(18,55,29,0.24)]',
@@ -663,12 +663,12 @@ export const ChatsPage = () => {
                   <div className="flex items-end gap-3">
                     <button
                       type="button"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-white/12 text-[var(--color-muted)] transition hover:text-sena-green"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl glass-liquid text-[var(--color-muted)] transition hover:text-sena-green"
                       aria-label="Adjuntar archivo"
                     >
                       <Paperclip className="h-4 w-4" />
                     </button>
-                    <div className="flex-1 rounded-[26px] border border-white/20 bg-white/15 px-4 py-2.5 shadow-[0_16px_32px_rgba(18,55,29,0.18)] focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
+                    <div className="flex-1 rounded-[26px] glass-liquid px-4 py-2.5 transition focus-within:border-sena-green focus-within:ring-2 focus-within:ring-sena-green/30">
                       <textarea
                         rows={2}
                         placeholder="Escribe un mensaje..."
@@ -688,7 +688,7 @@ export const ChatsPage = () => {
                     </Button>
                     <button
                       type="button"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-white/12 text-[var(--color-muted)] transition hover:text-sena-green"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl glass-liquid text-[var(--color-muted)] transition hover:text-sena-green"
                       aria-label="Insertar emoji"
                     >
                       <Smile className="h-5 w-5" />
