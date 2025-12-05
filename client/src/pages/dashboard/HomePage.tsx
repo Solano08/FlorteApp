@@ -1652,65 +1652,65 @@ export const HomePage = () => {
         )}
       </AnimatePresence>
 
-      <div className="mx-auto grid w-full gap-4 pb-20 md:grid-cols-[minmax(0,1fr)_minmax(0,280px)] lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)_minmax(0,260px)] xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,320px)]">
-        <aside className="hidden w-full flex-col gap-3 lg:flex">
-          <Card className="glass-liquid p-4">
+      <div className="mx-auto grid w-full gap-4 pb-20 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,300px)] xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_minmax(0,360px)]">
+        <aside className="hidden w-full flex-col gap-5 lg:flex">
+          <Card className="glass-liquid p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rapida</h3>
-              <Sparkles className="h-3.5 w-3.5 text-sena-green" />
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Actividad rapida</h3>
+              <Sparkles className="h-4 w-4 text-sena-green" />
             </div>
-            <p className="mt-3 text-xs text-[var(--color-muted)]">
+            <p className="mt-4 text-sm text-[var(--color-muted)]">
               Accede en segundos a proyectos, grupos y espacios clave de tu comunidad.
             </p>
-            <div className="mt-4 space-y-2">
+            <div className="mt-5 space-y-3">
               <Button
                 size="sm"
                 variant="secondary"
-                className="w-full justify-between px-3"
+                className="w-full justify-between px-4 py-2.5"
                 onClick={() => navigate('/explore')}
               >
                 Explorar proyectos
-                <ArrowUpRight className="h-4 w-4" />
+                <ArrowUpRight className="h-5 w-5" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                className="w-full justify-between px-3"
+                className="w-full justify-between px-4 py-2.5"
                 onClick={() => navigate('/groups')}
               >
                 Encontrar grupos
-                <Users className="h-4 w-4" />
+                <Users className="h-5 w-5" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                className="w-full justify-between px-3"
+                className="w-full justify-between px-4 py-2.5"
                 onClick={() => navigate('/projects')}
               >
                 Revisar mis proyectos
-                <FolderKanban className="h-4 w-4" />
+                <FolderKanban className="h-5 w-5" />
               </Button>
             </div>
           </Card>
 
-          <Card className="glass-liquid p-3">
+          <Card className="glass-liquid p-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">Avances destacados</h3>
-              <Sparkles className="h-3.5 w-3.5 text-sena-green" />
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Avances destacados</h3>
+              <Sparkles className="h-4 w-4 text-sena-green" />
             </div>
-            <div className="mt-2 space-y-2.5">
+            <div className="mt-4 space-y-3">
               {learningHighlights.length === 0 && (
-                <p className="text-xs text-[var(--color-muted)]">
+                <p className="text-sm text-[var(--color-muted)]">
                   Registra tus proyectos para seguir tu progreso.
                 </p>
               )}
               {learningHighlights.map((project) => (
                 <div
                   key={project.id}
-                  className="rounded-xl glass-liquid px-3 py-2.5 transition hover:border-sena-green/40 hover:bg-white/30 dark:hover:bg-white/10"
+                  className="rounded-xl glass-liquid px-4 py-3 transition hover:border-sena-green/40 hover:bg-white/30 dark:hover:bg-white/10"
                 >
-                  <p className="text-sm font-semibold text-[var(--color-text)] truncate">{project.title}</p>
-                  <p className="text-[11px] text-[var(--color-muted)] capitalize">{project.status}</p>
+                  <p className="text-base font-semibold text-[var(--color-text)] truncate">{project.title}</p>
+                  <p className="text-xs text-[var(--color-muted)] capitalize mt-1">{project.status}</p>
                 </div>
               ))}
             </div>
@@ -1912,38 +1912,38 @@ export const HomePage = () => {
           {feedPosts.map((post) => renderPostCard(post, 'list'))}
         </section>
 
-        <aside className="hidden flex-col gap-4 md:flex">
-          <Card className="glass-liquid p-4">
+        <aside className="hidden flex-col gap-5 md:flex">
+          <Card className="glass-liquid p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">Tendencias</h3>
-              <Button variant="ghost" size="sm" className="px-2 py-1 text-xs">
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Tendencias</h3>
+              <Button variant="ghost" size="sm" className="px-3 py-1.5 text-sm">
                 Ver todo
               </Button>
             </div>
-            <div className="mt-3 space-y-2.5">
+            <div className="mt-4 space-y-3">
               {resources.slice(0, 5).map((resource) => (
                 <div
                   key={resource.id}
-                  className="rounded-xl glass-liquid px-3 py-2.5 transition hover:border-sena-green/40 hover:bg-white/35 dark:hover:bg-white/10"
+                  className="rounded-xl glass-liquid px-4 py-3 transition hover:border-sena-green/40 hover:bg-white/35 dark:hover:bg-white/10"
                 >
-                  <p className="text-sm font-semibold text-[var(--color-text)] truncate">{resource.title}</p>
-                  <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wide">
+                  <p className="text-base font-semibold text-[var(--color-text)] truncate">{resource.title}</p>
+                  <p className="text-xs text-[var(--color-muted)] uppercase tracking-wide mt-1">
                     {resource.resourceType}
                   </p>
                 </div>
               ))}
               {resources.length === 0 && (
-                <p className="text-xs text-[var(--color-muted)]">An no hay recursos recientes.</p>
+                <p className="text-sm text-[var(--color-muted)]">An no hay recursos recientes.</p>
               )}
             </div>
           </Card>
 
-          <Card className="glass-liquid p-4">
+          <Card className="glass-liquid p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">Anuncios</h3>
-              <Sparkles className="h-3.5 w-3.5 text-sena-green" />
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Anuncios</h3>
+              <Sparkles className="h-4 w-4 text-sena-green" />
             </div>
-            <div className="mt-4 h-64 overflow-hidden rounded-3xl">
+            <div className="mt-5 h-80 overflow-hidden rounded-3xl">
               <AnimatePresence initial={false} mode="wait">
                 {announcementSlides.map(
                   (slide, index) =>
@@ -1967,14 +1967,14 @@ export const HomePage = () => {
                 )}
               </AnimatePresence>
             </div>
-            <div className="mt-4 flex justify-center gap-2">
+            <div className="mt-5 flex justify-center gap-2">
               {announcementSlides.map((slide, index) => (
                 <button
                   key={slide.id}
                   type="button"
                   onClick={() => setActiveAnnouncement(index)}
                   className={classNames(
-                    'h-2 w-6 rounded-full transition',
+                    'h-2.5 w-8 rounded-full transition',
                     index === activeAnnouncement ? 'bg-sena-green' : 'glass-liquid'
                   )}
                   aria-label={`Mostrar anuncio ${index + 1}`}
