@@ -102,7 +102,7 @@ export const DashboardLayout = ({
               alt="Florte"
               className="h-9 w-9 object-cover md:h-10 md:w-10"
             />
-            <span className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)] md:text-base" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
+            <span className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)] md:text-base">
               Florte
             </span>
           </div>
