@@ -1870,7 +1870,7 @@ export const ProfilePage = () => {
 
                             role="menu"
 
-                            className="absolute right-0 top-full mt-2 w-48 transform -translate-x-full rounded-2xl glass-liquid-strong p-1.5 text-left text-[var(--color-text)]"
+                            className="absolute right-0 top-full mt-2 w-48 transform -translate-x-full rounded-2xl glass-frosted p-1.5 text-left text-[var(--color-text)]"
 
                           >
 
@@ -1962,7 +1962,7 @@ export const ProfilePage = () => {
 
                                 role="menu"
 
-                                className="absolute left-full top-0 mt-0 w-48 translate-x-2 rounded-2xl glass-liquid-strong p-1.5 text-left"
+                                className="absolute left-full top-0 mt-0 w-48 translate-x-2 rounded-2xl glass-frosted p-1.5 text-left"
 
                               >
 

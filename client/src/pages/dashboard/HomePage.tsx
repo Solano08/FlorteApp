@@ -1094,7 +1094,7 @@ export const HomePage = () => {
               <MoreHorizontal className="h-5 w-5" />
             </button>
             {postMenuOpenId === post.id && (
-              <div className="absolute right-0 top-9 z-20 w-48 rounded-2xl glass-liquid-strong p-2 text-sm text-[var(--color-text)]">
+              <div className="absolute right-0 top-9 z-20 w-48 rounded-2xl glass-frosted p-2 text-sm text-[var(--color-text)]">
                 {canManagePost && (
                   <button
                     type="button"
@@ -1225,7 +1225,7 @@ export const HomePage = () => {
             </Button>
             {reactionPickerPost === post.id && (
               <div
-                className="absolute bottom-full left-1/2 z-10 -translate-x-1/2 translate-y-2 rounded-2xl glass-liquid-strong px-4 py-3"
+                className="absolute bottom-full left-1/2 z-10 -translate-x-1/2 translate-y-2 rounded-2xl glass-frosted px-4 py-3"
                 onMouseEnter={() => handleReactionHover(post.id)}
               >
                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap sm:gap-3 hide-scrollbar">
@@ -1361,7 +1361,7 @@ export const HomePage = () => {
                                   <MoreHorizontal className="h-4 w-4" />
                                 </button>
                                 {commentMenuOpenId === comment.id && (
-                                  <div className="absolute right-0 top-8 z-20 w-48 rounded-2xl glass-liquid-strong p-2 text-sm text-[var(--color-text)]">
+                                  <div className="absolute right-0 top-8 z-20 w-48 rounded-2xl glass-frosted p-2 text-sm text-[var(--color-text)]">
                                     {canManageComment && (
                                       <button
                                         type="button"
@@ -2098,7 +2098,7 @@ export const HomePage = () => {
                   <MoreHorizontal className="h-5 w-5" />
                 </button>
                 {isStoryMenuOpen && (
-                  <div className="absolute right-3 top-14 z-10 w-44 rounded-2xl glass-liquid-strong px-3 py-2 text-sm text-white">
+                  <div className="absolute right-3 top-14 z-10 w-44 rounded-2xl glass-frosted px-3 py-2 text-sm text-white">
                     <button
                       type="button"
                       className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-white/10"

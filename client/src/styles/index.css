@@ -108,6 +108,46 @@ body {
     box-shadow:
       0 12px 40px 0 rgba(0, 0, 0, 0.7);
   }
+
+  .glass-frosted {
+    @apply backdrop-blur-[56px] saturate-[2.3];
+    background: linear-gradient(120deg,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.92) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow:
+      0 12px 40px -5px rgba(31, 38, 135, 0.25);
+  }
+
+  .dark .glass-frosted {
+    @apply backdrop-blur-[56px] saturate-[2.3];
+    background: linear-gradient(120deg,
+        rgba(15, 15, 15, 0.95) 0%,
+        rgba(15, 15, 15, 0.92) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 12px 40px 0 rgba(0, 0, 0, 0.8);
+  }
+
+  .glass-frosted-card {
+    @apply backdrop-blur-[48px] saturate-[2.2];
+    background: linear-gradient(120deg,
+        rgba(255, 255, 255, 0.90) 0%,
+        rgba(255, 255, 255, 0.88) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow:
+      0 8px 32px -5px rgba(31, 38, 135, 0.2);
+  }
+
+  .dark .glass-frosted-card {
+    @apply backdrop-blur-[48px] saturate-[2.2];
+    background: linear-gradient(120deg,
+        rgba(15, 15, 15, 0.90) 0%,
+        rgba(15, 15, 15, 0.88) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 8px 32px 0 rgba(0, 0, 0, 0.7);
+  }
 }
 
 @keyframes float-auth {
