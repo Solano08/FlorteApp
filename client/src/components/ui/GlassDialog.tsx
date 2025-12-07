@@ -77,7 +77,7 @@ export const GlassDialog = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className={classNames(
-            'fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-slate-900/30 px-4 py-10 backdrop-blur-[28px] hide-scrollbar',
+            'fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-slate-900/30 px-4 py-10 backdrop-blur-[28px]',
             overlayClassName
           )}
           onClick={handleOverlayClick}
