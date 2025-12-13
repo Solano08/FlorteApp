@@ -1387,11 +1387,22 @@ export const ProfilePage = () => {
 
       subtitle="Administra tu informacion y mantiene tu presencia actualizada para el resto de la comunidad."
 
+      fluid
+
+      contentClassName="h-full p-0 overflow-hidden"
+
     >
 
       <LayoutGroup>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)]">
+        <div className="flex h-full w-full flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-10 xl:px-16">
+            <div className="mx-auto max-w-7xl">
+              <div className="mb-3 space-y-1">
+                <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">Perfil</h2>
+                <p className="text-xs text-[var(--color-muted)] sm:text-sm">Administra tu informacion y mantiene tu presencia actualizada para el resto de la comunidad.</p>
+              </div>
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)]">
 
           <div className="space-y-6">
 
@@ -1589,7 +1600,7 @@ export const ProfilePage = () => {
 
               </div>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 max-h-[50vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
 
                 {isLoadingProfilePosts ? (
 
@@ -1742,7 +1753,7 @@ export const ProfilePage = () => {
 
 
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
               {isLoadingSaved ? (
                 <p className="text-xs text-[var(--color-muted)]">Cargando elementos guardados...</p>
               ) : savedPosts.length === 0 ? (
@@ -1762,6 +1773,9 @@ export const ProfilePage = () => {
 
         </div>
 
+              </div>
+            </div>
+          </div>
         </div>
 
 

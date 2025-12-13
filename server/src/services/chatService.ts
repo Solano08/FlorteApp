@@ -10,7 +10,7 @@ export const chatService = {
     return await chatRepository.createChat(input);
   },
 
-  async listUserChats(userId: string): Promise<Array<Chat & { lastMessageAt?: Date }>> {
+  async listUserChats(userId: string): Promise<Array<Chat & { lastMessageAt?: Date; lastMessage?: string }>> {
     return await chatRepository.findUserChats(userId);
   },
 

@@ -397,7 +397,7 @@ export const ProjectsPage = () => {
             <p className="mt-4 text-sm text-[var(--color-muted)]">
               Visualiza el estado de cada iniciativa y cambia de fase con un clic.
             </p>
-            <div className="mt-5 grid grid-cols-3 gap-3">
+            <div className="mt-5 space-y-3">
               {statusOrder.map((status) => {
                 const { icon: Icon, accent, helper, badge } = statusDisplay[status];
                 const isActive = statusFilter === status;
@@ -406,26 +406,28 @@ export const ProjectsPage = () => {
                     key={status}
                     type="button"
                     onClick={() => setStatusFilter((prev) => (prev === status ? 'all' : status))}
-                    className={`group relative flex min-h-[120px] flex-col rounded-2xl border px-3 py-3 text-center transition ${
+                    className={`group relative flex h-full flex-col rounded-2xl border px-4 py-3 text-left transition ${
                       isActive
                         ? 'border-sena-green bg-sena-green/10 shadow-[0_12px_24px_rgba(18,55,29,0.14)]'
                         : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-sena-green/50'
                     }`}
                   >
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${badge}`}>
                         <Icon className={`h-4 w-4 ${accent}`} />
                       </span>
-                      <p className="text-xl font-semibold text-[var(--color-text)]">{stats[status]}</p>
-                      <div className="relative mt-1 flex min-h-[44px] w-full items-center justify-center px-2">
-                        <p className="absolute inset-x-2 text-xs uppercase tracking-wide text-[var(--color-muted)] transition-all duration-200 group-hover:opacity-0 group-hover:translate-y-[-4px] text-center">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">
                           {statusLabels[status]}
                         </p>
-                        <p className="absolute inset-x-2 text-[11px] text-[var(--color-muted)] leading-relaxed opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2 text-center">
-                          {helper}
-                        </p>
+                        <p className="text-xl font-semibold text-[var(--color-text)]">{stats[status]}</p>
                       </div>
                     </div>
+                    <p className="mt-2 text-[11px] text-[var(--color-muted)] leading-relaxed">{helper}</p>
+                    {/* Tooltip con el nombre al hacer hover */}
+                    <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white opacity-0 shadow-[0_8px_16px_rgba(15,23,42,0.35)] transition group-hover:opacity-100 whitespace-nowrap z-10">
+                      {statusLabels[status]}
+                    </span>
                   </button>
                 );
               })}

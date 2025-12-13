@@ -8,5 +8,6 @@ router.get('/', projectController.list);
 router.post('/', requireAuth, projectController.create);
 router.get('/me', requireAuth, projectController.listMine);
 router.put('/:projectId', requireAuth, projectController.update);
+router.delete('/:projectId', requireAuth, projectController.delete);
 
 export default router;

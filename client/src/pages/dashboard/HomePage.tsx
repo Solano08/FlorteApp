@@ -13,7 +13,6 @@ import { projectService } from '../../services/projectService';
 import { libraryService } from '../../services/libraryService';
 import { feedService } from '../../services/feedService';
 import {
-  ArrowUpRight,
   Bookmark,
   ChevronLeft,
   ChevronRight,
@@ -387,6 +386,14 @@ export const HomePage = () => {
     storyUrlsRef.current = storyMediaUrls;
   }, [storyMediaUrls]);
 
+  // Prevenir salto visual al cargar la página
+  useEffect(() => {
+    // Asegurar que la página inicie en la parte superior sin animación
+    if (window.scrollY > 0) {
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       storyUrlsRef.current.forEach((url) => {
@@ -492,6 +499,11 @@ export const HomePage = () => {
     queryFn: projectService.listMyProjects
   });
 
+  const { data: allProjects = [] } = useQuery({
+    queryKey: ['projects'],
+    queryFn: projectService.listProjects
+  });
+
   const { data: resources = [] } = useQuery({
     queryKey: ['library', 'latest'],
     queryFn: libraryService.listResources
@@ -505,6 +517,12 @@ export const HomePage = () => {
 
   const [activeAnnouncement, setActiveAnnouncement] = useState(0);
   const learningHighlights = projects.slice(0, 3);
+  const topProjects = useMemo(() => {
+    // Obtener los 3 mejores proyectos (por ahora los primeros 3, ordenados por fecha de actualización)
+    return [...allProjects]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 3);
+  }, [allProjects]);
 
   const updatePostInCache = (postId: string, updater: (post: FeedPostAggregate) => FeedPostAggregate) => {
     queryClient.setQueryData<FeedPostAggregate[]>(feedQueryKey, (existing) => {
@@ -1416,7 +1434,7 @@ export const HomePage = () => {
                                       <p className="text-xs font-semibold">{commentAttachmentName}</p>
                                     </div>
                                     <a
-                                      href={comment.attachmentUrl}
+                                      href={comment.attachmentUrl ?? undefined}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-[11px] font-semibold text-sena-green underline-offset-2 hover:underline"
@@ -1432,7 +1450,7 @@ export const HomePage = () => {
                                       <p className="text-xs font-semibold">{commentAttachmentName}</p>
                                     </div>
                                     <a
-                                      href={comment.attachmentUrl}
+                                      href={comment.attachmentUrl ?? undefined}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-[11px] font-semibold text-sena-green underline-offset-2 hover:underline"
@@ -1616,7 +1634,7 @@ export const HomePage = () => {
   return (
     <DashboardLayout
       fluid
-      contentClassName="px-2 sm:px-6 lg:px-10 xl:px-16"
+      contentClassName="px-2 sm:px-6 lg:px-10 xl:px-16 !pt-0"
     >
       <AnimatePresence>
         {composerSuccessMessage && (
@@ -1649,8 +1667,8 @@ export const HomePage = () => {
         )}
       </AnimatePresence>
 
-      <div className="mx-auto grid w-full gap-4 pb-20 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,300px)] xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_minmax(0,360px)]">
-        <aside className="hidden w-full flex-col gap-5 lg:flex">
+      <div className="mx-auto grid w-full gap-4 pb-20 pt-2 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,300px)] xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_minmax(0,360px)]" style={{ minHeight: '100vh' }}>
+        <aside className="hidden w-full flex-col gap-5 lg:flex lg:sticky lg:top-14 lg:z-10 lg:self-start" style={{ alignSelf: 'flex-start', willChange: 'transform' }}>
           <Card className="glass-liquid p-6">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-[var(--color-text)]">Actividad rapida</h3>
@@ -1663,15 +1681,6 @@ export const HomePage = () => {
               <Button
                 size="sm"
                 variant="secondary"
-                className="w-full justify-between px-4 py-2.5"
-                onClick={() => navigate('/explore')}
-              >
-                Explorar proyectos
-                <ArrowUpRight className="h-5 w-5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
                 className="w-full justify-between px-4 py-2.5"
                 onClick={() => navigate('/groups')}
               >
@@ -1690,21 +1699,21 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          <Card className="glass-liquid p-5">
+          <Card className="glass-liquid p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Avances destacados</h3>
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Top projects</h3>
               <Sparkles className="h-4 w-4 text-sena-green" />
             </div>
             <div className="mt-4 space-y-3">
-              {learningHighlights.length === 0 && (
+              {topProjects.length === 0 && (
                 <p className="text-sm text-[var(--color-muted)]">
-                  Registra tus proyectos para seguir tu progreso.
+                  Aún no hay proyectos destacados.
                 </p>
               )}
-              {learningHighlights.map((project) => (
+              {topProjects.map((project) => (
                 <div
                   key={project.id}
-                  className="rounded-xl glass-liquid px-4 py-3 transition hover:border-sena-green/40 hover:bg-white/30 dark:hover:bg-white/10"
+                  className="rounded-xl glass-liquid px-4 py-3 transition hover:border-sena-green/40 hover:bg-white/35 dark:hover:bg-white/10"
                 >
                   <p className="text-base font-semibold text-[var(--color-text)] truncate">{project.title}</p>
                   <p className="text-xs text-[var(--color-muted)] capitalize mt-1">{project.status}</p>
@@ -1717,7 +1726,7 @@ export const HomePage = () => {
 
 
         <section className="mx-auto flex min-w-0 w-full max-w-3xl flex-col gap-5">
-          <Card className="overflow-hidden glass-liquid">
+          <Card padded={false} className="overflow-hidden glass-liquid p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-[var(--color-text)] sm:text-base">Historias</h2>
               <Button
@@ -1909,29 +1918,27 @@ export const HomePage = () => {
           {feedPosts.map((post) => renderPostCard(post, 'list'))}
         </section>
 
-        <aside className="hidden flex-col gap-5 md:flex">
+        <aside className="hidden flex-col gap-5 md:flex md:sticky md:top-14 md:z-10 md:self-start" style={{ alignSelf: 'flex-start', willChange: 'transform' }}>
           <Card className="glass-liquid p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Tendencias</h3>
-              <Button variant="ghost" size="sm" className="px-3 py-1.5 text-sm">
-                Ver todo
-              </Button>
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Avances destacados</h3>
+              <Sparkles className="h-4 w-4 text-sena-green" />
             </div>
             <div className="mt-4 space-y-3">
-              {resources.slice(0, 5).map((resource) => (
+              {learningHighlights.length === 0 && (
+                <p className="text-sm text-[var(--color-muted)]">
+                  Registra tus proyectos para seguir tu progreso.
+                </p>
+              )}
+              {learningHighlights.map((project) => (
                 <div
-                  key={resource.id}
-                  className="rounded-xl glass-liquid px-4 py-3 transition hover:border-sena-green/40 hover:bg-white/35 dark:hover:bg-white/10"
+                  key={project.id}
+                  className="rounded-xl glass-liquid px-4 py-3 transition hover:border-sena-green/40 hover:bg-white/30 dark:hover:bg-white/10"
                 >
-                  <p className="text-base font-semibold text-[var(--color-text)] truncate">{resource.title}</p>
-                  <p className="text-xs text-[var(--color-muted)] uppercase tracking-wide mt-1">
-                    {resource.resourceType}
-                  </p>
+                  <p className="text-base font-semibold text-[var(--color-text)] truncate">{project.title}</p>
+                  <p className="text-xs text-[var(--color-muted)] capitalize mt-1">{project.status}</p>
                 </div>
               ))}
-              {resources.length === 0 && (
-                <p className="text-sm text-[var(--color-muted)]">An no hay recursos recientes.</p>
-              )}
             </div>
           </Card>
 
@@ -2031,12 +2038,9 @@ export const HomePage = () => {
                       />
                       <div>
                         <p className="text-sm font-semibold text-[var(--color-text)]">{chat.name ?? 'Chat sin ttulo'}</p>
-                        <p className="text-xs text-[var(--color-muted)]">
-                          {chat.lastMessageAt
-                            ? new Date(chat.lastMessageAt).toLocaleTimeString('es-CO', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
+                        <p className="text-xs text-[var(--color-muted)] truncate">
+                          {chat.lastMessage 
+                            ? (chat.lastMessage.length > 40 ? chat.lastMessage.substring(0, 40) + '...' : chat.lastMessage)
                             : 'Sin mensajes'}
                         </p>
                       </div>
@@ -2048,13 +2052,11 @@ export const HomePage = () => {
           )}
         </AnimatePresence>
 
-        <AnimatePresence>
-          {openChatIds.map((chatId, index) => {
-            const chat = chats.find((c) => c.id === chatId);
-            if (!chat) return null;
-            return <ChatWindow key={chat.id} chat={chat} index={index} onClose={handleCloseChat} />;
-          })}
-        </AnimatePresence>
+        {openChatIds.map((chatId, index) => {
+          const chat = chats.find((c) => c.id === chatId);
+          if (!chat) return null;
+          return <ChatWindow key={chat.id} chat={chat} index={index} onClose={handleCloseChat} />;
+        })}
 
         {isStoryViewerOpen && storyMediaUrls.length > 0 && (
           <div
@@ -2410,33 +2412,46 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
     }
   });
 
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (messages.length > 0 && messagesContainerRef.current && !isLoading) {
+      // Scroll inmediato al final cuando se cargan los mensajes
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 16 }}
-      transition={{ duration: 0.2 }}
+    <div
       className="fixed bottom-28 z-50 w-80"
       style={{ right: 24 + index * 320 }}
     >
       <Card padded={false} className="flex h-96 flex-col overflow-hidden rounded-3xl glass-liquid-strong">
         <div className="flex items-center justify-between border-b border-white/20 px-4 py-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <img
               src={`https://avatars.dicebear.com/api/initials/${encodeURIComponent(chat.name ?? 'Chat')}.svg`}
               alt={chat.name ?? 'Chat'}
-              className="h-9 w-9 rounded-full object-cover"
+              className="h-9 w-9 rounded-full object-cover flex-shrink-0"
             />
-            <div>
-              <p className="text-sm font-semibold text-[var(--color-text)]">{chat.name ?? 'Chat sin ttulo'}</p>
-              <p className="text-xs text-[var(--color-muted)]">Activo ahora</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-[var(--color-text)] truncate">{chat.name ?? 'Chat sin ttulo'}</p>
+              <p className="text-xs text-[var(--color-muted)] truncate">
+                {lastMessage 
+                  ? (lastMessage.content.length > 30 ? lastMessage.content.substring(0, 30) + '...' : lastMessage.content)
+                  : chat.lastMessage 
+                    ? (chat.lastMessage.length > 30 ? chat.lastMessage.substring(0, 30) + '...' : chat.lastMessage)
+                    : 'Sin mensajes'}
+              </p>
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={() => onClose(chat.id)}>
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3 hide-scrollbar">
+        <div ref={messagesContainerRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3 hide-scrollbar">
           {isLoading && <p className="text-xs text-[var(--color-muted)]">Cargando mensajes...</p>}
           {!isLoading && messages.length === 0 && (
             <p className="text-xs text-[var(--color-muted)]">An no hay mensajes en este chat.</p>
@@ -2474,7 +2489,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
           </div>
         </form>
       </Card>
-    </motion.div>
+    </div>
   );
 };
 

@@ -9,8 +9,9 @@ import { ChatsPage } from '../pages/chats/ChatsPage';
 import { LibraryPage } from '../pages/library/LibraryPage';
 import { GroupsPage } from '../pages/groups/GroupsPage';
 import { ProjectsPage } from '../pages/projects/ProjectsPage';
-import { ExplorePage } from '../pages/explore/ExplorePage';
 import { AdminModerationPage } from '../pages/admin/AdminModerationPage';
+import { SettingsPage } from '../pages/settings/SettingsPage';
+import { UIPlaygroundPage } from '../pages/ui/UIPlaygroundPage';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingScreen';
 import { UserRole } from '../types/auth';
@@ -100,14 +101,6 @@ export const AppRoutes = () => (
       }
     />
     <Route
-      path="/explore"
-      element={
-        <ProtectedRoute>
-          <ExplorePage />
-        </ProtectedRoute>
-      }
-    />
-    <Route
       path="/chats"
       element={
         <ProtectedRoute>
@@ -144,6 +137,22 @@ export const AppRoutes = () => (
       element={
         <ProtectedRoute allowedRoles={['admin']}>
           <AdminModerationPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/settings"
+      element={
+        <ProtectedRoute>
+          <SettingsPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/ui-playground"
+      element={
+        <ProtectedRoute>
+          <UIPlaygroundPage />
         </ProtectedRoute>
       }
     />

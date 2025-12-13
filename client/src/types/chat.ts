@@ -5,6 +5,7 @@ export interface Chat {
   createdBy: string;
   createdAt: string;
   lastMessageAt?: string | null;
+  lastMessage?: string | null;
 }
 
 export interface Message {

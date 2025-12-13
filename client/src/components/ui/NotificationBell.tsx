@@ -63,7 +63,7 @@ export const NotificationBell = () => {
     <div className="relative">
       <Button
         variant="ghost"
-        className="h-11 w-11 rounded-full text-[var(--color-text)] glass-liquid-strong backdrop-blur-[48px] saturate-[2.2] hover:bg-white/30"
+        className="h-11 w-11 rounded-full text-[var(--color-text)] glass-liquid hover:bg-white/30"
         onClick={handleToggle}
         aria-label="Notificaciones"
       >
@@ -79,8 +79,11 @@ export const NotificationBell = () => {
             transition={{ duration: 0.2 }}
             className="absolute right-0 mt-3 w-80"
           >
-            <div className="p-6 rounded-[32px] glass-frosted relative space-y-4">
-              <div className="flex items-start justify-between gap-4 border-b border-white/30 pb-4">
+            <div className="p-6 rounded-[32px] glass-liquid relative space-y-4">
+              <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.25),_transparent_70%)] opacity-60 dark:opacity-20 mix-blend-overlay" />
+              <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.18),_transparent_70%)] opacity-50 dark:opacity-12 mix-blend-overlay" />
+              <div className="relative z-10 space-y-4">
+              <div className="flex items-start justify-between gap-4 border-b border-white/30 dark:border-white/10 pb-4">
                 <div>
                   <p className="text-sm font-semibold text-[var(--color-text)]">Notificaciones</p>
                   <p className="text-xs text-[var(--color-muted)]">Mantente al día con tu comunidad</p>
@@ -89,7 +92,7 @@ export const NotificationBell = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setOpen(false)}
-                  className="rounded-full text-[var(--color-muted)] glass-liquid-strong backdrop-blur-[48px] saturate-[2.2] hover:text-sena-green"
+                  className="rounded-full text-[var(--color-muted)] glass-liquid hover:text-sena-green"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -99,7 +102,7 @@ export const NotificationBell = () => {
                 {notifications.map(({ id, title, description, icon: Icon, time }) => (
                   <div
                     key={id}
-                    className="flex gap-3 rounded-2xl px-4 py-3 text-left glass-frosted-card transition hover:opacity-95"
+                    className="flex gap-3 rounded-2xl px-4 py-3 text-left glass-liquid transition hover:bg-white/80"
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sena-green/18 text-sena-green shadow-[0_20px_38px_rgba(18,55,29,0.2)]">
                       <Icon className="h-5 w-5" />
@@ -113,14 +116,15 @@ export const NotificationBell = () => {
                 ))}
               </div>
 
-              <div className="border-t border-white/30 pt-4">
+              <div className="border-t border-white/30 dark:border-white/10 pt-4">
                 <Button
                   variant="secondary"
-                  className="w-full rounded-2xl py-2.5 text-sm font-semibold text-sena-green glass-liquid-strong backdrop-blur-[48px] saturate-[2.2] hover:bg-white/80 dark:text-white"
+                  className="w-full rounded-2xl py-2.5 text-sm font-semibold text-sena-green glass-liquid hover:bg-white/80 dark:text-white"
                   onClick={handleViewAll}
                 >
                   Ver todas las notificaciones
                 </Button>
+              </div>
               </div>
             </div>
           </motion.div>
@@ -133,7 +137,7 @@ export const NotificationBell = () => {
             open={showAll}
             onClose={() => setShowAll(false)}
             size="xl"
-            contentClassName={`${floatingModalContentClass} glass-frosted`}
+            contentClassName={floatingModalContentClass}
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -143,7 +147,7 @@ export const NotificationBell = () => {
               <Button
                 variant="ghost"
                 onClick={() => setShowAll(false)}
-                className="self-start rounded-full px-3 py-1 text-xs text-[var(--color-muted)] glass-liquid-strong backdrop-blur-[48px] saturate-[2.2] hover:text-sena-green"
+                className="self-start rounded-full px-3 py-1 text-xs text-[var(--color-muted)] glass-liquid hover:text-sena-green"
               >
                 Cerrar
               </Button>
@@ -153,7 +157,7 @@ export const NotificationBell = () => {
               {notifications.map(({ id, title, description, icon: Icon, time }) => (
                 <div
                   key={`modal-${id}`}
-                  className="flex gap-4 rounded-[24px] px-4 py-4 text-left glass-frosted-card transition hover:border-sena-green/50 hover:opacity-95"
+                  className="flex gap-4 rounded-[24px] px-4 py-4 text-left glass-liquid transition hover:border-sena-green/50"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-sena-green/18 text-sena-green shadow-[0_20px_38px_rgba(18,55,29,0.2)]">
                     <Icon className="h-5 w-5" />

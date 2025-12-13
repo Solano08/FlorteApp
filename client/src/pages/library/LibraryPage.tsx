@@ -1,269 +1,212 @@
-import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
-import { libraryService } from '../../services/libraryService';
 import { Card } from '../../components/ui/Card';
-import { Input } from '../../components/ui/Input';
-import { TextArea } from '../../components/ui/TextArea';
-import { Button } from '../../components/ui/Button';
-import { Library, BookOpen, Layers } from 'lucide-react';
+import { GlassDialog } from '../../components/ui/GlassDialog';
+import { ExternalLink, BookOpen, GraduationCap, Globe, FileText, X } from 'lucide-react';
 
-const resourceSchema = z.object({
-  title: z.string().min(3, 'El título es obligatorio'),
-  description: z.string().max(500).optional(),
-  resourceType: z.enum(['document', 'video', 'link', 'course', 'other']),
-  url: z.string().url('Ingresa un enlace válido').optional(),
-  tags: z.string().optional()
-});
+interface LibraryResource {
+  id: string;
+  title: string;
+  category: string;
+  image: string;
+  url?: string;
+  type: 'external' | 'academic';
+  content?: {
+    title: string;
+    description: string;
+    sections: Array<{
+      title: string;
+      content: string;
+    }>;
+  };
+}
 
-type ResourceFormValues = z.infer<typeof resourceSchema>;
-
-const resourceTypeLabels: Record<ResourceFormValues['resourceType'], string> = {
-  document: 'Documento',
-  video: 'Video',
-  link: 'Enlace',
-  course: 'Curso',
-  other: 'Otro'
-};
-
-const curatedCollections = [
-  { id: 'col-1', title: 'Recursos para diseño UX', items: 24 },
-  { id: 'col-2', title: 'Aprendizajes de IA aplicada', items: 18 },
-  { id: 'col-3', title: 'Plantillas de pitch y demo day', items: 12 }
+const libraryResources: LibraryResource[] = [
+  {
+    id: 'betowa',
+    title: 'Betowa',
+    category: 'Plataforma Educativa',
+    image: '/images/betowa-cover.jpg',
+    url: 'https://betowa.sena.edu.co/',
+    type: 'external'
+  },
+  {
+    id: 'portal-ceet',
+    title: 'Portal CEET',
+    category: 'Centro de Excelencia',
+    image: '/images/ceet-cover.jpg',
+    url: 'https://www.gics-sennova.com/portal_ceet/',
+    type: 'external'
+  },
+  {
+    id: 'sofia-plus',
+    title: 'Sofia Plus',
+    category: 'Sistema de Gestión',
+    image: '/images/sofia-cover.png',
+    url: 'http://senasofiaplus.edu.co/sofia-public/',
+    type: 'external'
+  },
+  {
+    id: 'guia-innovacion',
+    title: 'Guía de Innovación Tecnológica',
+    category: 'Recurso Académico',
+    image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=800&q=80',
+    type: 'academic',
+    content: {
+      title: 'Guía de Innovación Tecnológica para Aprendices SENA',
+      description: 'Esta guía te ayudará a comprender los fundamentos de la innovación tecnológica y cómo aplicarlos en tus proyectos de formación.',
+      sections: [
+        {
+          title: 'Introducción a la Innovación',
+          content: 'La innovación tecnológica es el proceso mediante el cual se introducen nuevos productos, servicios o procesos que mejoran la eficiencia y la calidad. En el contexto del SENA, la innovación se enfoca en desarrollar soluciones prácticas que respondan a las necesidades del sector productivo.'
+        },
+        {
+          title: 'Metodologías de Innovación',
+          content: 'Existen diversas metodologías que puedes aplicar en tus proyectos: Design Thinking, Lean Startup, Agile, entre otras. Cada una tiene sus propias características y se adapta mejor a diferentes tipos de proyectos. Es importante elegir la metodología que mejor se ajuste a tu contexto y objetivos.'
+        },
+        {
+          title: 'Prototipado y Validación',
+          content: 'El prototipado es una fase crucial en el proceso de innovación. Permite materializar ideas y validarlas con usuarios reales antes de invertir grandes recursos. Un buen prototipo debe ser funcional, representar la idea central y permitir obtener feedback valioso para iterar y mejorar.'
+        },
+        {
+          title: 'Recursos y Herramientas',
+          content: 'Para desarrollar proyectos innovadores, puedes utilizar diversas herramientas: plataformas de diseño como Figma, herramientas de gestión como Trello, entornos de desarrollo como Visual Studio Code, y plataformas de colaboración como GitHub. El SENA también ofrece acceso a laboratorios y equipos especializados.'
+        },
+        {
+          title: 'Casos de Éxito',
+          content: 'Muchos aprendices del SENA han desarrollado proyectos innovadores que han tenido impacto real. Estos casos demuestran que con dedicación, metodología adecuada y apoyo de instructores, es posible crear soluciones que transformen comunidades y sectores productivos.'
+        }
+      ]
+    }
+  }
 ];
 
 export const LibraryPage = () => {
-  const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<ResourceFormValues['resourceType'] | 'all'>('all');
+  const [selectedResource, setSelectedResource] = useState<LibraryResource | null>(null);
 
-  const { data: resources = [], isLoading } = useQuery({
-    queryKey: ['library', search],
-    queryFn: async () => {
-      if (!search) {
-        return await libraryService.listResources();
-      }
-      return await libraryService.searchResources(search);
+  const handleResourceClick = (resource: LibraryResource) => {
+    if (resource.type === 'external' && resource.url) {
+      window.open(resource.url, '_blank', 'noopener,noreferrer');
+    } else if (resource.type === 'academic') {
+      setSelectedResource(resource);
     }
-  });
+  };
 
-  const createResourceMutation = useMutation({
-    mutationFn: libraryService.createResource,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library'] }).catch(() => {});
-    }
-  });
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting }
-  } = useForm<ResourceFormValues>({
-    resolver: zodResolver(resourceSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      resourceType: 'document',
-      url: '',
-      tags: ''
-    }
-  });
-
-  const filteredResources = useMemo(() => {
-    if (typeFilter === 'all') return resources;
-    return resources.filter((resource) => resource.resourceType === typeFilter);
-  }, [resources, typeFilter]);
+  const handleCloseModal = () => {
+    setSelectedResource(null);
+  };
 
   return (
     <DashboardLayout
       title="Biblioteca"
-      subtitle="Comparte y descubre materiales de aprendizaje seleccionados por la comunidad."
+      subtitle="Encuentra las páginas oficiales del SENA y recursos académicos que te servirán en tu formación."
     >
       <div className="space-y-6">
         <Card>
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <BookOpen className="h-6 w-6 text-sena-green" />
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green">
-                <BookOpen className="h-4 w-4" /> Curaduría colaborativa
-              </p>
-              <h2 className="mt-3 text-2xl font-semibold text-[var(--color-text)]">
-                Elige tu siguiente recurso para aprender o enseñar
+              <h2 className="text-xl font-semibold text-[var(--color-text)]">
+                Recursos Educativos y Plataformas Oficiales
               </h2>
-              <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Encuentra presentaciones, guías, grabaciones de clases y plantillas listas para tus proyectos.
+              <p className="text-sm text-[var(--color-muted)]">
+                Accede a las plataformas oficiales del SENA y recursos académicos seleccionados para tu aprendizaje.
               </p>
-            </div>
-            <div className="flex w-full max-w-xl flex-col gap-3">
-              <Input
-                placeholder="Buscar por título, descripción o etiqueta..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <div className="flex flex-wrap gap-2">
-                {(['all', ...Object.keys(resourceTypeLabels)] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setTypeFilter(type as ResourceFormValues['resourceType'] | 'all')}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                      typeFilter === type
-                        ? 'bg-sena-green text-white'
-                        : 'bg-[var(--color-accent-soft)] text-sena-green hover:bg-sena-green/15'
-                    }`}
-                  >
-                    {type === 'all' ? 'Todos' : resourceTypeLabels[type as ResourceFormValues['resourceType']]}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         </Card>
 
-        <div className="grid gap-6 xl:grid-cols-[2fr_1.1fr]">
-          <div className="space-y-4">
-            {isLoading && <p className="text-sm text-[var(--color-muted)]">Cargando recursos...</p>}
-            {!isLoading && filteredResources.length === 0 && (
-              <Card>
-                <p className="text-sm text-[var(--color-muted)]">
-                  No se encontraron recursos con esos criterios. Comparte uno nuevo para inspirar a otros.
-                </p>
-              </Card>
-            )}
-            {filteredResources.map((resource) => (
-              <Card key={resource.id} className="space-y-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--color-text)]">{resource.title}</h3>
-                    <p className="text-xs text-[var(--color-muted)]">
-                      Publicado el {new Date(resource.createdAt).toLocaleDateString('es-CO')}
-                    </p>
-                  </div>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green">
-                    <Library className="h-4 w-4" />
-                    {resourceTypeLabels[resource.resourceType]}
-                  </span>
-                </div>
-                <p className="text-sm text-[var(--color-text)]">
-                  {resource.description ?? 'Este recurso aún no tiene descripción detallada.'}
-                </p>
-                {resource.tags && resource.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {resource.tags.map((tag) => (
-                      <span key={tag} className="rounded-full bg-[var(--color-accent-soft)] px-3 py-1 text-xs text-sena-green">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  {resource.url ? (
-                    <a
-                      href={resource.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-medium text-sena-green hover:underline"
-                    >
-                      Abrir recurso
-                    </a>
-                  ) : (
-                    <span className="text-sm text-[var(--color-muted)]">Recurso sin enlace público.</span>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+          {libraryResources.map((resource) => (
+            <Card
+              key={resource.id}
+              onClick={() => handleResourceClick(resource)}
+              className="group cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg"
+            >
+              <div className="space-y-4">
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl">
+                  <img
+                    src={resource.image}
+                    alt={resource.title}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  {resource.type === 'external' && (
+                    <div className="absolute bottom-2 right-2 rounded-full bg-white/90 p-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                      <ExternalLink className="h-4 w-4 text-sena-green" />
+                    </div>
                   )}
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="secondary">
-                      Guardar
-                    </Button>
-                    <Button size="sm">Compartir</Button>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-lg font-semibold text-[var(--color-text)] line-clamp-2">
+                      {resource.title}
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold text-sena-green">
+                      {resource.type === 'external' ? (
+                        <Globe className="h-3 w-3" />
+                      ) : (
+                        <FileText className="h-3 w-3" />
+                      )}
+                      {resource.category}
+                    </span>
                   </div>
                 </div>
-              </Card>
-            ))}
-          </div>
-
-          <div className="space-y-4">
-            <Card>
-              <h2 className="text-base font-semibold text-[var(--color-text)]">Agregar recurso</h2>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">
-                Comparte documentos, videos, cursos y enlaces relevantes con la comunidad.
-              </p>
-              <form
-                className="mt-4 space-y-4"
-                onSubmit={handleSubmit((values) => {
-                  createResourceMutation.mutate(
-                    {
-                      title: values.title,
-                      description: values.description,
-                      resourceType: values.resourceType,
-                      url: values.url,
-                      tags: values.tags
-                        ? values.tags
-                            .split(',')
-                            .map((tag) => tag.trim())
-                            .filter(Boolean)
-                        : undefined
-                    },
-                    {
-                      onSuccess: () => reset()
-                    }
-                  );
-                })}
-              >
-                <Input label="Título" error={errors.title?.message} {...register('title')} />
-                <TextArea label="Descripción" error={errors.description?.message} rows={4} {...register('description')} />
-                <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-text)]">
-                  Tipo de recurso
-                  <select
-                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm"
-                    {...register('resourceType')}
-                  >
-                    {Object.entries(resourceTypeLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <Input label="URL" placeholder="https://..." error={errors.url?.message} {...register('url')} />
-                <Input
-                  label="Etiquetas"
-                  placeholder="sena, innovación, programación"
-                  hint="Separa con comas"
-                  {...register('tags')}
-                />
-                <Button type="submit" className="w-full" loading={isSubmitting || createResourceMutation.isPending}>
-                  Publicar recurso
-                </Button>
-              </form>
-            </Card>
-
-            <Card>
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-[var(--color-text)]">Colecciones destacadas</h3>
-                <Layers className="h-4 w-4 text-sena-green" />
               </div>
-              <div className="mt-4 space-y-3">
-                {curatedCollections.map((collection) => (
-                  <div key={collection.id} className="rounded-xl border border-[var(--color-border)] px-4 py-3">
-                    <p className="text-sm font-semibold text-[var(--color-text)]">{collection.title}</p>
-                    <p className="text-xs text-[var(--color-muted)]">{collection.items} recursos seleccionados</p>
+            </Card>
+          ))}
+        </div>
+
+        <GlassDialog
+          open={Boolean(selectedResource && selectedResource.type === 'academic')}
+          onClose={handleCloseModal}
+          size="xl"
+        >
+          {selectedResource?.content && (
+            <div className="space-y-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold text-[var(--color-text)]">
+                    {selectedResource.content.title}
+                  </h2>
+                  <p className="text-sm text-[var(--color-muted)]">
+                    {selectedResource.content.description}
+                  </p>
+                </div>
+                <button
+                  onClick={handleCloseModal}
+                  className="rounded-full p-2 transition-colors hover:bg-white/10"
+                >
+                  <X className="h-5 w-5 text-[var(--color-text)]" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {selectedResource.content.sections.map((section, index) => (
+                  <div key={index} className="space-y-3">
+                    <h3 className="text-lg font-semibold text-sena-green">
+                      {section.title}
+                    </h3>
+                    <p className="text-sm leading-relaxed text-[var(--color-text)]">
+                      {section.content}
+                    </p>
                   </div>
                 ))}
               </div>
-            </Card>
 
-            <Card>
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Consejos de curaduría</h3>
-              <div className="mt-3 space-y-3 text-sm text-[var(--color-muted)]">
-                <p>• Prefiere enlaces permanentes y con acceso abierto para toda la comunidad.</p>
-                <p>• Describe brevemente por qué el recurso es valioso para tu grupo o proyecto.</p>
-                <p>• Usa etiquetas cortas y específicas: ejemplo, “frontend”, “pitch”, “ux research”.</p>
+              <div className="flex justify-end pt-4">
+                <button
+                  onClick={handleCloseModal}
+                  className="rounded-lg bg-sena-green px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-sena-green/90"
+                >
+                  Cerrar
+                </button>
               </div>
-            </Card>
-          </div>
-        </div>
+            </div>
+          )}
+        </GlassDialog>
       </div>
     </DashboardLayout>
   );

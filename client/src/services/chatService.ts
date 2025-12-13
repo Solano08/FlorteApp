@@ -20,5 +20,9 @@ export const chatService = {
   async sendMessage(chatId: string, payload: SendMessagePayload): Promise<Message> {
     const { data } = await apiClient.post<{ success: boolean; message: Message }>(`/chats/${chatId}/messages`, payload);
     return data.message;
+  },
+
+  async deleteChat(chatId: string): Promise<void> {
+    await apiClient.delete(`/chats/${chatId}`);
   }
 };

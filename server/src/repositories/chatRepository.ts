@@ -73,9 +73,11 @@ export const chatRepository = {
     return mapChat(rows[0]);
   },
 
-  async findUserChats(userId: string): Promise<Array<Chat & { lastMessageAt?: Date }>> {
+  async findUserChats(userId: string): Promise<Array<Chat & { lastMessageAt?: Date; lastMessage?: string }>> {
     const [rows] = await getPool().query<RowDataPacket[]>(
-      `SELECT c.*, MAX(m.created_at) AS last_message_at
+      `SELECT c.*, 
+              MAX(m.created_at) AS last_message_at,
+              (SELECT content FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) AS last_message
        FROM chats c
        INNER JOIN chat_members cm ON cm.chat_id = c.id
        LEFT JOIN messages m ON m.chat_id = c.id
@@ -86,7 +88,8 @@ export const chatRepository = {
     );
     return rows.map((row) => ({
       ...mapChat(row),
-      lastMessageAt: row.last_message_at
+      lastMessageAt: row.last_message_at,
+      lastMessage: row.last_message || null
     }));
   },
 

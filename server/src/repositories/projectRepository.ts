@@ -139,5 +139,17 @@ export const projectRepository = {
       { projectId }
     );
     return rows.map((row) => ({ userId: row.user_id as string, role: row.role as string }));
+  },
+
+  async deleteProject(id: string): Promise<void> {
+    const [result] = await getPool().execute<ResultSetHeader>(
+      'DELETE FROM projects WHERE id = :id',
+      { id }
+    );
+    if (result.affectedRows === 0) {
+      // It's possible the project didn't exist, but for idempotency we can just ignore or throw.
+      // In this context, if we want to be strict:
+      // throw new Error('Project not found or already deleted');
+    }
   }
 };

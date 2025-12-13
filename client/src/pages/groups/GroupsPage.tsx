@@ -80,7 +80,7 @@ export const GroupsPage = () => {
 
             </div>
 
-            <div className="mt-3 space-y-3 overflow-y-auto pr-1 hide-scrollbar">
+            <div className="mt-3 space-y-3 overflow-y-auto pr-1">
 
               {activeGroups.length === 0 && (
 
