@@ -224,7 +224,7 @@ export const DashboardLayout = ({
               contentClassName
                 ? contentClassName
                 : classNames(
-                    'overflow-y-auto py-4',
+                    'overflow-hidden py-4',
                     fluid
                       ? 'mx-0 px-4 sm:px-6 lg:px-10 xl:px-16'
                       : 'mx-auto max-w-5xl px-4 sm:px-6'

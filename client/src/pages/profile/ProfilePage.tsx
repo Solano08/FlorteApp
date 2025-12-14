@@ -1396,21 +1396,21 @@ export const ProfilePage = () => {
       <LayoutGroup>
 
         <div className="flex h-full w-full flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-10 xl:px-16">
-            <div className="mx-auto max-w-7xl">
-              <div className="mb-3 space-y-1">
+          <div className="flex-1 overflow-hidden px-4 py-3 sm:px-6 lg:px-10 xl:px-16" style={{ height: 'calc(100vh - 56px)', maxHeight: 'calc(100vh - 56px)' }}>
+            <div className="mx-auto max-w-7xl h-full flex flex-col">
+              <div className="mb-2 space-y-1 flex-shrink-0">
                 <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">Perfil</h2>
                 <p className="text-xs text-[var(--color-muted)] sm:text-sm">Administra tu informacion y mantiene tu presencia actualizada para el resto de la comunidad.</p>
               </div>
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)]">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)] flex-1 min-h-0">
 
-          <div className="space-y-6">
+          <div className="space-y-4 overflow-hidden flex flex-col min-h-0">
 
             <Card className="relative overflow-visible rounded-[32px] glass-liquid-strong p-0">
 
               <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[38px] bg-[radial-gradient(circle_at_center,_rgba(18,55,29,0.06)_0%,_rgba(18,55,29,0.025)_38%,_transparent_70%)] blur-xl" />
 
-              <div className="relative h-48 w-full overflow-visible rounded-t-[32px] sm:h-52 md:h-56">
+              <div className="relative h-40 w-full overflow-visible rounded-t-[32px] sm:h-44 md:h-48">
 
                 <div className="relative h-full overflow-hidden rounded-t-[32px] glass-liquid">
 
@@ -1680,7 +1680,7 @@ export const ProfilePage = () => {
 
 
 
-        <div className="space-y-6">
+        <div className="space-y-4">
 
           <Card className="border border-white/30 bg-white/60 shadow-[0_10px_22px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
 

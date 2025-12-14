@@ -232,6 +232,8 @@ export const HomePage = () => {
   const [editingPostContent, setEditingPostContent] = useState('');
   const [reactionPickerPost, setReactionPickerPost] = useState<string | null>(null);
   const reactionPickerTimeout = useRef<number | null>(null);
+  const feedSectionRef = useRef<HTMLElement | null>(null);
+  const scrollPositionRef = useRef<number>(0);
   const [commentAttachments, setCommentAttachments] = useState<Record<string, ComposerAttachment | null>>({});
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
@@ -406,7 +408,7 @@ export const HomePage = () => {
 
   useEffect(() => {
     if (!composerSuccessMessage) return;
-    const timeout = window.setTimeout(() => setComposerSuccessMessage(null), 2000);
+    const timeout = window.setTimeout(() => setComposerSuccessMessage(null), 1500);
     return () => window.clearTimeout(timeout);
   }, [composerSuccessMessage]);
 
@@ -552,13 +554,17 @@ export const HomePage = () => {
       attachments?: Array<{ url: string; mimeType?: string | null }>;
     }) => feedService.createPost(payload),
     onSuccess: (post) => {
+      // Agregar el post sin ajustar el scroll para evitar cualquier movimiento
       queryClient.setQueryData<FeedPostAggregate[]>(feedQueryKey, (existing) =>
         existing ? [post, ...existing] : [post]
       );
+
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
       void queryClient.invalidateQueries({ queryKey: ['profile', 'recent-posts'] });
       setComposerContent('');
       handleClearAttachments();
+      
+      // Mostrar mensaje de éxito
       setComposerSuccessMessage('Tu publicacion se ha subido correctamente.');
     },
     onError: (error) => {
@@ -1075,13 +1081,14 @@ export const HomePage = () => {
     return (
       <Card
         key={`${context}-${post.id}`}
-        className="relative overflow-visible space-y-4 glass-liquid"
+        data-post-id={post.id}
+        className="relative overflow-visible space-y-3 glass-liquid p-4 sm:space-y-4 sm:p-5 lg:p-6"
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2 sm:gap-3">
           <button
             type="button"
             onClick={() => handleNavigateToProfile(post.authorId)}
-            className="h-11 w-11 overflow-hidden rounded-full glass-liquid p-[1px] transition hover:border-sena-green/50"
+            className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full glass-liquid p-[1px] transition hover:border-sena-green/50 sm:h-11 sm:w-11"
           >
             <img src={authorAvatar} alt={post.author.fullName} className="h-full w-full rounded-full object-cover" />
           </button>
@@ -1634,105 +1641,114 @@ export const HomePage = () => {
   return (
     <DashboardLayout
       fluid
-      contentClassName="px-2 sm:px-6 lg:px-10 xl:px-16 !pt-0"
+      contentClassName="h-full overflow-hidden px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 !pt-0"
     >
-      <AnimatePresence>
-        {composerSuccessMessage && (
-          <motion.div
-            key={composerSuccessMessage}
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25 }}
-            className="pointer-events-auto fixed inset-x-0 top-24 z-40 mx-auto w-[min(88vw,360px)] rounded-2xl glass-liquid-strong px-5 pb-4 pt-5 text-center text-sm text-[var(--color-text)]"
-          >
-            <button
-              type="button"
-              onClick={() => setComposerSuccessMessage(null)}
-              className="absolute right-3 top-3 rounded-full bg-slate-900/5 p-1 text-[var(--color-text)] transition hover:bg-slate-900/10 dark:bg-white/10 dark:hover:bg-white/20"
-              aria-label="Cerrar notificacion"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <p className="text-base font-semibold tracking-wide text-[var(--color-text)]">{composerSuccessMessage}</p>
-            <div className="absolute bottom-0 left-0 h-1 w-full overflow-hidden rounded-b-2xl bg-transparent">
-              <motion.div
-                initial={{ width: '100%' }}
-                animate={{ width: 0 }}
-                transition={{ duration: 2, ease: 'linear' }}
-                className="h-full bg-sena-green"
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      <div className="mx-auto grid w-full gap-4 pb-20 pt-2 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,300px)] xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_minmax(0,360px)]" style={{ minHeight: '100vh' }}>
-        <aside className="hidden w-full flex-col gap-5 lg:flex lg:sticky lg:top-14 lg:z-10 lg:self-start" style={{ alignSelf: 'flex-start', willChange: 'transform' }}>
-          <Card className="glass-liquid p-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Actividad rapida</h3>
-              <Sparkles className="h-4 w-4 text-sena-green" />
-            </div>
-            <p className="mt-4 text-sm text-[var(--color-muted)]">
-              Accede en segundos a proyectos, grupos y espacios clave de tu comunidad.
-            </p>
-            <div className="mt-5 space-y-3">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="w-full justify-between px-4 py-2.5"
-                onClick={() => navigate('/groups')}
-              >
-                Encontrar grupos
-                <Users className="h-5 w-5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full justify-between px-4 py-2.5"
-                onClick={() => navigate('/projects')}
-              >
-                Revisar mis proyectos
-                <FolderKanban className="h-5 w-5" />
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="glass-liquid p-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Top projects</h3>
-              <Sparkles className="h-4 w-4 text-sena-green" />
-            </div>
-            <div className="mt-4 space-y-3">
-              {topProjects.length === 0 && (
-                <p className="text-sm text-[var(--color-muted)]">
-                  Aún no hay proyectos destacados.
-                </p>
-              )}
-              {topProjects.map((project) => (
-                <div
-                  key={project.id}
-                  className="rounded-xl glass-liquid px-4 py-3 transition hover:border-sena-green/40 hover:bg-white/35 dark:hover:bg-white/10"
+      <div className="mx-auto grid w-full max-w-[1920px] items-start gap-3 pt-2 sm:gap-4 md:grid-cols-[1fr_320px] md:gap-4 lg:grid-cols-[280px_1fr_300px] lg:gap-5 xl:grid-cols-[320px_1fr_360px] xl:gap-6 2xl:max-w-[2560px]" style={{ height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
+        <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)' }}>
+          <div className="flex flex-col space-y-6 py-4">
+            {/* Actividad Rápida */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-2">
+                <Sparkles className="h-4 w-4 text-sena-green" />
+                <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rápida</h3>
+              </div>
+              <div className="space-y-1">
+                <button
+                  onClick={() => navigate('/groups')}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-[var(--color-surface)]/50 hover:shadow-sm"
                 >
-                  <p className="text-base font-semibold text-[var(--color-text)] truncate">{project.title}</p>
-                  <p className="text-xs text-[var(--color-muted)] capitalize mt-1">{project.status}</p>
-                </div>
-              ))}
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sena-green/10 text-sena-green transition-colors group-hover:bg-sena-green/20">
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <span className="flex-1 text-sm font-medium text-[var(--color-text)]">Encontrar grupos</span>
+                </button>
+                <button
+                  onClick={() => navigate('/projects')}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-[var(--color-surface)]/50 hover:shadow-sm"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sena-green/10 text-sena-green transition-colors group-hover:bg-sena-green/20">
+                    <FolderKanban className="h-4 w-4" />
+                  </div>
+                  <span className="flex-1 text-sm font-medium text-[var(--color-text)]">Revisar mis proyectos</span>
+                </button>
+              </div>
             </div>
-          </Card>
+
+            {/* Top Projects */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-2">
+                <Sparkles className="h-4 w-4 text-sena-green" />
+                <h3 className="text-sm font-semibold text-[var(--color-text)]">Top projects</h3>
+              </div>
+              <div className="space-y-1">
+                {topProjects.length === 0 ? (
+                  <p className="px-2 text-xs text-[var(--color-muted)]">
+                    Aún no hay proyectos destacados.
+                  </p>
+                ) : (
+                  topProjects.map((project) => (
+                    <button
+                      key={project.id}
+                      onClick={() => navigate(`/projects/${project.id}`)}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-[var(--color-surface)]/50 hover:shadow-sm"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-sena-green/20 to-emerald-400/20 text-sena-green">
+                        <FolderKanban className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--color-text)] truncate">{project.title}</p>
+                        <p className="text-xs text-[var(--color-muted)] capitalize">{project.status}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Mensaje de éxito */}
+          <AnimatePresence>
+            {composerSuccessMessage && (
+              <motion.div
+                key="success-message"
+                initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ 
+                  duration: 0.5, 
+                  ease: [0.16, 1, 0.3, 1],
+                  exit: { duration: 0.4, ease: [0.16, 1, 0.3, 1] }
+                }}
+                className="relative flex items-center rounded-xl glass-liquid-strong px-4 py-3 shadow-lg mt-2 overflow-hidden"
+                style={{ willChange: 'transform, opacity' }}
+              >
+                <p className="text-sm font-medium text-[var(--color-text)] whitespace-nowrap relative z-10">{composerSuccessMessage}</p>
+                <motion.div
+                  initial={{ width: '100%' }}
+                  animate={{ width: '0%' }}
+                  transition={{ duration: 1.5, ease: 'linear' }}
+                  className="absolute bottom-0 left-0 h-1 bg-sena-green"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </aside>
 
 
 
-        <section className="mx-auto flex min-w-0 w-full max-w-3xl flex-col gap-5">
-          <Card padded={false} className="overflow-hidden glass-liquid p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[var(--color-text)] sm:text-base">Historias</h2>
+        <section 
+          ref={feedSectionRef}
+          className="mx-auto flex min-w-0 w-full flex-col gap-3 sm:gap-4 lg:gap-5 pb-16 sm:pb-20 hide-scrollbar" 
+          style={{ width: '100%', maxWidth: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden' }}
+        >
+          <Card padded={false} className="overflow-visible glass-liquid p-3 sm:p-4 lg:p-5 mt-0">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xs font-semibold text-[var(--color-text)] sm:text-sm">Historias</h2>
               <Button
                 variant="ghost"
                 size="sm"
-                className="px-2 py-1 text-xs text-[var(--color-muted)] hover:text-sena-green"
+                className="px-2 py-0.5 text-[10px] text-[var(--color-muted)] hover:text-sena-green"
                 onClick={handleOpenStoryPicker}
               >
                 Subir
@@ -1745,29 +1761,29 @@ export const HomePage = () => {
               className="hidden"
               onChange={handleStoryFileChange}
             />
-            <div className="mt-3 flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+            <div className="flex gap-2.5 overflow-x-auto pb-1 hide-scrollbar -mx-1 px-1">
               {storiesWithAvatars.map((story) => (
                 <button
                   key={story.id}
                   type="button"
                   onClick={handleStoryClick}
-                  className="flex w-20 flex-col items-center gap-2.5 text-xs"
+                  className="flex w-16 flex-shrink-0 flex-col items-center gap-1.5"
                 >
                   <div
-                    className={`relative h-16 w-16 rounded-full p-[3px] ${storyMediaUrls.length
+                    className={`relative h-12 w-12 rounded-full p-[2.5px] ${storyMediaUrls.length
                       ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500'
                       : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500'
                       }`}
                   >
-                    <div className="flex h-full w-full items-center justify-center rounded-full border border-[var(--color-surface)] bg-[var(--color-surface)]">
+                    <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-surface)]">
                       {storyMediaUrls.length ? (
                         <img src={story.avatar} alt={story.name} className="h-full w-full rounded-full object-cover" />
                       ) : (
-                        <Plus className="h-5 w-5 text-sena-green" />
+                        <Plus className="h-4 w-4 text-sena-green" />
                       )}
                     </div>
                   </div>
-                  <span className="text-[11px] font-medium text-[var(--color-text)] text-center leading-tight">
+                  <span className="text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate">
                     {storyMediaUrls.length ? 'Tus historias' : 'Crear historia'}
                   </span>
                 </button>
@@ -1775,14 +1791,14 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          <Card className="relative z-30 overflow-visible glass-liquid">
-            <div className="flex items-start gap-3">
+          <Card className="relative z-30 overflow-visible glass-liquid p-4 sm:p-5 lg:p-6 mt-0">
+            <div className="flex items-start gap-2 sm:gap-3">
               <img
                 src={composerAvatarUrl}
                 alt="composer"
-                className="h-10 w-10 rounded-full object-cover shadow-[0_10px_18px_rgba(18,55,29,0.14)]"
+                className="h-9 w-9 flex-shrink-0 rounded-full object-cover shadow-[0_10px_18px_rgba(18,55,29,0.14)] sm:h-10 sm:w-10"
               />
-              <div className="flex-1 space-y-3">
+              <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
                 <TextArea
                   placeholder="Comparte un nuevo avance, recurso o proyecto..."
                   rows={3}
@@ -1792,8 +1808,8 @@ export const HomePage = () => {
                   ref={composerInputRef}
                 />
 
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+                  <div className="flex gap-1.5 sm:gap-2">
                     {composerIcons.map(({ icon: Icon, label, action }) => {
                       const isEmojiAction = action === 'emoji';
                       const isEmojiOpen = emojiPickerTarget?.type === 'composer' && isEmojiAction;
@@ -1904,13 +1920,13 @@ export const HomePage = () => {
           </Card>
 
           {isLoadingFeed && (
-            <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)]">
+            <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)] sm:p-5">
               Cargando publicaciones...
             </Card>
           )}
 
           {!isLoadingFeed && feedPosts.length === 0 && (
-            <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)]">
+            <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)] sm:p-5">
               Aun no hay publicaciones en tu comunidad. Comparte la primera para iniciar la conversacion.
             </Card>
           )}
@@ -1918,87 +1934,100 @@ export const HomePage = () => {
           {feedPosts.map((post) => renderPostCard(post, 'list'))}
         </section>
 
-        <aside className="hidden flex-col gap-5 md:flex md:sticky md:top-14 md:z-10 md:self-start" style={{ alignSelf: 'flex-start', willChange: 'transform' }}>
-          <Card className="glass-liquid p-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Avances destacados</h3>
-              <Sparkles className="h-4 w-4 text-sena-green" />
-            </div>
-            <div className="mt-4 space-y-3">
-              {learningHighlights.length === 0 && (
-                <p className="text-sm text-[var(--color-muted)]">
-                  Registra tus proyectos para seguir tu progreso.
-                </p>
-              )}
-              {learningHighlights.map((project) => (
-                <div
-                  key={project.id}
-                  className="rounded-xl glass-liquid px-4 py-3 transition hover:border-sena-green/40 hover:bg-white/30 dark:hover:bg-white/10"
-                >
-                  <p className="text-base font-semibold text-[var(--color-text)] truncate">{project.title}</p>
-                  <p className="text-xs text-[var(--color-muted)] capitalize mt-1">{project.status}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="glass-liquid p-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Anuncios</h3>
-              <Sparkles className="h-4 w-4 text-sena-green" />
-            </div>
-            <div className="mt-5 h-80 overflow-hidden rounded-3xl">
-              <AnimatePresence initial={false} mode="wait">
-                {announcementSlides.map(
-                  (slide, index) =>
-                    index === activeAnnouncement && (
-                      <motion.div
-                        key={slide.id}
-                        className="h-full w-full"
-                        initial={{ opacity: 0.2, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.98 }}
-                        transition={{ duration: 0.4 }}
-                      >
-                        <img
-                          src={slide.image}
-                          alt={slide.alt}
-                          className="h-full w-full rounded-3xl object-cover"
-                          loading="lazy"
-                        />
-                      </motion.div>
-                    )
+        <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden' }}>
+          <div className="flex flex-col space-y-4 py-3">
+            {/* Avances Destacados */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-2">
+                <Sparkles className="h-4 w-4 text-sena-green" />
+                <h3 className="text-sm font-semibold text-[var(--color-text)]">Avances destacados</h3>
+              </div>
+              <div className="space-y-1">
+                {learningHighlights.length === 0 ? (
+                  <p className="px-2 text-xs text-[var(--color-muted)]">
+                    Registra tus proyectos para seguir tu progreso.
+                  </p>
+                ) : (
+                  learningHighlights.map((project) => (
+                    <button
+                      key={project.id}
+                      onClick={() => navigate(`/projects/${project.id}`)}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-[var(--color-surface)]/50 hover:shadow-sm"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-sena-green/20 to-emerald-400/20 text-sena-green">
+                        <FolderKanban className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--color-text)] truncate">{project.title}</p>
+                        <p className="text-xs text-[var(--color-muted)] capitalize">{project.status}</p>
+                      </div>
+                    </button>
+                  ))
                 )}
-              </AnimatePresence>
+              </div>
             </div>
-            <div className="mt-5 flex justify-center gap-2">
-              {announcementSlides.map((slide, index) => (
-                <button
-                  key={slide.id}
-                  type="button"
-                  onClick={() => setActiveAnnouncement(index)}
-                  className={classNames(
-                    'h-2.5 w-8 rounded-full transition',
-                    index === activeAnnouncement ? 'bg-sena-green' : 'glass-liquid'
+
+            {/* Anuncios */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-2">
+                <Sparkles className="h-4 w-4 text-sena-green" />
+                <h3 className="text-sm font-semibold text-[var(--color-text)]">Anuncios</h3>
+              </div>
+              <div className="relative h-40 overflow-hidden rounded-xl sm:h-44 lg:h-48">
+                <AnimatePresence initial={false} mode="wait">
+                  {announcementSlides.map(
+                    (slide, index) =>
+                      index === activeAnnouncement && (
+                        <motion.div
+                          key={slide.id}
+                          className="h-full w-full"
+                          initial={{ opacity: 0.2, scale: 0.98 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.98 }}
+                          transition={{ duration: 0.4 }}
+                        >
+                          <img
+                            src={slide.image}
+                            alt={slide.alt}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        </motion.div>
+                      )
                   )}
-                  aria-label={`Mostrar anuncio ${index + 1}`}
-                />
-              ))}
+                </AnimatePresence>
+              </div>
+              <div className="flex justify-center gap-2 px-2">
+                {announcementSlides.map((slide, index) => (
+                  <button
+                    key={slide.id}
+                    type="button"
+                    onClick={() => setActiveAnnouncement(index)}
+                    className={classNames(
+                      'h-2 w-8 rounded-full transition-all duration-200',
+                      index === activeAnnouncement 
+                        ? 'bg-sena-green shadow-sm' 
+                        : 'bg-[var(--color-surface)]/40 hover:bg-[var(--color-surface)]/60'
+                    )}
+                    aria-label={`Mostrar anuncio ${index + 1}`}
+                  />
+                ))}
+              </div>
             </div>
-          </Card>
+          </div>
         </aside>
 
 
 
 
 
-        <Button
-          className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full shadow-[0_18px_30px_rgba(57,169,0,0.3)]"
-          variant="primary"
+        <button
           onClick={() => setMessagesOpen((prev) => !prev)}
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-surface)]/90 backdrop-blur-xl text-[var(--color-text)] shadow-[0_8px_24px_rgba(0,0,0,0.25)] border border-white/30 transition-all duration-300 hover:scale-105 hover:bg-[var(--color-surface)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.35)] active:scale-95"
+          aria-label="Abrir mensajes"
         >
-          <MessageCircle className="h-5 w-5" />
-        </Button>
+          <MessageCircle className="h-6 w-6" />
+        </button>
 
         <AnimatePresence>
           {messagesOpen && (
