@@ -238,6 +238,8 @@ export const HomePage = () => {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
   const [emojiPickerTarget, setEmojiPickerTarget] = useState<{ type: 'composer' } | { type: 'comment'; postId: string } | null>(null);
+  const [deletePostTarget, setDeletePostTarget] = useState<FeedPostAggregate | null>(null);
+  const [deleteCommentTarget, setDeleteCommentTarget] = useState<{ postId: string; commentId: string } | null>(null);
   const [commentModalPost, setCommentModalPost] = useState<FeedPostAggregate | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -944,9 +946,14 @@ export const HomePage = () => {
   };
 
   const handleDeletePost = (post: FeedPostAggregate) => {
-    if (!window.confirm('¿Deseas eliminar esta publicación?')) return;
-    deletePostMutation.mutate(post.id);
+    setDeletePostTarget(post);
     setPostMenuOpenId(null);
+  };
+
+  const handleConfirmDeletePost = () => {
+    if (!deletePostTarget) return;
+    deletePostMutation.mutate(deletePostTarget.id);
+    setDeletePostTarget(null);
   };
 
   const handleStartEditComment = (postId: string, comment: FeedComment) => {
@@ -969,8 +976,14 @@ export const HomePage = () => {
   };
 
   const handleDeleteComment = (postId: string, commentId: string) => {
-    if (!window.confirm('¿Deseas eliminar este comentario?')) return;
-    deleteCommentMutation.mutate({ postId, commentId });
+    setDeleteCommentTarget({ postId, commentId });
+    setCommentMenuOpenId(null);
+  };
+
+  const handleConfirmDeleteComment = () => {
+    if (!deleteCommentTarget) return;
+    deleteCommentMutation.mutate(deleteCommentTarget);
+    setDeleteCommentTarget(null);
   };
 
   const handleCopyPostLink = async (post: FeedPostAggregate) => {
@@ -1082,7 +1095,7 @@ export const HomePage = () => {
       <Card
         key={`${context}-${post.id}`}
         data-post-id={post.id}
-        className="relative overflow-visible space-y-3 glass-liquid p-4 sm:space-y-4 sm:p-5 lg:p-6"
+        className="relative overflow-visible space-y-3 glass-liquid p-4 sm:space-y-4 sm:p-5 lg:p-6 post-card-shadow"
       >
         <div className="flex items-start gap-2 sm:gap-3">
           <button
@@ -1232,7 +1245,7 @@ export const HomePage = () => {
             <Button
               variant="ghost"
               className={classNames(
-                'w-full justify-center gap-2 text-xs sm:text-sm min-h-[38px] min-w-[110px]',
+                'post-action-btn w-full justify-center gap-2 text-xs sm:text-sm min-h-[38px] min-w-[110px]',
                 viewerHasReaction && 'text-sena-green'
               )}
               onMouseEnter={() => handleReactionHover(post.id)}
@@ -1272,7 +1285,7 @@ export const HomePage = () => {
           <Button
             variant="ghost"
             className={classNames(
-              'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
+              'post-action-btn justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm',
               isModal && 'cursor-default text-sena-green'
             )}
             onClick={() => {
@@ -1285,7 +1298,7 @@ export const HomePage = () => {
           </Button>
           <Button
             variant="ghost"
-            className="justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm"
+            className="post-action-btn justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm"
             onClick={() => handleOpenShare(post)}
           >
             <Share2 className="h-4 w-4" /> Compartir
@@ -1293,7 +1306,7 @@ export const HomePage = () => {
           <Button
             variant="ghost"
             className={classNames(
-              'justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm min-h-[38px] min-w-[110px]',
+              'post-action-btn justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm min-h-[38px] min-w-[110px]',
               post.isSaved && 'text-sena-green'
             )}
             onClick={() => saveMutation.mutate(post.id)}
@@ -1641,11 +1654,11 @@ export const HomePage = () => {
   return (
     <DashboardLayout
       fluid
-      contentClassName="h-full overflow-hidden px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 !pt-0"
+      contentClassName="h-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 !pt-0"
     >
 
-      <div className="mx-auto grid w-full max-w-[1920px] items-start gap-3 pt-2 sm:gap-4 md:grid-cols-[1fr_320px] md:gap-4 lg:grid-cols-[280px_1fr_300px] lg:gap-5 xl:grid-cols-[320px_1fr_360px] xl:gap-6 2xl:max-w-[2560px]" style={{ height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
-        <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)' }}>
+      <div className="mx-auto grid w-full max-w-[1920px] items-start gap-3 pt-2 sm:gap-4 md:grid-cols-[1fr_320px] md:gap-4 lg:grid-cols-[280px_1fr_300px] lg:gap-5 xl:grid-cols-[320px_1fr_360px] xl:gap-6 2xl:max-w-[2560px]" style={{ minHeight: 'calc(100vh - 56px)', boxShadow: 'none', WebkitBoxShadow: 'none' }}>
+        <aside className="hidden w-full mt-4 flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)' }}>
           <div className="flex flex-col space-y-6 py-4">
             {/* Actividad Rápida */}
             <div className="space-y-3">
@@ -1705,44 +1718,16 @@ export const HomePage = () => {
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Mensaje de éxito */}
-          <AnimatePresence>
-            {composerSuccessMessage && (
-              <motion.div
-                key="success-message"
-                initial={{ opacity: 0, scale: 0.95, y: 5 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ 
-                  duration: 0.5, 
-                  ease: [0.16, 1, 0.3, 1],
-                  exit: { duration: 0.4, ease: [0.16, 1, 0.3, 1] }
-                }}
-                className="relative flex items-center rounded-xl glass-liquid-strong px-4 py-3 shadow-lg mt-2 overflow-hidden"
-                style={{ willChange: 'transform, opacity' }}
-              >
-                <p className="text-sm font-medium text-[var(--color-text)] whitespace-nowrap relative z-10">{composerSuccessMessage}</p>
-                <motion.div
-                  initial={{ width: '100%' }}
-                  animate={{ width: '0%' }}
-                  transition={{ duration: 1.5, ease: 'linear' }}
-                  className="absolute bottom-0 left-0 h-1 bg-sena-green"
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </aside>
+          </div>        </aside>
 
 
 
         <section 
           ref={feedSectionRef}
-          className="mx-auto flex min-w-0 w-full flex-col gap-3 sm:gap-4 lg:gap-5 pb-16 sm:pb-20 hide-scrollbar" 
-          style={{ width: '100%', maxWidth: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden' }}
+          className="feed-section mx-auto flex min-w-0 w-full flex-col gap-3 sm:gap-4 lg:gap-5 pb-16 sm:pb-20 px-3 sm:px-4 relative z-10" 
+          style={{ width: '100%', maxWidth: '100%', overflowX: 'visible', boxShadow: 'none', WebkitBoxShadow: 'none' }}
         >
-          <Card padded={false} className="overflow-visible glass-liquid p-3 sm:p-4 lg:p-5 mt-0">
+          <Card padded={false} className="overflow-visible glass-liquid p-3 sm:p-4 lg:p-5 mt-0" style={{ boxShadow: 'none' }}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-semibold text-[var(--color-text)] sm:text-sm">Historias</h2>
               <Button
@@ -1791,7 +1776,7 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          <Card className="relative z-30 overflow-visible glass-liquid p-4 sm:p-5 lg:p-6 mt-0">
+          <Card className="relative z-30 overflow-visible glass-liquid p-4 sm:p-5 lg:p-6 mt-0" style={{ boxShadow: 'none' }}>
             <div className="flex items-start gap-2 sm:gap-3">
               <img
                 src={composerAvatarUrl}
@@ -1920,13 +1905,13 @@ export const HomePage = () => {
           </Card>
 
           {isLoadingFeed && (
-            <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)] sm:p-5">
+            <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)] sm:p-5" style={{ boxShadow: 'none' }}>
               Cargando publicaciones...
             </Card>
           )}
 
           {!isLoadingFeed && feedPosts.length === 0 && (
-            <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)] sm:p-5">
+            <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)] sm:p-5" style={{ boxShadow: 'none' }}>
               Aun no hay publicaciones en tu comunidad. Comparte la primera para iniciar la conversacion.
             </Card>
           )}
@@ -1934,7 +1919,7 @@ export const HomePage = () => {
           {feedPosts.map((post) => renderPostCard(post, 'list'))}
         </section>
 
-        <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden' }}>
+        <aside className="hidden w-full mt-4 flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden' }}>
           <div className="flex flex-col space-y-4 py-3">
             {/* Avances Destacados */}
             <div className="space-y-3">
@@ -2058,21 +2043,25 @@ export const HomePage = () => {
                       key={chat.id}
                       type="button"
                       onClick={() => handleOpenChat(chat.id)}
-                      className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-left transition hover:border-sena-green/50 hover:bg-white/30 dark:hover:bg-white/15"
+                      className="group relative flex w-full items-center gap-3 rounded-xl border border-transparent bg-transparent px-3 py-2.5 text-left transition-all duration-300 ease-out hover:border-white/30 hover:bg-gradient-to-r hover:from-white/10 hover:via-white/5 hover:to-transparent hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.05)] dark:hover:border-white/20 dark:hover:from-white/8 dark:hover:via-white/4"
                     >
-                      <img
-                        src={`https://avatars.dicebear.com/api/initials/${encodeURIComponent(chat.name ?? 'Chat')}.svg`}
-                        alt={chat.name ?? 'Chat'}
-                        className="h-9 w-9 rounded-full object-cover"
-                      />
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--color-text)]">{chat.name ?? 'Chat sin ttulo'}</p>
-                        <p className="text-xs text-[var(--color-muted)] truncate">
+                      <div className="relative flex-shrink-0">
+                        <img
+                          src={`https://avatars.dicebear.com/api/initials/${encodeURIComponent(chat.name ?? 'Chat')}.svg`}
+                          alt={chat.name ?? 'Chat'}
+                          className="h-9 w-9 rounded-full object-cover transition-transform duration-300 group-hover:scale-110 group-hover:ring-2 group-hover:ring-white/20"
+                        />
+                        <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-[var(--color-text)] transition-colors duration-300">{chat.name ?? 'Chat sin ttulo'}</p>
+                        <p className="text-xs text-[var(--color-muted)] truncate transition-colors duration-300 group-hover:text-[var(--color-text)]/80">
                           {chat.lastMessage 
                             ? (chat.lastMessage.length > 40 ? chat.lastMessage.substring(0, 40) + '...' : chat.lastMessage)
                             : 'Sin mensajes'}
                         </p>
                       </div>
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
                     </button>
                   ))}
                 </div>
@@ -2081,11 +2070,13 @@ export const HomePage = () => {
           )}
         </AnimatePresence>
 
-        {openChatIds.map((chatId, index) => {
-          const chat = chats.find((c) => c.id === chatId);
-          if (!chat) return null;
-          return <ChatWindow key={chat.id} chat={chat} index={index} onClose={handleCloseChat} />;
-        })}
+        <AnimatePresence mode="popLayout">
+          {openChatIds.map((chatId, index) => {
+            const chat = chats.find((c) => c.id === chatId);
+            if (!chat) return null;
+            return <ChatWindow key={chat.id} chat={chat} index={index} onClose={handleCloseChat} />;
+          })}
+        </AnimatePresence>
 
         {isStoryViewerOpen && storyMediaUrls.length > 0 && (
           <div
@@ -2418,6 +2409,113 @@ export const HomePage = () => {
             </div>
           </GlassDialog>
         )}
+
+        {/* Modal de confirmación eliminar publicación */}
+        {deletePostTarget && (
+          <GlassDialog
+            open={Boolean(deletePostTarget)}
+            onClose={() => setDeletePostTarget(null)}
+            size="sm"
+            preventCloseOnBackdrop={deletePostMutation.isPending}
+          >
+            <div className="space-y-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
+                    ¿Eliminar publicación? 🗑️
+                  </h2>
+                  <p className="text-base leading-relaxed text-[var(--color-text)]">
+                    Esta acción no se puede deshacer. ¿Estás seguro de que quieres eliminar esta publicación?
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setDeletePostTarget(null)}
+                  disabled={deletePostMutation.isPending}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmDeletePost}
+                  loading={deletePostMutation.isPending}
+                  disabled={deletePostMutation.isPending}
+                  className="bg-rose-500/90 hover:bg-rose-500 text-white"
+                >
+                  Sí, eliminar
+                </Button>
+              </div>
+            </div>
+          </GlassDialog>
+        )}
+
+        {/* Modal de confirmación eliminar comentario */}
+        {deleteCommentTarget && (
+          <GlassDialog
+            open={Boolean(deleteCommentTarget)}
+            onClose={() => setDeleteCommentTarget(null)}
+            size="sm"
+            preventCloseOnBackdrop={deleteCommentMutation.isPending}
+          >
+            <div className="space-y-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
+                    ¿Eliminar comentario? 💬
+                  </h2>
+                  <p className="text-base leading-relaxed text-[var(--color-text)]">
+                    ¿Estás seguro de que quieres eliminar este comentario? Esta acción no se puede deshacer.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setDeleteCommentTarget(null)}
+                  disabled={deleteCommentMutation.isPending}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmDeleteComment}
+                  loading={deleteCommentMutation.isPending}
+                  disabled={deleteCommentMutation.isPending}
+                  className="bg-rose-500/90 hover:bg-rose-500 text-white"
+                >
+                  Sí, eliminar
+                </Button>
+              </div>
+            </div>
+          </GlassDialog>
+        )}
+
+        {/* Mensaje de éxito */}
+        <AnimatePresence>
+          {composerSuccessMessage && (
+            <motion.div
+              key="success-message"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ 
+                duration: 0.3, 
+                ease: [0.16, 1, 0.3, 1],
+                exit: { duration: 0.25, ease: [0.16, 1, 0.3, 1] }
+              }}
+              className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
+              style={{ willChange: 'transform, opacity' }}
+            >
+              <p className="text-sm font-medium text-[var(--color-text)] whitespace-nowrap relative z-10">{composerSuccessMessage}</p>
+              <motion.div
+                initial={{ width: '100%' }}
+                animate={{ width: '0%' }}
+                transition={{ duration: 1.5, ease: 'linear' }}
+                className="absolute bottom-0 left-0 h-1 bg-sena-green"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </DashboardLayout>
   );
@@ -2453,7 +2551,16 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
   const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, y: 20, x: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+      exit={{ opacity: 0, scale: 0.9, y: 20, x: 20 }}
+      transition={{ 
+        type: 'spring', 
+        stiffness: 300, 
+        damping: 30,
+        opacity: { duration: 0.2 }
+      }}
       className="fixed bottom-28 z-50 w-80"
       style={{ right: 24 + index * 320 }}
     >
@@ -2518,7 +2625,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
           </div>
         </form>
       </Card>
-    </div>
+    </motion.div>
   );
 };
 

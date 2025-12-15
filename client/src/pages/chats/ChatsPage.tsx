@@ -41,8 +41,7 @@ import {
   Forward,
   Copy,
   CheckSquare2,
-  CheckCheck,
-  MessageSquareMore
+  CheckCheck
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -221,6 +220,9 @@ export const ChatsPage = () => {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [moreMenuPosition, setMoreMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [deleteMessageTarget, setDeleteMessageTarget] = useState<string | null>(null);
+  const [deleteChatTarget, setDeleteChatTarget] = useState<string | null>(null);
+  const [blockUserTarget, setBlockUserTarget] = useState<{ chatId: string; isGroup: boolean } | null>(null);
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
   const moreMenuButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -820,20 +822,10 @@ export const ChatsPage = () => {
         }
         break;
       case 'delete':
-        if (window.confirm('¿Estás seguro de que deseas eliminar este mensaje? Esta acción no se puede deshacer.')) {
-          try {
-            // Por ahora, solo eliminamos del estado local
-            // TODO: Implementar eliminación en el backend
-            await queryClient.invalidateQueries({ queryKey: ['chats', selectedChatId, 'messages'] });
-            alert('Mensaje eliminado (funcionalidad completa próximamente)');
-          } catch (err) {
-            console.error('Error al eliminar:', err);
-            alert('No se pudo eliminar el mensaje');
-          }
-        }
+        setDeleteMessageTarget(message.id);
         break;
       default:
-        console.log(`Acción no implementada: ${action}`);
+        console.warn(`Acción no implementada: ${action}`);
     }
   };
 
@@ -950,9 +942,7 @@ export const ChatsPage = () => {
 
     switch (action) {
       case 'delete':
-        if (window.confirm('¿Estás seguro de que deseas eliminar este chat? Esta acción no se puede deshacer.')) {
-          deleteChatMutation.mutate(chatId);
-        }
+        setDeleteChatTarget(chatId);
         break;
       case 'archive':
         setArchivedChats((prev) => {
@@ -1033,18 +1023,11 @@ export const ChatsPage = () => {
       case 'block':
         const chat = chats.find((c) => c.id === chatId);
         if (chat && !chat.isGroup) {
-          if (window.confirm('¿Estás seguro de que deseas bloquear a este usuario? No podrás recibir mensajes de ellos.')) {
-            // TODO: Implementar bloqueo en backend
-            console.log('Bloquear usuario del chat:', chatId);
-            // Por ahora, eliminamos el chat cuando se bloquea
-            deleteChatMutation.mutate(chatId);
-          }
-        } else {
-          alert('Solo puedes bloquear usuarios en chats privados.');
+          setBlockUserTarget({ chatId, isGroup: chat.isGroup });
         }
         break;
       default:
-        console.log(`Acción no implementada: ${action}`);
+        console.warn(`Acción no implementada: ${action}`);
     }
   };
 
@@ -2974,6 +2957,135 @@ export const ChatsPage = () => {
           </div>
         </div>
       </GlassDialog>
+
+      {/* Modal de confirmación eliminar mensaje */}
+      {deleteMessageTarget && (
+        <GlassDialog
+          open={Boolean(deleteMessageTarget)}
+          onClose={() => setDeleteMessageTarget(null)}
+          size="sm"
+        >
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
+                  ¿Eliminar mensaje? 💬
+                </h2>
+                <p className="text-base leading-relaxed text-[var(--color-text)]">
+                  ¿Estás seguro de que quieres eliminar este mensaje? Esta acción no se puede deshacer.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteMessageTarget(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    await queryClient.invalidateQueries({ queryKey: ['chats', selectedChatId, 'messages'] });
+                    setDeleteMessageTarget(null);
+                  } catch (err) {
+                    console.error('Error al eliminar:', err);
+                  }
+                }}
+                className="bg-rose-500/90 hover:bg-rose-500 text-white"
+              >
+                Sí, eliminar
+              </Button>
+            </div>
+          </div>
+        </GlassDialog>
+      )}
+
+      {/* Modal de confirmación eliminar chat */}
+      {deleteChatTarget && (
+        <GlassDialog
+          open={Boolean(deleteChatTarget)}
+          onClose={() => setDeleteChatTarget(null)}
+          size="sm"
+          preventCloseOnBackdrop={deleteChatMutation.isPending}
+        >
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
+                  ¿Eliminar conversación? 💭
+                </h2>
+                <p className="text-base leading-relaxed text-[var(--color-text)]">
+                  Esta conversación será eliminada permanentemente. Todos los mensajes se perderán. ¿Estás seguro?
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteChatTarget(null)}
+                disabled={deleteChatMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  deleteChatMutation.mutate(deleteChatTarget);
+                  setDeleteChatTarget(null);
+                }}
+                loading={deleteChatMutation.isPending}
+                disabled={deleteChatMutation.isPending}
+                className="bg-rose-500/90 hover:bg-rose-500 text-white"
+              >
+                Sí, eliminar
+              </Button>
+            </div>
+          </div>
+        </GlassDialog>
+      )}
+
+      {/* Modal de confirmación bloquear usuario */}
+      {blockUserTarget && !blockUserTarget.isGroup && (
+        <GlassDialog
+          open={Boolean(blockUserTarget)}
+          onClose={() => setBlockUserTarget(null)}
+          size="sm"
+          preventCloseOnBackdrop={deleteChatMutation.isPending}
+        >
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
+                  ¿Bloquear usuario? 🚫
+                </h2>
+                <p className="text-base leading-relaxed text-[var(--color-text)]">
+                  Ya no recibirás mensajes de este usuario. La conversación se eliminará. ¿Estás seguro?
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setBlockUserTarget(null)}
+                disabled={deleteChatMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  deleteChatMutation.mutate(blockUserTarget.chatId);
+                  setBlockUserTarget(null);
+                }}
+                loading={deleteChatMutation.isPending}
+                disabled={deleteChatMutation.isPending}
+                className="bg-rose-500/90 hover:bg-rose-500 text-white"
+              >
+                Sí, bloquear
+              </Button>
+            </div>
+          </div>
+        </GlassDialog>
+      )}
     </DashboardLayout>
   );
 };

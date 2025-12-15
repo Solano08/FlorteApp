@@ -76,7 +76,7 @@ export const GlassDialog = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={classNames(
-        'fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/35 dark:bg-slate-900/55 backdrop-blur-[28px]',
+        'fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/8 dark:bg-slate-900/12 backdrop-blur-[12px]',
         overlayClassName
       )}
       style={{
@@ -100,13 +100,21 @@ export const GlassDialog = ({
             'relative w-full overflow-hidden',
             frameless
               ? 'rounded-none border-none bg-transparent p-0 shadow-none backdrop-blur-none'
-              : `rounded-[32px] p-6 ${(size === 'lg' || size === 'xl') ? 'glass-liquid-deep' : 'glass-liquid-strong'}`,
+              : 'rounded-[32px] p-6 glass-liquid-deep',
             frameless ? '' : sizeClasses[size],
             contentClassName,
             motionClassName
           )}
           onClick={(event) => event.stopPropagation()}
         >
+          {/* Efectos de luz adicionales para glass-liquid-deep */}
+          {(size === 'lg' || size === 'xl') && !frameless && (
+            <>
+              <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_30%_20%,_rgba(255,255,255,0.25),_transparent_50%)] opacity-60 dark:opacity-20 mix-blend-overlay z-[1]" />
+              <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_70%_80%,_rgba(255,255,255,0.15),_transparent_50%)] opacity-50 dark:opacity-12 mix-blend-overlay z-[1]" />
+              <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-70 dark:opacity-25 z-[1]" />
+            </>
+          )}
           <div className="relative z-10 space-y-6">{children}</div>
         </motion.div>
       </div>

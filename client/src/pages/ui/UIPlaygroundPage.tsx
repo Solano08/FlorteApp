@@ -53,7 +53,6 @@ export const UIPlaygroundPage = () => {
   };
 
   const handleFileSelect = (file: File) => {
-    console.log('Archivo seleccionado:', file.name);
   };
 
   return (
@@ -302,31 +301,44 @@ export const UIPlaygroundPage = () => {
           </Card>
 
           <GlassDialog open={dialogOpen} onClose={() => setDialogOpen(false)} size={dialogSize}>
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-[var(--color-text)]">Diálogo de Ejemplo</h2>
-                  <p className="text-sm text-[var(--color-muted)]">
-                    Este es un diálogo de tamaño {dialogSize} con efecto glass.
+            <div className="space-y-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-bold tracking-tight text-[var(--color-text)]">
+                    ¡Hola! 👋
+                  </h2>
+                  <p className="text-base leading-relaxed text-[var(--color-text)]">
+                    Estás viendo un diálogo con efecto <span className="font-semibold text-sena-green">glass líquido</span>. Este es el tamaño <span className="font-semibold">{dialogSize}</span> y se adapta perfectamente al contenido.
                   </p>
                 </div>
                 <button
                   onClick={() => setDialogOpen(false)}
-                  className="rounded-full p-2 transition-colors hover:bg-white/10"
+                  className="rounded-full p-2 transition-all hover:bg-white/15 hover:scale-[1.03]"
+                  aria-label="Cerrar diálogo"
                 >
                   <X className="h-5 w-5 text-[var(--color-text)]" />
                 </button>
               </div>
-              <p className="text-sm text-[var(--color-text)]">
-                Este componente utiliza Framer Motion para animaciones suaves y el efecto glass-liquid
-                para un diseño moderno y elegante.
-              </p>
+
+              <div className="space-y-3 pt-1">
+                <p className="text-base leading-relaxed text-[var(--color-text)]">
+                  ¿Notas cómo el fondo se ve hermoso a través del vidrio? ✨ Este diseño premium mantiene tu atención mientras puedes ver el contexto de lo que había detrás.
+                </p>
+                <p className="text-sm leading-relaxed text-[var(--color-muted)]">
+                  Perfecto para mostrar información importante, confirmaciones o simplemente destacar contenido especial. ¡Muy elegante, ¿verdad?
+                </p>
+              </div>
+
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="ghost" onClick={() => setDialogOpen(false)}>
-                  Cancelar
+                <Button
+                  variant="ghost"
+                  onClick={() => setDialogOpen(false)}
+                  className="px-4"
+                >
+                  Entendido
                 </Button>
-                <Button onClick={() => setDialogOpen(false)}>
-                  Confirmar
+                <Button onClick={() => setDialogOpen(false)} className="px-5">
+                  ¡Genial!
                 </Button>
               </div>
             </div>

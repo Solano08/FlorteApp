@@ -79,8 +79,6 @@ import { Profile } from '../../types/profile';
 import { ActivityOverview } from '../../types/activity';
 
 import { floatingModalContentClass } from '../../utils/modalStyles';
-import { resolveAssetUrl } from '../../utils/media';
-import { FileText } from 'lucide-react';
 
 
 
@@ -131,20 +129,6 @@ type ProfileValues = z.infer<typeof profileSchema>;
 
 
 const defaultSkills: string[] = ['UI/UX', 'React', 'Innovacion', 'Trabajo colaborativo', 'Aprendiz SENA'];
-
-const detectMediaType = (url: string, mimeType?: string | null): 'image' | 'video' | 'pdf' | 'other' => {
-  if (mimeType) {
-    if (mimeType.startsWith('image/')) return 'image';
-    if (mimeType.startsWith('video/')) return 'video';
-    if (mimeType === 'application/pdf') return 'pdf';
-  }
-  const lowerUrl = url.toLowerCase();
-  const extension = lowerUrl.includes('.') ? lowerUrl.substring(lowerUrl.lastIndexOf('.') + 1).split('?')[0] : '';
-  if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension)) return 'image';
-  if (['mp4', 'webm', 'ogg', 'mov', 'm4v'].includes(extension)) return 'video';
-  if (extension === 'pdf') return 'pdf';
-  return 'other';
-};
 
 
 
@@ -364,8 +348,8 @@ export const ProfilePage = () => {
           </div>
           <p className="mt-2 text-[12px] text-[var(--color-muted)] line-clamp-2">{snippet}</p>
           {showMedia && post.mediaUrl && (
-            <div className="mt-3 overflow-hidden rounded-xl glass-liquid">
-              <img src={resolveAssetUrl(post.mediaUrl) ?? post.mediaUrl} alt="Vista previa de la publicacion" className="h-32 w-full object-cover" />
+            <div className="mt-3 overflow-hidden rounded-xl border border-white/30">
+              <img src={post.mediaUrl} alt="Vista previa de la publicacion" className="h-32 w-full object-cover" />
             </div>
           )}
         </div>
@@ -888,7 +872,7 @@ export const ProfilePage = () => {
   };
 
   const getAvatarUrl = (fullName: string, avatarUrl?: string | null) =>
-    resolveAssetUrl(avatarUrl) ?? `https://avatars.dicebear.com/api/initials/${encodeURIComponent(fullName || 'Usuario')}.svg`;
+    avatarUrl ?? `https://avatars.dicebear.com/api/initials/${encodeURIComponent(fullName || 'Usuario')}.svg`;
 
 
 
@@ -1109,7 +1093,7 @@ export const ProfilePage = () => {
 
     coverPreview ??
 
-    resolveAssetUrl(coverImageUrl) ??
+    coverImageUrl ??
 
     'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80';
 
@@ -1387,32 +1371,21 @@ export const ProfilePage = () => {
 
       subtitle="Administra tu informacion y mantiene tu presencia actualizada para el resto de la comunidad."
 
-      fluid
-
-      contentClassName="h-full p-0 overflow-hidden"
-
     >
 
       <LayoutGroup>
 
-        <div className="flex h-full w-full flex-col overflow-hidden">
-          <div className="flex-1 overflow-hidden px-4 py-3 sm:px-6 lg:px-10 xl:px-16" style={{ height: 'calc(100vh - 56px)', maxHeight: 'calc(100vh - 56px)' }}>
-            <div className="mx-auto max-w-7xl h-full flex flex-col">
-              <div className="mb-2 space-y-1 flex-shrink-0">
-                <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">Perfil</h2>
-                <p className="text-xs text-[var(--color-muted)] sm:text-sm">Administra tu informacion y mantiene tu presencia actualizada para el resto de la comunidad.</p>
-              </div>
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)] flex-1 min-h-0">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)]">
 
-          <div className="space-y-4 overflow-hidden flex flex-col min-h-0">
+          <div className="space-y-6">
 
-            <Card className="relative overflow-visible rounded-[32px] glass-liquid-strong p-0">
+            <Card className="relative overflow-visible rounded-[32px] border border-white/25 bg-white/45 p-0 shadow-[0_14px_30px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
 
               <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[38px] bg-[radial-gradient(circle_at_center,_rgba(18,55,29,0.06)_0%,_rgba(18,55,29,0.025)_38%,_transparent_70%)] blur-xl" />
 
-              <div className="relative h-40 w-full overflow-visible rounded-t-[32px] sm:h-44 md:h-48">
+              <div className="relative h-48 w-full overflow-visible rounded-t-[32px] sm:h-52 md:h-56">
 
-                <div className="relative h-full overflow-hidden rounded-t-[32px] glass-liquid">
+                <div className="relative h-full overflow-hidden rounded-t-[32px] border border-white/20 shadow-[0_16px_28px_rgba(18,55,29,0.12)]">
 
                   <img
 
@@ -1442,7 +1415,7 @@ export const ProfilePage = () => {
 
                   <AvatarUploader
 
-                    imageUrl={resolveAssetUrl(profile?.avatarUrl)}
+                    imageUrl={profile?.avatarUrl}
 
                     loading={isAvatarBusy}
 
@@ -1548,7 +1521,7 @@ export const ProfilePage = () => {
 
                       title={rawValue}
 
-                      className="inline-flex items-center gap-2 rounded-full glass-liquid px-4 py-1.5 text-xs font-semibold text-sena-green transition hover:opacity-80"
+                      className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/95 px-4 py-1.5 text-xs font-semibold text-sena-green shadow-[0_10px_20px_rgba(18,55,29,0.16)] transition hover:bg-white"
 
                     >
 
@@ -1568,7 +1541,7 @@ export const ProfilePage = () => {
 
 
 
-            <Card className="glass-liquid">
+            <Card className="border border-white/30 bg-white/60 shadow-[0_10px_22px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
 
               <h3 className="text-base font-semibold text-[var(--color-text)]">Acerca de mi</h3>
 
@@ -1582,7 +1555,7 @@ export const ProfilePage = () => {
 
 
 
-            <Card className="glass-liquid">
+            <Card className="border border-white/30 bg-white/60 shadow-[0_10px_22px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
 
               <div className="flex items-center justify-between">
 
@@ -1600,7 +1573,7 @@ export const ProfilePage = () => {
 
               </div>
 
-              <div className="mt-4 max-h-[50vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
+              <div className="mt-4 space-y-3">
 
                 {isLoadingProfilePosts ? (
 
@@ -1626,7 +1599,7 @@ export const ProfilePage = () => {
 
                     >
 
-                      <div className="rounded-2xl glass-liquid px-4 py-3 text-sm text-[var(--color-text)] transition hover:border-sena-green/60">
+                      <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
 
                         <div className="flex items-center justify-between gap-3">
 
@@ -1680,7 +1653,7 @@ export const ProfilePage = () => {
 
 
 
-        <div className="space-y-4">
+        <div className="space-y-6">
 
           <Card className="border border-white/30 bg-white/60 shadow-[0_10px_22px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
 
@@ -1714,7 +1687,7 @@ export const ProfilePage = () => {
                   {activityStats.map(({ id, label, value, icon: Icon, accent }) => (
                     <div
                       key={id}
-                      className="group relative flex min-h-[110px] flex-col items-center justify-center gap-3 rounded-2xl glass-liquid px-4 py-5 text-center"
+                      className="group relative flex min-h-[110px] flex-col items-center justify-center gap-3 rounded-2xl border border-white/25 bg-white/35 px-4 py-5 text-center shadow-[0_16px_28px_rgba(18,55,29,0.14)]"
                       role="figure"
                       title={label}
                       aria-label={label}
@@ -1753,7 +1726,7 @@ export const ProfilePage = () => {
 
 
 
-            <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
+            <div className="mt-4 space-y-3">
               {isLoadingSaved ? (
                 <p className="text-xs text-[var(--color-muted)]">Cargando elementos guardados...</p>
               ) : savedPosts.length === 0 ? (
@@ -1773,9 +1746,6 @@ export const ProfilePage = () => {
 
         </div>
 
-              </div>
-            </div>
-          </div>
         </div>
 
 
@@ -1794,7 +1764,7 @@ export const ProfilePage = () => {
 
               exit={{ opacity: 0 }}
 
-              className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/30 px-4 py-6 backdrop-blur-[28px] sm:px-6 md:py-10 hide-scrollbar"
+              className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/30 px-4 py-6 backdrop-blur-[18px] sm:px-6 md:py-10"
             >
 
               <motion.div
@@ -1807,14 +1777,14 @@ export const ProfilePage = () => {
 
                 transition={{ duration: 0.25, ease: 'easeInOut' }}
 
-                className="relative w-full max-w-3xl overflow-hidden rounded-[32px] glass-liquid-strong"
+                className="relative w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/40 bg-white/85 shadow-[0_32px_90px_rgba(15,38,25,0.28)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/85"
               >
 
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.5),_transparent_70%)] opacity-90 dark:opacity-40" />
 
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/15 to-white/10 dark:from-white/5 dark:via-white/0 dark:to-white/5" />
 
-                <div className="relative z-10 max-h-[88vh] overflow-y-auto p-6 sm:p-8 space-y-6 hide-scrollbar">
+                <div className="relative z-10 max-h-[88vh] overflow-y-auto p-6 sm:p-8 space-y-6">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 
                     <div>
@@ -1839,9 +1809,9 @@ export const ProfilePage = () => {
 
 
 
-                  <div className="rounded-[24px] glass-liquid p-4">
+                  <div className="rounded-[24px] border border-white/30 bg-white/60 p-4 shadow-[0_26px_56px_rgba(18,55,29,0.12)] backdrop-blur-[20px] dark:border-white/10 dark:bg-white/10">
 
-                    <div className="relative h-36 overflow-hidden rounded-3xl glass-liquid sm:h-40 md:h-44">
+                    <div className="relative h-36 overflow-hidden rounded-3xl border border-white/30 sm:h-40 md:h-44">
                       <img src={displayCoverImage} alt="Portada actual" className="h-full w-full object-cover" />
 
                       <div className="absolute inset-0 bg-gradient-to-t from-black/22 via-transparent to-black/8" />
@@ -1868,7 +1838,7 @@ export const ProfilePage = () => {
 
                           aria-expanded={isCoverEditorMenuOpen}
 
-                          className="flex h-10 w-10 items-center justify-center rounded-2xl glass-liquid text-sena-green transition hover:opacity-80"
+                          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-sena-green shadow-[0_12px_28px_rgba(18,55,29,0.2)] backdrop-blur transition hover:bg-white"
 
                         >
 
@@ -1884,7 +1854,7 @@ export const ProfilePage = () => {
 
                             role="menu"
 
-                            className="absolute right-0 top-full mt-2 w-48 transform -translate-x-full rounded-2xl glass-frosted p-1.5 text-left text-[var(--color-text)]"
+                            className="absolute right-0 top-full mt-2 w-48 transform -translate-x-full rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left text-[var(--color-text)] shadow-[0_22px_50px_rgba(18,55,29,0.22)] backdrop-blur"
 
                           >
 
@@ -1934,7 +1904,7 @@ export const ProfilePage = () => {
 
                             ref={avatarUploaderRef}
 
-                            imageUrl={resolveAssetUrl(profile?.avatarUrl)}
+                            imageUrl={profile?.avatarUrl}
 
                             loading={isAvatarBusy}
 
@@ -1960,7 +1930,7 @@ export const ProfilePage = () => {
 
                               aria-expanded={isAvatarMenuOpen}
 
-                              className="flex h-9 w-9 items-center justify-center rounded-2xl glass-liquid text-sena-green transition hover:opacity-80"
+                              className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/70 bg-white/95 text-sena-green shadow-[0_12px_28px_rgba(18,55,29,0.2)] backdrop-blur transition hover:bg-white"
 
                             >
 
@@ -1976,7 +1946,7 @@ export const ProfilePage = () => {
 
                                 role="menu"
 
-                                className="absolute left-full top-0 mt-0 w-48 translate-x-2 rounded-2xl glass-frosted p-1.5 text-left"
+                                className="absolute left-full top-0 mt-0 w-48 translate-x-2 rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left shadow-[0_22px_50px_rgba(18,55,29,0.22)] backdrop-blur"
 
                               >
 
@@ -2134,7 +2104,7 @@ export const ProfilePage = () => {
 
                                 onClick={() => handleActivateLinkField(name)}
 
-                                className="flex h-32 flex-col items-center justify-center gap-2 rounded-2xl glass-liquid border-dashed px-4 text-center text-sm font-semibold text-[var(--color-muted)] transition hover:border-sena-green/60 hover:text-sena-green"
+                                className="flex h-32 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/35 bg-white/25 px-4 text-center text-sm font-semibold text-[var(--color-muted)] shadow-[0_18px_36px_rgba(18,55,29,0.14)] transition hover:border-sena-green/60 hover:text-sena-green dark:border-white/10 dark:bg-white/10"
 
                               >
 
@@ -2160,7 +2130,7 @@ export const ProfilePage = () => {
 
                               key={name}
 
-                              className="rounded-2xl glass-liquid p-4"
+                              className="rounded-2xl border border-white/30 bg-white/30 p-4 shadow-[0_20px_40px_rgba(18,55,29,0.16)] backdrop-blur-[14px] dark:border-white/10 dark:bg-white/10"
 
                             >
 
@@ -2178,7 +2148,7 @@ export const ProfilePage = () => {
 
                                       onClick={() => handleClearLinkField(name)}
 
-                                      className="flex h-7 w-7 items-center justify-center rounded-full glass-liquid text-[var(--color-muted)] transition hover:border-red-300 hover:text-red-400"
+                                      className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/20 text-[var(--color-muted)] transition hover:border-red-300 hover:text-red-400 dark:border-white/10 dark:bg-white/5"
 
                                       aria-label={`Eliminar ${label}`}
 
@@ -2196,7 +2166,7 @@ export const ProfilePage = () => {
 
                                     onClick={() => handleCollapseLinkField(name)}
 
-                                    className="flex h-7 w-7 items-center justify-center rounded-full glass-liquid text-[var(--color-muted)] transition hover:border-sena-green/60 hover:text-sena-green"
+                                    className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/20 text-[var(--color-muted)] transition hover:border-sena-green/60 hover:text-sena-green dark:border-white/10 dark:bg-white/5"
 
                                     aria-label={`Cerrar ${label}`}
 
@@ -2302,7 +2272,7 @@ export const ProfilePage = () => {
             Cerrar
           </Button>
         </div>
-        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
+        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
           {savedPosts.length === 0 ? (
             <p className="text-xs text-[var(--color-muted)]">Aun no tienes publicaciones guardadas.</p>
           ) : (
@@ -2332,9 +2302,9 @@ export const ProfilePage = () => {
               </Button>
             </div>
             {selectedSavedPost.mediaUrl && (
-              <div className="overflow-hidden rounded-2xl glass-liquid">
+              <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/10">
                 <img
-                  src={resolveAssetUrl(selectedSavedPost.mediaUrl) ?? selectedSavedPost.mediaUrl}
+                  src={selectedSavedPost.mediaUrl}
                   alt="Vista previa de la publicacion guardada"
                   className="max-h-56 w-full object-cover"
                 />
@@ -2345,31 +2315,12 @@ export const ProfilePage = () => {
             )}
             {selectedSavedPost.attachments?.length ? (
               <div className="grid gap-2 md:grid-cols-2">
-                {selectedSavedPost.attachments.map((attachment) => {
-                  const resolvedUrl = resolveAssetUrl(attachment.url) ?? attachment.url;
-                  const mediaType = detectMediaType(resolvedUrl, attachment.mimeType);
-                  return (
-                    <div key={attachment.id} className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/10">
-                      {mediaType === 'image' && (
-                        <img src={resolvedUrl} alt="Adjunto" className="h-full w-full object-cover" />
-                      )}
-                      {mediaType === 'video' && (
-                        <video src={resolvedUrl} controls className="h-full w-full bg-black object-cover" preload="metadata" />
-                      )}
-                      {(mediaType === 'pdf' || mediaType === 'other') && (
-                        <div className="flex items-center gap-2 p-3 text-[11px]">
-                          <FileText className="h-6 w-6 text-sena-green" />
-                          <div className="min-w-0">
-                            <p className="font-semibold text-[var(--color-text)] truncate">
-                              {mediaType === 'pdf' ? 'Documento PDF' : 'Archivo adjunto'}
-                            </p>
-                            <p className="text-[10px] text-[var(--color-muted)]">{attachment.mimeType ?? 'Archivo adjunto'}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {selectedSavedPost.attachments.map((attachment) => (
+                  <div key={attachment.id} className="rounded-2xl border border-white/20 bg-white/10 p-3 text-[11px]">
+                    <p className="font-semibold text-[var(--color-text)] truncate">{attachment.url}</p>
+                    <p className="text-[10px] text-[var(--color-muted)]">{attachment.mimeType ?? 'Archivo adjunto'}</p>
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>
@@ -2411,7 +2362,7 @@ export const ProfilePage = () => {
 
         </div>
 
-        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
+        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
 
           {profilePosts.length === 0 ? (
 
@@ -2433,7 +2384,7 @@ export const ProfilePage = () => {
 
               >
 
-                <div className="rounded-2xl glass-liquid px-4 py-3 text-sm text-[var(--color-text)] transition hover:border-sena-green/60">
+                <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
 
                   <div className="flex items-center justify-between gap-3">
 
@@ -2489,7 +2440,7 @@ export const ProfilePage = () => {
 
           <div className="space-y-5">
             {selectedProfilePost.source === 'shared' && (
-              <div className="rounded-2xl glass-liquid p-3">
+              <div className="rounded-2xl border border-white/20 bg-white/25 p-3 shadow-[0_16px_30px_rgba(18,55,29,0.18)] backdrop-blur">
                 <div className="flex items-start gap-3">
                   <div className="h-10 w-10 overflow-hidden rounded-full border border-white/30 bg-white/70 p-[2px]">
                     <img
@@ -2519,7 +2470,7 @@ export const ProfilePage = () => {
               </div>
             )}
 
-            <div className="space-y-4 rounded-3xl glass-liquid p-4 text-[var(--color-text)]">
+            <div className="space-y-4 rounded-3xl border border-white/25 bg-white/40 p-4 text-[var(--color-text)] shadow-[0_24px_45px_rgba(18,55,29,0.2)] backdrop-blur-xl dark:border-white/15 dark:bg-white/10">
               <div className="flex items-start gap-3">
                 <div className="h-11 w-11 overflow-hidden rounded-full border border-white/30 bg-white/70 p-[2px]">
                   <img
@@ -2548,9 +2499,9 @@ export const ProfilePage = () => {
               )}
 
               {selectedProfilePost.mediaUrl && (
-                <div className="overflow-hidden rounded-2xl glass-liquid">
+                <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/10">
                   <img
-                    src={resolveAssetUrl(selectedProfilePost.mediaUrl) ?? selectedProfilePost.mediaUrl}
+                    src={selectedProfilePost.mediaUrl}
                     alt="Contenido de la publicacion"
                     className="max-h-72 w-full object-cover"
                   />
@@ -2559,36 +2510,17 @@ export const ProfilePage = () => {
 
               {selectedProfilePost.attachments?.length ? (
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {selectedProfilePost.attachments.map((attachment) => {
-                    const resolvedUrl = resolveAssetUrl(attachment.url) ?? attachment.url;
-                    const mediaType = detectMediaType(resolvedUrl, attachment.mimeType);
-                    return (
-                      <div
-                        key={attachment.id}
-                        className="relative overflow-hidden rounded-2xl glass-liquid"
-                      >
-                        {mediaType === 'image' && (
-                          <img src={resolvedUrl} alt="Adjunto" className="h-full w-full object-cover" />
-                        )}
-                        {mediaType === 'video' && (
-                          <video src={resolvedUrl} controls className="h-full w-full bg-black object-cover" preload="metadata" />
-                        )}
-                        {(mediaType === 'pdf' || mediaType === 'other') && (
-                          <div className="flex items-center gap-2 p-3 text-[11px]">
-                            <FileText className="h-6 w-6 text-sena-green" />
-                            <div className="min-w-0">
-                              <p className="font-semibold text-[var(--color-text)] truncate">
-                                {mediaType === 'pdf' ? 'Documento PDF' : 'Archivo adjunto'}
-                              </p>
-                              <p className="text-[10px] text-[var(--color-muted)]">
-                                {attachment.mimeType ?? 'Archivo adjunto'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {selectedProfilePost.attachments.map((attachment) => (
+                    <div
+                      key={attachment.id}
+                      className="rounded-2xl border border-white/20 bg-white/12 p-3 text-[11px] shadow-sm"
+                    >
+                      <p className="font-semibold text-[var(--color-text)] truncate">{attachment.url}</p>
+                      <p className="text-[10px] text-[var(--color-muted)]">
+                        {attachment.mimeType ?? 'Archivo adjunto'}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               ) : null}
 

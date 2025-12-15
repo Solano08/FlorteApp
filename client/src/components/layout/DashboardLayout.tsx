@@ -216,7 +216,7 @@ export const DashboardLayout = ({
           </div>
         </header>
 
-        <main className="flex-1 overflow-hidden min-h-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ boxShadow: 'none', WebkitBoxShadow: 'none' }}>
           <div
             className={classNames(
               'h-full w-full',
@@ -230,6 +230,7 @@ export const DashboardLayout = ({
                       : 'mx-auto max-w-5xl px-4 sm:px-6'
                   )
             )}
+            style={{ boxShadow: 'none', WebkitBoxShadow: 'none' }}
           >
             {(title || subtitle) && (
               <div className="mb-3 space-y-1">

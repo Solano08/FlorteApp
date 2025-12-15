@@ -38,7 +38,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       secondary:
         'bg-white/10 text-[var(--color-text)] backdrop-blur-md border border-white/20 hover:border-white/40 hover:bg-white/20 hover:text-sena-green shadow-sm focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10',
       ghost:
-        'bg-transparent text-[var(--color-text)] hover:text-sena-green hover:bg-[var(--color-accent-soft)] focus:ring-sena-green/30'
+        'bg-white/5 text-[var(--color-text)] border border-white/10 hover:bg-white/15 hover:border-white/25 hover:text-[var(--color-text)] focus:ring-sena-green/30 backdrop-blur-sm transition-all hover:scale-[1.02] active:scale-95 dark:bg-white/5 dark:hover:bg-white/10'
     };
 
     const sizes: Record<ButtonSize, string> = {
