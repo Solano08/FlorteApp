@@ -332,7 +332,16 @@ export const CommunitiesPage = () => {
                       type: 'text'
                     },
                     {
-                      onSuccess: () => resolve(),
+                      onSuccess: (channel) => {
+                        // Guardar relación canal-categoría si se especificó
+                        if (values.categoryId && communityId) {
+                          const stored = localStorage.getItem(`channelCategories_${communityId}`);
+                          const relations = stored ? JSON.parse(stored) : {};
+                          relations[channel.id] = values.categoryId;
+                          localStorage.setItem(`channelCategories_${communityId}`, JSON.stringify(relations));
+                        }
+                        resolve();
+                      },
                       onError: (error) => reject(error)
                     }
                   );

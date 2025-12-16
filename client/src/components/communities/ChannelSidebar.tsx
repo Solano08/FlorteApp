@@ -1,8 +1,9 @@
 import { FC, useMemo, useState, useRef, useEffect } from 'react';
-import { Hash, UserPlus, ChevronDown, ChevronRight, Settings, Plus, Check, X } from 'lucide-react';
+import { Hash, UserPlus, ChevronDown, ChevronRight, Settings, Plus, Check, X, Folder } from 'lucide-react';
 import { Channel } from '../../types/channel';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Group } from '../../types/group';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ChannelSidebarProps {
   channels: Channel[];
@@ -28,7 +29,15 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
   isSubmitting = false
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { communityId, channelId } = useParams<{ communityId?: string; channelId?: string }>();
+  
+  // Verificar si el usuario es administrador de la comunidad
+  const isAdmin = useMemo(() => {
+    if (!user || !community) return false;
+    // El creador de la comunidad es admin
+    return community.createdBy === user.id;
+  }, [user, community]);
   const [isCommunityMenuOpen, setIsCommunityMenuOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
@@ -45,6 +54,22 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     const stored = localStorage.getItem(`categories_${communityId}`);
     return stored ? JSON.parse(stored) : [];
   });
+  const [channelCategories, setChannelCategories] = useState<Record<string, string>>(() => {
+    // Cargar relaciones canal-categoría desde localStorage
+    if (!communityId) return {};
+    const stored = localStorage.getItem(`channelCategories_${communityId}`);
+    return stored ? JSON.parse(stored) : {};
+  });
+  const [draggedChannel, setDraggedChannel] = useState<{ channel: Channel; categoryId: string | null } | null>(null);
+  const [draggedCategory, setDraggedCategory] = useState<{ id: string } | null>(null);
+  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'before' | 'after' | null>(null);
+  const [categoryOrder, setCategoryOrder] = useState<string[]>(() => {
+    // Cargar orden de categorías desde localStorage
+    if (!communityId) return [];
+    const stored = localStorage.getItem(`categoryOrder_${communityId}`);
+    return stored ? JSON.parse(stored) : [];
+  });
   const communityMenuRef = useRef<HTMLDivElement | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
@@ -57,19 +82,184 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     };
   }, [channels]);
 
-  const handleCreateTextChannelInline = () => {
+  const handleCreateTextChannelInline = async () => {
     if (!onCreateChannel || !newTextChannelName.trim() || isSubmitting) return;
     try {
-      onCreateChannel({ 
+      await onCreateChannel({ 
         name: newTextChannelName.trim(),
         categoryId: selectedCategoryId || undefined
       });
+      // Actualizar relaciones locales después de crear el canal
+      // La relación se guarda en CommunitiesPage, pero necesitamos actualizar el estado local
+      // Esperamos un momento para que la query se actualice y luego sincronizamos
+      setTimeout(() => {
+        if (communityId) {
+          const stored = localStorage.getItem(`channelCategories_${communityId}`);
+          const relations = stored ? JSON.parse(stored) : {};
+          setChannelCategories(relations);
+        }
+      }, 100);
       setNewTextChannelName('');
       setSelectedCategoryId(null);
       setIsCreatingTextChannel(false);
     } catch (error) {
       console.error('Error al crear canal:', error);
     }
+  };
+
+  // Guardar relación canal-categoría
+  const saveChannelCategory = (channelId: string, categoryId: string | null) => {
+    if (!communityId) return;
+    const updated = { ...channelCategories };
+    if (categoryId) {
+      updated[channelId] = categoryId;
+    } else {
+      delete updated[channelId];
+    }
+    setChannelCategories(updated);
+    localStorage.setItem(`channelCategories_${communityId}`, JSON.stringify(updated));
+  };
+
+  // Guardar orden de categorías
+  const saveCategoryOrder = (newOrder: string[]) => {
+    if (!communityId) return;
+    setCategoryOrder(newOrder);
+    localStorage.setItem(`categoryOrder_${communityId}`, JSON.stringify(newOrder));
+  };
+
+  // Obtener categorías ordenadas (incluyendo "Texto" como categoría especial)
+  const getOrderedCategories = () => {
+    const defaultCategories = [
+      { id: 'texto', name: 'Texto', communityId: communityId! },
+      { id: 'voz', name: 'Voz', communityId: communityId! }
+    ];
+    const allCategories = [...defaultCategories, ...categories.filter(c => c.id !== 'texto' && c.id !== 'voz')];
+    
+    if (categoryOrder.length === 0) return allCategories;
+    
+    const ordered = categoryOrder
+      .map(id => allCategories.find(cat => cat.id === id))
+      .filter((c): c is { id: string; name: string; communityId: string } => c !== undefined);
+
+    // Agregar cualquier categoría nueva que no esté en el orden
+    const existingIds = new Set(ordered.map(c => c.id));
+    allCategories.forEach(c => {
+      if (!existingIds.has(c.id)) {
+        ordered.push(c);
+      }
+    });
+    
+    return ordered;
+  };
+
+  // Manejar drag and drop de canales
+  const handleChannelDragStart = (e: React.DragEvent, channel: Channel, categoryId: string | null) => {
+    setDraggedChannel({ channel, categoryId });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', channel.id);
+    e.dataTransfer.setData('type', 'channel');
+  };
+
+  // Manejar drag and drop de categorías
+  const handleCategoryDragStart = (e: React.DragEvent, categoryId: string) => {
+    setDraggedCategory({ id: categoryId });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', categoryId);
+    e.dataTransfer.setData('type', 'category');
+  };
+
+  const handleDragOver = (e: React.DragEvent, categoryId: string | null, position?: 'before' | 'after') => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverCategory(categoryId);
+    setDragOverPosition(position || null);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverCategory(null);
+    setDragOverPosition(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetCategoryId: string | null, position?: 'before' | 'after') => {
+    e.preventDefault();
+    if (!communityId) return;
+    
+    const dragType = e.dataTransfer.getData('type');
+    
+    if (dragType === 'channel' && draggedChannel) {
+      // Mover canal a categoría
+      saveChannelCategory(draggedChannel.channel.id, targetCategoryId);
+      setDraggedChannel(null);
+    } else if (dragType === 'category' && draggedCategory) {
+      // Mover categoría (los canales se mueven automáticamente porque están asociados por categoryId)
+      const defaultCategories = ['texto', 'voz'];
+      const allCategoryIds = [...defaultCategories, ...categories.map(c => c.id)];
+      const currentOrder = categoryOrder.length > 0 
+        ? categoryOrder.filter(id => allCategoryIds.includes(id))
+        : allCategoryIds;
+      
+      // Asegurar que todas las categorías estén en el orden
+      allCategoryIds.forEach(id => {
+        if (!currentOrder.includes(id)) {
+          currentOrder.push(id);
+        }
+      });
+      
+      const sourceIndex = currentOrder.indexOf(draggedCategory.id);
+      
+      if (sourceIndex === -1) {
+        // Si la categoría no está en el orden, agregarla
+        if (targetCategoryId) {
+          const targetIndex = currentOrder.indexOf(targetCategoryId);
+          if (targetIndex !== -1) {
+            if (position === 'after') {
+              currentOrder.splice(targetIndex + 1, 0, draggedCategory.id);
+            } else {
+              currentOrder.splice(targetIndex, 0, draggedCategory.id);
+            }
+          } else {
+            currentOrder.push(draggedCategory.id);
+          }
+        } else {
+          currentOrder.push(draggedCategory.id);
+        }
+        saveCategoryOrder(currentOrder);
+      } else if (targetCategoryId) {
+        const targetIndex = currentOrder.indexOf(targetCategoryId);
+        if (targetIndex !== -1 && targetIndex !== sourceIndex) {
+          const newOrder = [...currentOrder];
+          newOrder.splice(sourceIndex, 1);
+          
+          if (position === 'before') {
+            newOrder.splice(targetIndex > sourceIndex ? targetIndex - 1 : targetIndex, 0, draggedCategory.id);
+          } else if (position === 'after') {
+            newOrder.splice(targetIndex > sourceIndex ? targetIndex : targetIndex + 1, 0, draggedCategory.id);
+          } else {
+            newOrder.splice(targetIndex, 0, draggedCategory.id);
+          }
+          
+          saveCategoryOrder(newOrder);
+        }
+      } else {
+        // Mover al final
+        const newOrder = [...currentOrder];
+        newOrder.splice(sourceIndex, 1);
+        newOrder.push(draggedCategory.id);
+        saveCategoryOrder(newOrder);
+      }
+      
+      setDraggedCategory(null);
+    }
+    
+    setDragOverCategory(null);
+    setDragOverPosition(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedChannel(null);
+    setDraggedCategory(null);
+    setDragOverCategory(null);
+    setDragOverPosition(null);
   };
 
   const toggleCategoryCollapse = (categoryId: string) => {
@@ -85,11 +275,11 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
   };
 
   const getChannelsInCategory = (categoryId: string) => {
-    // Por ahora, los canales no tienen categoryId en el tipo Channel
-    // Esto requeriría modificar el tipo o usar localStorage para almacenar la relación
-    // Por simplicidad, retornamos un array vacío por ahora
-    // TODO: Implementar cuando los canales tengan categoryId
-    return [];
+    if (categoryId === 'texto') {
+      // Para la categoría "Texto", mostrar canales sin categoría asignada
+      return textChannels.filter((channel) => !channelCategories[channel.id]);
+    }
+    return textChannels.filter((channel) => channelCategories[channel.id] === categoryId);
   };
 
   const handleCreateCategoryInline = () => {
@@ -107,18 +297,28 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     // Guardar en localStorage
     localStorage.setItem(`categories_${communityId}`, JSON.stringify(updatedCategories));
     
+    // Agregar al orden
+    const newOrder = [...categoryOrder, newCategory.id];
+    saveCategoryOrder(newOrder);
+    
     setNewCategoryName('');
     setIsCreatingCategory(false);
   };
 
-  // Actualizar categorías cuando cambia el communityId
+  // Actualizar categorías y relaciones cuando cambia el communityId
   useEffect(() => {
     if (!communityId) {
       setCategories([]);
+      setChannelCategories({});
+      setCategoryOrder([]);
       return;
     }
-    const stored = localStorage.getItem(`categories_${communityId}`);
-    setCategories(stored ? JSON.parse(stored) : []);
+    const storedCategories = localStorage.getItem(`categories_${communityId}`);
+    setCategories(storedCategories ? JSON.parse(storedCategories) : []);
+    const storedRelations = localStorage.getItem(`channelCategories_${communityId}`);
+    setChannelCategories(storedRelations ? JSON.parse(storedRelations) : {});
+    const storedOrder = localStorage.getItem(`categoryOrder_${communityId}`);
+    setCategoryOrder(storedOrder ? JSON.parse(storedOrder) : []);
   }, [communityId]);
 
   // Cerrar menú de comunidad al hacer clic fuera
@@ -312,12 +512,44 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
           ) : (
             <>
               {/* Mostrar categorías creadas */}
-              {categories.map((category) => {
+              {getOrderedCategories().map((category, categoryIndex) => {
                 const isCollapsed = collapsedCategories.has(category.id);
                 const categoryChannels = getChannelsInCategory(category.id);
+                const isDraggingCategory = draggedCategory?.id === category.id;
                 return (
-                  <div key={category.id} className="mb-2">
-                    <div className="group mb-1.5 flex items-center gap-1 px-1">
+                  <div 
+                    key={category.id} 
+                    className="mb-2 relative"
+                  >
+                    {/* Indicador de posición antes */}
+                    {dragOverCategory === category.id && dragOverPosition === 'before' && draggedCategory && draggedCategory.id !== category.id && isAdmin && (
+                      <div className="absolute -top-1 left-0 right-0 h-0.5 bg-sena-green rounded-full z-10" />
+                    )}
+                    <div 
+                      className={`group mb-1.5 flex items-center gap-1 px-1 ${isAdmin ? 'cursor-move' : 'cursor-default'} ${isDraggingCategory ? 'opacity-50' : ''}`}
+                      draggable={isAdmin}
+                      onDragStart={(e) => isAdmin && handleCategoryDragStart(e, category.id)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (draggedCategory && draggedCategory.id !== category.id && isAdmin) {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const midpoint = rect.top + rect.height / 2;
+                          const position = e.clientY < midpoint ? 'before' : 'after';
+                          handleDragOver(e, category.id, position);
+                        }
+                      }}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (draggedCategory && draggedCategory.id !== category.id && isAdmin) {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const midpoint = rect.top + rect.height / 2;
+                          const position = e.clientY < midpoint ? 'before' : 'after';
+                          handleDrop(e, category.id, position);
+                        }
+                      }}
+                    >
                       <button
                         type="button"
                         onClick={(e) => {
@@ -336,28 +568,181 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] flex-1">
                         {category.name}
                       </p>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setContextMenu(null);
-                          setSelectedCategoryId(category.id);
-                          setIsCreatingTextChannel(true);
-                          setNewTextChannelName('');
-                        }}
-                        className="opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-slate-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
-                        aria-label="Crear canal en categoría"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
+                      {category.id !== 'texto' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setContextMenu(null);
+                            setSelectedCategoryId(category.id);
+                            setIsCreatingTextChannel(true);
+                            setNewTextChannelName('');
+                          }}
+                          className="opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-slate-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
+                          aria-label="Crear canal en categoría"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      )}
+                      {category.id === 'texto' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsCreatingTextChannel(true);
+                            setSelectedCategoryId(null);
+                            setNewTextChannelName('');
+                          }}
+                          className="opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-slate-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
+                          aria-label="Crear canal en Texto"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
-                    {!isCollapsed && categoryChannels.length > 0 && (
-                      <div className="ml-4 space-y-1">
-                        {/* Aquí se mostrarían los canales de la categoría */}
-                        {categoryChannels.map((channel) => (
-                          <div key={channel.id}>Canal {channel.name}</div>
-                        ))}
+                    {!isCollapsed && (
+                      <>
+                        {isCreatingTextChannel && selectedCategoryId === category.id && (
+                          <div className="ml-4 mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
+                            <Hash className="h-4 w-4 text-[var(--color-muted)]" />
+                            <input
+                              autoFocus
+                              value={newTextChannelName}
+                              onChange={(e) => setNewTextChannelName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  void handleCreateTextChannelInline();
+                                }
+                                if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                  setIsCreatingTextChannel(false);
+                                  setNewTextChannelName('');
+                                  setSelectedCategoryId(null);
+                                }
+                              }}
+                              className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                              placeholder="nombre-del-canal"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => void handleCreateTextChannelInline()}
+                              disabled={!newTextChannelName.trim() || isSubmitting}
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                              aria-label="Crear canal"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsCreatingTextChannel(false);
+                                setNewTextChannelName('');
+                                setSelectedCategoryId(null);
+                              }}
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px]"
+                              aria-label="Cancelar"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                        {isCreatingTextChannel && category.id === 'texto' && !selectedCategoryId && (
+                          <div className="ml-4 mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
+                            <Hash className="h-4 w-4 text-[var(--color-muted)]" />
+                            <input
+                              autoFocus
+                              value={newTextChannelName}
+                              onChange={(e) => setNewTextChannelName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  void handleCreateTextChannelInline();
+                                }
+                                if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                  setIsCreatingTextChannel(false);
+                                  setNewTextChannelName('');
+                                }
+                              }}
+                              className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                              placeholder="nombre-del-canal"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => void handleCreateTextChannelInline()}
+                              disabled={!newTextChannelName.trim() || isSubmitting}
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                              aria-label="Crear canal"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsCreatingTextChannel(false);
+                                setNewTextChannelName('');
+                              }}
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px]"
+                              aria-label="Cancelar"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                        <div 
+                          className="ml-4 space-y-0.5"
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            if (!draggedCategory && isAdmin) {
+                              handleDragOver(e, category.id);
+                            }
+                          }}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (!draggedCategory && isAdmin) {
+                              handleDrop(e, category.id);
+                            }
+                          }}
+                        >
+                        {categoryChannels.map((channel) => {
+                          const isActive = channel.id === channelId;
+                          return (
+                            <div
+                              key={channel.id}
+                              draggable={isAdmin}
+                              onDragStart={(e) => isAdmin && handleChannelDragStart(e, channel, category.id)}
+                              onDragEnd={handleDragEnd}
+                              className={`group relative ${isAdmin ? 'cursor-move' : 'cursor-default'}`}
+                              onMouseEnter={() => setHoveredChannel(channel.id)}
+                              onMouseLeave={() => setHoveredChannel(null)}
+                            >
+                              <button
+                                onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
+                                className={`relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
+                                  isActive
+                                    ? 'bg-white/80 dark:bg-slate-800/80 text-sena-green dark:text-emerald-400 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 dark:before:bg-emerald-500/60 before:rounded-full'
+                                    : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-slate-700/50 hover:text-[var(--color-text)]'
+                                }`}
+                              >
+                                <Hash className="h-4 w-4 flex-shrink-0" />
+                                <span className="truncate flex-1">{channel.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleChannelSettings(channel.id, e)}
+                                  className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
+                                  aria-label="Ajustes del canal"
+                                  style={{ pointerEvents: hoveredChannel === channel.id ? 'auto' : 'none' }}
+                                >
+                                  <Settings className="h-3.5 w-3.5" />
+                                </button>
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
+                      </>
                     )}
                     {isCreatingTextChannel && selectedCategoryId === category.id && (
                       <div className="ml-4 mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
@@ -404,110 +789,30 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                         </button>
                       </div>
                     )}
+                    {/* Indicador de posición después */}
+                    {dragOverCategory === category.id && dragOverPosition === 'after' && draggedCategory && draggedCategory.id !== category.id && (
+                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-sena-green rounded-full z-10" />
+                    )}
                   </div>
                 );
               })}
-              {textChannels.length > 0 && (
-                <div>
-                  <div
-                    className="group mb-1.5 flex items-center gap-1 px-1"
-                    onMouseEnter={() => setHoveredCategory('texto')}
-                    onMouseLeave={() => setHoveredCategory(null)}
-                  >
-                    <ChevronDown className="h-3 w-3 text-[var(--color-muted)]" />
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] flex-1">
-                      Texto
-                    </p>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsCreatingTextChannel(true);
-                      }}
-                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150
-                        ${hoveredCategory === 'texto' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                      aria-label="Crear canal en Texto"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  {isCreatingTextChannel && (
-                    <div className="mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
-                      <Hash className="h-4 w-4 text-[var(--color-muted)]" />
-                      <input
-                        autoFocus
-                        value={newTextChannelName}
-                        onChange={(e) => setNewTextChannelName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            void handleCreateTextChannelInline();
-                          }
-                          if (e.key === 'Escape') {
-                            e.preventDefault();
-                            setIsCreatingTextChannel(false);
-                            setNewTextChannelName('');
-                          }
-                        }}
-                        className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
-                        placeholder="nombre-del-canal"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => void handleCreateTextChannelInline()}
-                        disabled={!newTextChannelName.trim() || isSubmitting}
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
-                        aria-label="Crear canal"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsCreatingTextChannel(false);
-                          setNewTextChannelName('');
-                        }}
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px]"
-                        aria-label="Cancelar"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+              {/* Zona de drop al final para categorías */}
+              {draggedCategory && isAdmin && (
+                <div
+                  className="mb-2 relative"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    handleDragOver(e, null, 'after');
+                  }}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    handleDrop(e, null, 'after');
+                  }}
+                >
+                  {dragOverCategory === null && dragOverPosition === 'after' && (
+                    <div className="h-0.5 bg-sena-green rounded-full" />
                   )}
-                  <div className="space-y-0.5">
-                    {textChannels.map((channel) => {
-                      const isActive = channel.id === channelId;
-                      return (
-                        <div
-                          key={channel.id}
-                          className="group relative"
-                          onMouseEnter={() => setHoveredChannel(channel.id)}
-                          onMouseLeave={() => setHoveredChannel(null)}
-                        >
-                          <button
-                            onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
-                            className={`relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
-                              isActive
-                                ? 'bg-white/80 dark:bg-slate-800/80 text-sena-green dark:text-emerald-400 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 dark:before:bg-emerald-500/60 before:rounded-full'
-                                : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-slate-700/50 hover:text-[var(--color-text)]'
-                            }`}
-                          >
-                            <Hash className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate flex-1">{channel.name}</span>
-                            <button
-                              type="button"
-                              onClick={(e) => handleChannelSettings(channel.id, e)}
-                              className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
-                              aria-label="Ajustes del canal"
-                              style={{ pointerEvents: hoveredChannel === channel.id ? 'auto' : 'none' }}
-                            >
-                              <Settings className="h-3.5 w-3.5" />
-                            </button>
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
               )}
 

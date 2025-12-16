@@ -21,9 +21,9 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
   const { communityId } = useParams<{ communityId?: string }>();
 
   return (
-    <aside className="relative z-[100] flex h-full w-[80px] flex-col items-center justify-between bg-gradient-to-b from-white/70 via-white/50 to-white/70 dark:from-slate-800/70 dark:via-slate-800/50 dark:to-slate-800/70 backdrop-blur-xl px-2 py-3 shadow-[2px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[2px_0_20px_rgba(0,0,0,0.2)]">
+    <aside className="relative z-[100] flex h-full w-[80px] flex-col items-center justify-between bg-gradient-to-b from-white/70 via-white/50 to-white/70 dark:from-slate-800/70 dark:via-slate-800/50 dark:to-slate-800/70 backdrop-blur-xl px-4 py-4 shadow-[2px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[2px_0_20px_rgba(0,0,0,0.2)]">
       {/* Lista de comunidades */}
-      <div className="relative z-[100] flex flex-1 flex-col items-center gap-2 overflow-y-auto overflow-x-visible">
+      <div className="relative z-[100] flex flex-1 flex-col items-center gap-3 overflow-y-auto overflow-x-visible py-2 px-2">
         {isLoading ? (
           <div className="mt-4 text-[10px] text-[var(--color-muted)]">Cargando...</div>
         ) : communities.length === 0 ? (
@@ -68,7 +68,7 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
       </div>
 
       {/* Botones inferiores */}
-      <div className="mt-3 flex flex-col items-center gap-2">
+      <div className="mt-4 flex flex-col items-center gap-3 pb-2">
         <button
           type="button"
           onClick={onCreateCommunity}

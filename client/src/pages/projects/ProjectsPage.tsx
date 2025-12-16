@@ -285,79 +285,78 @@ export const ProjectsPage = () => {
 
   return (
     <DashboardLayout
-      contentClassName="overflow-y-auto py-4 hide-scrollbar mx-0 px-4 sm:px-6 lg:px-10 xl:px-16"
+      fluid
+      contentClassName="h-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 !pt-0"
     >
-      <div className="mx-auto grid w-full gap-4 pb-20 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,300px)] xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_minmax(0,360px)]">
+      <div className="mx-auto grid w-full max-w-[1920px] items-start gap-3 pt-2 sm:gap-4 md:grid-cols-[1fr_240px] md:gap-4 lg:grid-cols-[240px_1fr_240px] lg:gap-5 xl:grid-cols-[260px_1fr_260px] xl:gap-6 2xl:max-w-[2560px]" style={{ minHeight: 'calc(100vh - 56px)', boxShadow: 'none', WebkitBoxShadow: 'none' }}>
         {/* Sidebar izquierdo: Actividad rápida y Tus proyectos */}
-        <aside className="hidden w-full flex-col gap-5 lg:flex">
-          <Card className="glass-liquid p-6 shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sena-green/20 to-emerald-500/20">
+        <aside className="hidden w-full mt-4 flex-col lg:flex" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden', zIndex: 100 }}>
+          <div className="flex flex-col space-y-6 py-4 px-2">
+            {/* Actividad Rápida */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-2">
                 <Sparkles className="h-4 w-4 text-sena-green" />
+                <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rápida</h3>
               </div>
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Actividad rápida</h3>
+              <div className="space-y-1.5">
+                <button
+                  onClick={() => navigate('/explore')}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                    <ArrowUpRight className="h-5 w-5" />
+                  </div>
+                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Explorar proyectos</span>
+                </button>
+                <button
+                  onClick={() => navigate('/projects')}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                    <FolderKanban className="h-5 w-5" />
+                  </div>
+                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Revisar mis proyectos</span>
+                </button>
+              </div>
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-[var(--color-muted)]">
-              Accede en segundos a proyectos, grupos y espacios clave de tu comunidad.
-            </p>
-            <div className="mt-5 space-y-2.5">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="w-full justify-between px-4 py-2.5 transition-all hover:scale-[1.02] hover:shadow-md"
-                onClick={() => navigate('/explore')}
-              >
-                <span>Explorar proyectos</span>
-                <ArrowUpRight className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full justify-between px-4 py-2.5 transition-all hover:scale-[1.02]"
-                onClick={() => navigate('/projects')}
-              >
-                <span>Revisar mis proyectos</span>
-                <FolderKanban className="h-4 w-4" />
-              </Button>
-            </div>
-          </Card>
 
-          <Card className="glass-liquid p-5 shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sena-green/20 to-emerald-500/20">
+            {/* Tus proyectos */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-2">
                 <FolderKanban className="h-4 w-4 text-sena-green" />
+                <h3 className="text-sm font-semibold text-[var(--color-text)]">Tus proyectos</h3>
               </div>
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Tus proyectos</h3>
+              <div className="space-y-1.5">
+                {isLoading ? (
+                  <p className="px-2 text-xs text-[var(--color-muted)]">Cargando proyectos...</p>
+                ) : learningHighlights.length === 0 ? (
+                  <p className="px-2 text-xs text-[var(--color-muted)]">
+                    Registra tus proyectos para seguir tu progreso.
+                  </p>
+                ) : (
+                  learningHighlights.map((project) => (
+                    <button
+                      key={project.id}
+                      onClick={() => navigate(`/projects/${project.id}`)}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                        <FolderKanban className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[var(--color-text)] truncate">{project.title}</p>
+                        <p className="text-xs text-[var(--color-muted)] capitalize">{statusLabels[project.status]}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
-            <div className="mt-4 space-y-2.5">
-              {isLoading ? (
-                <p className="text-sm text-[var(--color-muted)]">Cargando proyectos...</p>
-              ) : learningHighlights.length === 0 ? (
-                <p className="text-sm text-[var(--color-muted)]">
-                  Registra tus proyectos para seguir tu progreso.
-                </p>
-              ) : (
-                learningHighlights.map((project) => (
-                  <button
-                    key={project.id}
-                    onClick={() => navigate(`/projects/${project.id}`)}
-                    className="group w-full rounded-xl glass-liquid px-4 py-3 text-left transition-all hover:border-sena-green/40 hover:bg-white/40 dark:hover:bg-white/10 hover:shadow-md hover:scale-[1.01]"
-                  >
-                    <p className="truncate text-sm font-semibold text-[var(--color-text)] group-hover:text-sena-green transition-colors">
-                      {project.title}
-                    </p>
-                    <p className="mt-1 text-xs capitalize text-[var(--color-muted)]">
-                      {statusLabels[project.status]}
-                    </p>
-                  </button>
-                ))
-              )}
-            </div>
-          </Card>
+          </div>
         </aside>
 
         {/* Contenido principal */}
-        <section className="mx-auto flex min-w-0 w-full max-w-3xl flex-col gap-5">
+        <section className="mx-auto flex min-w-0 w-full flex-col gap-3 sm:gap-4 lg:gap-5 pb-16 sm:pb-20 px-3 sm:px-4 relative z-10 hide-scrollbar" style={{ width: '100%', maxWidth: '100%', overflowX: 'visible', boxShadow: 'none', WebkitBoxShadow: 'none', overflowY: 'auto', height: 'calc(100vh - 56px)', alignSelf: 'flex-start' }}>
           {/* Barra de búsqueda */}
           <Card className="glass-liquid shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
             <div className="flex items-center gap-3">
@@ -560,42 +559,88 @@ export const ProjectsPage = () => {
         </section>
 
         {/* Sidebar derecho: Laboratorio */}
-        <aside className="hidden w-full flex-col gap-5 lg:flex">
-          <Card className="glass-liquid p-6 shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sena-green/20 to-emerald-500/20">
+        <aside className="hidden w-full mt-4 flex-col lg:flex" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden', zIndex: 50 }}>
+          <div className="flex flex-col space-y-4 py-3">
+            {/* Laboratorio */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-2">
                 <Rocket className="h-4 w-4 text-sena-green" />
+                <h3 className="text-sm font-semibold text-[var(--color-text)]">Laboratorio</h3>
               </div>
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Laboratorio</h3>
+              <p className="px-2 text-xs text-[var(--color-muted)]">
+                Visualiza el estado de cada iniciativa y cambia de fase con un clic.
+              </p>
+              <div className="grid grid-cols-3 gap-2.5 px-2 pb-2">
+                {statusOrder.map((status) => {
+                  const { icon: Icon, accent, helper, badge } = statusDisplay[status];
+                  const isActive = statusFilter === status;
+                  const statusConfig = {
+                    draft: {
+                      gradient: 'from-amber-50/80 via-amber-100/60 to-orange-50/80 dark:from-amber-950/30 dark:via-amber-900/20 dark:to-orange-950/30',
+                      border: 'border-amber-300/50 dark:border-amber-700/40',
+                      borderHover: 'hover:border-amber-400/60 dark:hover:border-amber-600/50',
+                      shadow: 'shadow-[0_4px_16px_rgba(245,158,11,0.2)] dark:shadow-[0_4px_16px_rgba(245,158,11,0.15)]',
+                      shadowHover: 'hover:shadow-[0_6px_20px_rgba(245,158,11,0.3)] dark:hover:shadow-[0_6px_20px_rgba(245,158,11,0.2)]',
+                      activeShadow: 'shadow-[0_8px_24px_rgba(245,158,11,0.25)] dark:shadow-[0_8px_24px_rgba(245,158,11,0.2)]'
+                    },
+                    in_progress: {
+                      gradient: 'from-blue-50/80 via-blue-100/60 to-cyan-50/80 dark:from-blue-950/30 dark:via-blue-900/20 dark:to-cyan-950/30',
+                      border: 'border-blue-300/50 dark:border-blue-700/40',
+                      borderHover: 'hover:border-blue-400/60 dark:hover:border-blue-600/50',
+                      shadow: 'shadow-[0_4px_16px_rgba(59,130,246,0.2)] dark:shadow-[0_4px_16px_rgba(59,130,246,0.15)]',
+                      shadowHover: 'hover:shadow-[0_6px_20px_rgba(59,130,246,0.3)] dark:hover:shadow-[0_6px_20px_rgba(59,130,246,0.2)]',
+                      activeShadow: 'shadow-[0_8px_24px_rgba(59,130,246,0.25)] dark:shadow-[0_8px_24px_rgba(59,130,246,0.2)]'
+                    },
+                    completed: {
+                      gradient: 'from-sena-green/20 via-emerald-100/60 to-green-50/80 dark:from-sena-green/30 dark:via-emerald-900/20 dark:to-green-950/30',
+                      border: 'border-sena-green/40 dark:border-emerald-700/40',
+                      borderHover: 'hover:border-sena-green/50 dark:hover:border-emerald-600/50',
+                      shadow: 'shadow-[0_4px_16px_rgba(57,169,0,0.2)] dark:shadow-[0_4px_16px_rgba(57,169,0,0.15)]',
+                      shadowHover: 'hover:shadow-[0_6px_20px_rgba(57,169,0,0.3)] dark:hover:shadow-[0_6px_20px_rgba(57,169,0,0.2)]',
+                      activeShadow: 'shadow-[0_8px_24px_rgba(57,169,0,0.25)] dark:shadow-[0_8px_24px_rgba(57,169,0,0.2)]'
+                    }
+                  };
+                  const config = statusConfig[status];
+                  return (
+                    <div key={status} className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => setStatusFilter((prev) => (prev === status ? 'all' : status))}
+                        className={`relative flex flex-col items-center justify-center rounded-2xl border p-2.5 pb-2 min-h-[80px] w-full transition-all duration-300 bg-gradient-to-br ${config.gradient} ${
+                          isActive
+                            ? `${config.border} ${config.activeShadow} scale-[1.05] ring-2 ring-offset-2 ring-offset-transparent ${
+                                status === 'draft' ? 'ring-amber-400/30 dark:ring-amber-600/30' :
+                                status === 'in_progress' ? 'ring-blue-400/30 dark:ring-blue-600/30' :
+                                'ring-sena-green/30 dark:ring-emerald-600/30'
+                              }`
+                            : `${config.border} ${config.shadow} ${config.borderHover} ${config.shadowHover} hover:scale-[1.03]`
+                        }`}
+                      >
+                        <span className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${badge} ${
+                          isActive ? 'shadow-lg' : ''
+                        }`}>
+                          <Icon className={`h-5 w-5 ${accent} transition-transform group-hover:scale-110`} />
+                        </span>
+                        <p className={`mt-2 text-xl font-bold transition-colors ${
+                          status === 'draft' ? 'text-amber-700 dark:text-amber-400' :
+                          status === 'in_progress' ? 'text-blue-700 dark:text-blue-400' :
+                          'text-sena-green dark:text-emerald-400'
+                        }`}>{stats[status]}</p>
+                        {/* Nombre del estado en la parte inferior - solo visible en hover */}
+                        <p className={`mt-1 text-[9px] font-semibold uppercase tracking-wide transition-all duration-200 opacity-0 group-hover:opacity-100 ${
+                          status === 'draft' ? 'text-amber-700/80 dark:text-amber-400/80' :
+                          status === 'in_progress' ? 'text-blue-700/80 dark:text-blue-400/80' :
+                          'text-sena-green/80 dark:text-emerald-400/80'
+                        }`}>
+                          {statusLabels[status]}
+                        </p>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-[var(--color-muted)]">
-              Visualiza el estado de cada iniciativa y cambia de fase con un clic.
-            </p>
-            <div className="mt-5 grid grid-cols-3 gap-3">
-              {statusOrder.map((status) => {
-                const { icon: Icon, accent, helper, badge } = statusDisplay[status];
-                const isActive = statusFilter === status;
-                return (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => setStatusFilter((prev) => (prev === status ? 'all' : status))}
-                    title={statusLabels[status]}
-                    className={`group relative flex flex-col items-center justify-center rounded-2xl border p-4 transition-all duration-300 ${
-                      isActive
-                        ? 'border-sena-green/40 bg-gradient-to-br from-sena-green/10 to-emerald-500/5 shadow-[0_8px_24px_rgba(57,169,0,0.15)] scale-[1.02]'
-                        : 'border-white/30 dark:border-white/10 bg-white/40 dark:bg-slate-800/40 hover:border-sena-green/30 hover:bg-white/60 dark:hover:bg-slate-700/60 hover:shadow-md hover:scale-[1.01]'
-                    }`}
-                  >
-                    <span className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-110 ${badge}`}>
-                      <Icon className={`h-6 w-6 ${accent}`} />
-                    </span>
-                    <p className="mt-3 text-2xl font-bold text-[var(--color-text)]">{stats[status]}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
+          </div>
         </aside>
       </div>
 

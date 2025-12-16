@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { GlassDialog } from '../../components/ui/GlassDialog';
 import { EmojiPicker } from '../../components/ui/EmojiPicker';
+import { UserAvatar } from '../../components/ui/UserAvatar';
 import {
   MessageCirclePlus,
   Send,
@@ -155,6 +156,10 @@ export const ChatsPage = () => {
   const [selectedChats, setSelectedChats] = useState<Set<string>>(new Set());
   const [showStarredMessages, setShowStarredMessages] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; content?: string; senderId: string; attachmentUrl?: string } | null>(null);
+  const [isForwardDialogOpen, setIsForwardDialogOpen] = useState(false);
+  const [forwardingMessage, setForwardingMessage] = useState<{ id: string; content?: string; attachmentUrl?: string } | null>(null);
+  const [selectedForwardChats, setSelectedForwardChats] = useState<Set<string>>(new Set());
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
   const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -628,6 +633,7 @@ export const ChatsPage = () => {
         onSuccess: () => {
           setMessage('');
           setAttachment(null);
+          setReplyingTo(null);
           // Scroll suave al final después de enviar el mensaje
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
@@ -868,8 +874,15 @@ export const ChatsPage = () => {
         }
         break;
       case 'reply':
-        // Preparar respuesta: podría mostrar un input o modal
-        setMessage(`Re: ${message.content?.substring(0, 50)}${message.content && message.content.length > 50 ? '...' : ''}\n\n`);
+        // Guardar el mensaje a responder
+        setReplyingTo({
+          id: message.id,
+          content: message.content,
+          senderId: message.senderId,
+          attachmentUrl: message.attachmentUrl
+        });
+        setOpenMessageMenuId(null);
+        setMessageMenuPosition(null);
         // Hacer scroll al input de mensaje
         setTimeout(() => {
           const messageInput = document.querySelector('textarea[placeholder="Escribe un mensaje..."]') as HTMLTextAreaElement;
@@ -879,14 +892,17 @@ export const ChatsPage = () => {
           }
         }, 100);
         break;
-      case 'react':
-        // Mostrar selector de emojis para reaccionar
-        // Por ahora, solo mostramos un mensaje
-        toast.info('Funcionalidad de reacciones próximamente');
-        break;
       case 'forward':
-        // Preparar reenvío: podría mostrar un modal para seleccionar chat
-        toast.info('Funcionalidad de reenvío próximamente');
+        // Abrir diálogo de reenvío
+        setForwardingMessage({
+          id: message.id,
+          content: message.content,
+          attachmentUrl: message.attachmentUrl
+        });
+        setSelectedForwardChats(new Set());
+        setIsForwardDialogOpen(true);
+        setOpenMessageMenuId(null);
+        setMessageMenuPosition(null);
         break;
       case 'download':
         if (message.attachmentUrl) {
@@ -993,6 +1009,37 @@ export const ChatsPage = () => {
       document.removeEventListener('keydown', handleEscape);
     };
   }, [openMenuId]);
+
+  // Cerrar menú contextual (más opciones) al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isMoreMenuOpen) {
+        if (
+          moreMenuRef.current &&
+          !moreMenuRef.current.contains(event.target as Node) &&
+          moreMenuButtonRef.current &&
+          !moreMenuButtonRef.current.contains(event.target as Node)
+        ) {
+          setIsMoreMenuOpen(false);
+          setMoreMenuPosition(null);
+        }
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isMoreMenuOpen) {
+        setIsMoreMenuOpen(false);
+        setMoreMenuPosition(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isMoreMenuOpen]);
 
   const handleMenuToggle = (chatId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -2383,11 +2430,27 @@ export const ChatsPage = () => {
                           minute: '2-digit'
                         });
 
+                        const senderFriend = !isOwn ? friends.find((f) => f.id === entry.senderId) : null;
                         return (
                           <div
                             key={entry.id}
                             className={classNames('flex gap-3 items-end relative group', isOwn ? 'justify-end' : 'justify-start')}
                           >
+                            {/* Avatar para mensajes de grupos (solo si no es propio) */}
+                            {!isOwn && activeChat?.isGroup && (
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/profile/${entry.senderId}`)}
+                                className="flex-shrink-0 cursor-pointer transition-transform hover:scale-110"
+                              >
+                                <UserAvatar
+                                  firstName={senderFriend?.firstName || ''}
+                                  lastName={senderFriend?.lastName || ''}
+                                  avatarUrl={senderFriend?.avatarUrl}
+                                  size="sm"
+                                />
+                              </button>
+                            )}
                             <div
                               className={classNames(
                                 'max-w-[75%] rounded-2xl px-5 py-3.5 text-sm shadow-lg transition-all duration-200 relative',
@@ -2529,14 +2592,6 @@ export const ChatsPage = () => {
                                   )}
                                   <button
                                     type="button"
-                                    onClick={() => handleMessageAction('react', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
-                                  >
-                                    <Smile className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Reaccionar</span>
-                                  </button>
-                                  <button
-                                    type="button"
                                     onClick={() => handleMessageAction('forward', entry)}
                                     className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                   >
@@ -2556,18 +2611,28 @@ export const ChatsPage = () => {
                                   <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
                                   <button
                                     type="button"
-                                    onClick={() => handleMessageAction('pin', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
-                                  >
-                                    <Pin className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Fijar</span>
-                                  </button>
-                                  <button
-                                    type="button"
                                     onClick={() => handleMessageAction('star', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                    className={classNames(
+                                      "flex w-full items-center gap-3 px-4 py-3 text-sm transition-colors",
+                                      (() => {
+                                        const starredMessages = JSON.parse(localStorage.getItem('starredMessages') || '[]');
+                                        const isStarred = starredMessages.includes(entry.id);
+                                        return isStarred
+                                          ? "text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/30"
+                                          : "text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700/70";
+                                      })()
+                                    )}
                                   >
-                                    <Star className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
+                                    <Star className={classNames(
+                                      "h-4 w-4 flex-shrink-0 transition-colors",
+                                      (() => {
+                                        const starredMessages = JSON.parse(localStorage.getItem('starredMessages') || '[]');
+                                        const isStarred = starredMessages.includes(entry.id);
+                                        return isStarred
+                                          ? "text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400"
+                                          : "text-slate-600 dark:text-slate-400";
+                                      })()
+                                    )} />
                                     <span className="text-left font-medium">Destacar</span>
                                   </button>
                                   <div className="my-1 h-px bg-slate-200 dark:bg-slate-600/50 mx-2" />
@@ -2591,6 +2656,37 @@ export const ChatsPage = () => {
                 </div>
 
                 <form className="flex-shrink-0 border-t border-white/30 dark:border-white/10 bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm px-6 py-5" onSubmit={handleSendMessage}>
+                  {replyingTo && (
+                    <div className="mb-3 flex items-start gap-3 rounded-xl glass-liquid-strong p-3 border-l-4 border-sena-green/60">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Reply className="h-3.5 w-3.5 text-sena-green flex-shrink-0" />
+                          <span className="text-xs font-semibold text-sena-green">
+                            Respondiendo a {replyingTo.senderId === authUser?.id ? 'ti mismo' : getSenderName(replyingTo.senderId)}
+                          </span>
+                        </div>
+                        {replyingTo.content && (
+                          <p className="text-xs text-[var(--color-muted)] line-clamp-2">
+                            {replyingTo.content}
+                          </p>
+                        )}
+                        {replyingTo.attachmentUrl && (
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <Paperclip className="h-3 w-3 text-[var(--color-muted)]" />
+                            <span className="text-xs text-[var(--color-muted)]">Archivo adjunto</span>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setReplyingTo(null)}
+                        className="flex h-6 w-6 items-center justify-center rounded-lg glass-liquid text-[var(--color-muted)] hover:text-rose-500 transition-all flex-shrink-0"
+                        aria-label="Cancelar respuesta"
+                      >
+                        <XIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                   {attachment && (
                     <div className="mb-3 flex items-center gap-3 rounded-xl glass-liquid-strong p-3">
                       {attachment.mimeType.startsWith('image/') ? (
@@ -2655,19 +2751,10 @@ export const ChatsPage = () => {
                       >
                         <Smile className="h-5 w-5" />
                       </button>
-                      {showEmojiPicker && emojiPickerCoords && (
+                      {showEmojiPicker && (
                         <div
                           ref={emojiPickerRef}
-                          className="fixed z-[100]"
-                          style={{
-                            ...(emojiPickerPosition === 'top'
-                              ? { bottom: `${emojiPickerCoords.bottom}px` }
-                              : { top: `${emojiPickerCoords.top}px` }
-                            ),
-                            left: `${emojiPickerCoords.left}px`,
-                            maxWidth: 'calc(100vw - 2rem)',
-                            ...(emojiPickerCoords.maxHeight && { maxHeight: `${emojiPickerCoords.maxHeight}px` })
-                          }}
+                          className="absolute bottom-full right-0 mb-2 z-[100]"
                         >
                           <EmojiPicker
                             onEmojiSelect={handleEmojiSelect}
@@ -2995,10 +3082,11 @@ export const ChatsPage = () => {
                                 : 'glass-liquid hover:bg-white/40'
                             }`}
                           >
-                            <img
-                              src={resolveAssetUrl(avatarUrl) ?? avatarUrl}
-                              alt={friend.firstName}
-                              className="h-9 w-9 rounded-full object-cover"
+                            <UserAvatar
+                              firstName={friend.firstName}
+                              lastName={friend.lastName}
+                              avatarUrl={friend.avatarUrl}
+                              size="sm"
                             />
                             <div className="flex-1">
                               <p className="text-sm font-semibold text-[var(--color-text)]">
@@ -3202,6 +3290,171 @@ export const ChatsPage = () => {
                 );
               });
             })()}
+          </div>
+        </div>
+      </GlassDialog>
+
+      {/* Diálogo de reenvío */}
+      <GlassDialog
+        open={isForwardDialogOpen}
+        onClose={() => {
+          setIsForwardDialogOpen(false);
+          setForwardingMessage(null);
+          setSelectedForwardChats(new Set());
+        }}
+        size="md"
+      >
+        <div className="space-y-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-text)] flex items-center gap-2">
+                <Forward className="h-5 w-5 text-sena-green" />
+                Reenviar mensaje
+              </h3>
+              <p className="text-sm text-[var(--color-muted)]">Selecciona los chats a los que quieres reenviar</p>
+            </div>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setIsForwardDialogOpen(false);
+                setForwardingMessage(null);
+                setSelectedForwardChats(new Set());
+              }}
+              className="self-start rounded-full glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Vista previa del mensaje a reenviar */}
+          {forwardingMessage && (
+            <div className="rounded-xl glass-liquid-strong p-4 border-l-4 border-sena-green/60">
+              {forwardingMessage.content && (
+                <p className="text-sm text-[var(--color-text)] line-clamp-3 mb-2">
+                  {forwardingMessage.content}
+                </p>
+              )}
+              {forwardingMessage.attachmentUrl && (
+                <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  <span>Archivo adjunto</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Lista de chats disponibles */}
+          <div className="max-h-96 space-y-2 overflow-y-auto">
+            {filteredChats.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <MessageCirclePlus className="h-10 w-10 mb-2 text-[var(--color-muted)]/30" />
+                <p className="text-sm text-[var(--color-muted)]">No hay chats disponibles</p>
+              </div>
+            ) : (
+              filteredChats
+                .filter(chat => chat.id !== selectedChatId) // Excluir el chat actual
+                .map((chat) => {
+                  const isSelected = selectedForwardChats.has(chat.id);
+                  const chatLabel = getChatDisplayName(chat);
+                  const initials = getInitialsFromLabel(chatLabel);
+                  const gradient = getAvatarGradient(chat.id);
+
+                  return (
+                    <button
+                      key={chat.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedForwardChats((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(chat.id)) {
+                            next.delete(chat.id);
+                          } else {
+                            next.add(chat.id);
+                          }
+                          return next;
+                        });
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition ${
+                        isSelected
+                          ? 'bg-sena-green/10 border border-sena-green/40'
+                          : 'glass-liquid hover:bg-white/40'
+                      }`}
+                    >
+                      <span
+                        className={classNames(
+                          'flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm',
+                          gradient
+                        )}
+                      >
+                        {initials}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[var(--color-text)] truncate">
+                          {chatLabel}
+                        </p>
+                        <p className="text-xs text-[var(--color-muted)]">
+                          {chat.isGroup ? 'Chat grupal' : 'Chat privado'}
+                        </p>
+                      </div>
+                      <div
+                        className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                          isSelected
+                            ? 'bg-sena-green border-sena-green'
+                            : 'border-[var(--color-muted)]'
+                        }`}
+                      >
+                        {isSelected && <CheckCheck className="h-3 w-3 text-white" />}
+                      </div>
+                    </button>
+                  );
+                })
+            )}
+          </div>
+
+          {/* Botones de acción */}
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/30 dark:border-white/10">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setIsForwardDialogOpen(false);
+                setForwardingMessage(null);
+                setSelectedForwardChats(new Set());
+              }}
+              className="px-4"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!forwardingMessage || selectedForwardChats.size === 0) {
+                  toast.warning('Selecciona al menos un chat para reenviar');
+                  return;
+                }
+
+                try {
+                  // Reenviar el mensaje a cada chat seleccionado
+                  for (const chatId of selectedForwardChats) {
+                    await chatService.sendMessage(chatId, {
+                      content: forwardingMessage.content || undefined,
+                      attachmentUrl: forwardingMessage.attachmentUrl
+                    });
+                  }
+
+                  toast.success(`Mensaje reenviado a ${selectedForwardChats.size} ${selectedForwardChats.size === 1 ? 'chat' : 'chats'}`);
+                  queryClient.invalidateQueries({ queryKey: ['chats'] }).catch(() => { });
+                  setIsForwardDialogOpen(false);
+                  setForwardingMessage(null);
+                  setSelectedForwardChats(new Set());
+                } catch (error) {
+                  toast.error('Error al reenviar el mensaje');
+                }
+              }}
+              disabled={selectedForwardChats.size === 0}
+              className="px-6"
+            >
+              <Forward className="h-4 w-4 mr-2" />
+              Reenviar ({selectedForwardChats.size})
+            </Button>
           </div>
         </div>
       </GlassDialog>

@@ -49,3 +49,4 @@ Los siguientes servicios usan datos mock cuando está activo:
 - `friendService.listFriends()`
 - `channelService.listChannels()`, `listMessages()`
 
+

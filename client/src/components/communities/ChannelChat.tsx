@@ -1,5 +1,6 @@
 import { FC, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Hash, Send, MoreVertical, Plus, Smile, Info, Users, Pin, X, Reply, Copy, Forward, Star, Flag, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ChannelMessage } from '../../types/channel';
 import { Button } from '../ui/Button';
 import { GlassDialog } from '../ui/GlassDialog';
@@ -23,6 +24,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
   onSendMessage
 }) => {
   const { user } = useAuthContext();
+  const navigate = useNavigate();
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -367,29 +369,41 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                 >
                   {!isOwn && (
                     message.sender?.avatarUrl ? (
-                      <img
-                        src={resolveAssetUrl(message.sender.avatarUrl) ?? ''}
-                        alt={message.sender.firstName}
-                        className="h-10 w-10 flex-shrink-0 rounded-2xl object-cover ring-1 ring-white/40 dark:ring-white/15 shadow-sm"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => message.sender?.id && navigate(`/profile/${message.sender.id}`)}
+                        className="h-10 w-10 flex-shrink-0 rounded-2xl ring-1 ring-white/40 dark:ring-white/15 shadow-sm overflow-hidden transition-transform hover:scale-110 cursor-pointer"
+                      >
+                        <img
+                          src={resolveAssetUrl(message.sender.avatarUrl) ?? ''}
+                          alt={message.sender.firstName}
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
                     ) : (
-                      <div
-                        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ring-1 ring-white/40 dark:ring-white/15 shadow-sm ${getAvatarColorClasses(
+                      <button
+                        type="button"
+                        onClick={() => message.sender?.id && navigate(`/profile/${message.sender.id}`)}
+                        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ring-1 ring-white/40 dark:ring-white/15 shadow-sm transition-transform hover:scale-110 cursor-pointer ${getAvatarColorClasses(
                           message.sender?.id
                         )}`}
                       >
                         <span className="text-[11px] font-semibold">
                           {initials.length > 2 ? initials.slice(0, 2) : initials}
                         </span>
-                      </div>
+                      </button>
                     )
                   )}
                   <div className={`flex flex-col max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}>
                     {!isOwn && (
                       <div className="mb-1 flex items-center gap-2 px-1">
-                        <span className="text-xs font-semibold text-[var(--color-text)]">
+                        <button
+                          type="button"
+                          onClick={() => message.sender?.id && navigate(`/profile/${message.sender.id}`)}
+                          className="text-xs font-semibold text-[var(--color-text)] hover:text-sena-green transition-colors cursor-pointer"
+                        >
                           {message.sender?.firstName} {message.sender?.lastName}
-                        </span>
+                        </button>
                         <span className="text-[10px] text-[var(--color-muted)]">
                           {new Date(message.createdAt).toLocaleTimeString('es-CO', {
                             hour: '2-digit',
