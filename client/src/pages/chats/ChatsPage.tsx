@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { chatService } from '../../services/chatService';
+import { userService } from '../../services/userService';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { GlassDialog } from '../../components/ui/GlassDialog';
@@ -41,7 +42,8 @@ import {
   Forward,
   Copy,
   CheckSquare2,
-  CheckCheck
+  CheckCheck,
+  MessageSquareMore
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -49,6 +51,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import classNames from 'classnames';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
+import { useToast } from '../../hooks/useToast';
 import { resolveAssetUrl } from '../../utils/media';
 import { Message } from '../../types/chat';
 
@@ -164,6 +167,7 @@ export const ChatsPage = () => {
   const queryClient = useQueryClient();
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [activeFilter, setActiveFilter] = useState<ChatFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -189,7 +193,7 @@ export const ChatsPage = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const messageButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const { mode } = useTheme();
+  const { theme } = useTheme();
   const [lastReadTimes, setLastReadTimes] = useState<Record<string, string>>(() => {
     // Cargar desde localStorage si existe
     const stored = localStorage.getItem('chatLastReadTimes');
@@ -220,9 +224,6 @@ export const ChatsPage = () => {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [moreMenuPosition, setMoreMenuPosition] = useState<{ x: number; y: number } | null>(null);
-  const [deleteMessageTarget, setDeleteMessageTarget] = useState<string | null>(null);
-  const [deleteChatTarget, setDeleteChatTarget] = useState<string | null>(null);
-  const [blockUserTarget, setBlockUserTarget] = useState<{ chatId: string; isGroup: boolean } | null>(null);
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
   const moreMenuButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -285,7 +286,7 @@ export const ChatsPage = () => {
             const chatMessages = await chatService.listMessages(chat.id);
             messagesMap[chat.id] = chatMessages;
           } catch (error) {
-            console.error(`Error loading messages for chat ${chat.id}:`, error);
+            // Error silencioso al cargar mensajes de un chat
             messagesMap[chat.id] = [];
           }
         })
@@ -301,7 +302,7 @@ export const ChatsPage = () => {
   const unreadCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     const messagesMap = allChatMessages.data || {};
-    
+
     chats.forEach((chat) => {
       // Si el chat está seleccionado, no hay mensajes no leídos
       if (chat.id === selectedChatId) {
@@ -317,7 +318,7 @@ export const ChatsPage = () => {
 
       // Obtener la última vez que se leyó este chat
       const lastReadTime = lastReadTimes[chat.id];
-      
+
       if (!lastReadTime) {
         // Si nunca se ha leído, contar todos los mensajes excepto los propios
         const unreadMessages = chatMessages.filter(
@@ -328,14 +329,14 @@ export const ChatsPage = () => {
         // Contar mensajes creados después de la última lectura y que no sean del usuario
         const lastReadDate = new Date(lastReadTime);
         const unreadMessages = chatMessages.filter(
-          (msg) => 
+          (msg) =>
             msg.senderId !== authUser?.id &&
             new Date(msg.createdAt) > lastReadDate
         );
         counts[chat.id] = unreadMessages.length;
       }
     });
-    
+
     return counts;
   }, [chats, selectedChatId, allChatMessages.data, lastReadTimes, authUser?.id]);
 
@@ -369,10 +370,10 @@ export const ChatsPage = () => {
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (payload: { chatId: string; content?: string; attachmentUrl?: string }) => {
-      return await chatService.sendMessage(payload.chatId, { 
-        content: payload.content,
-        attachmentUrl: payload.attachmentUrl 
+    mutationFn: async (payload: { chatId: string; content: string; attachmentUrl?: string }) => {
+      return await chatService.sendMessage(payload.chatId, {
+        content: payload.content || undefined,
+        attachmentUrl: payload.attachmentUrl
       });
     },
     onSuccess: (_, variables) => {
@@ -391,7 +392,7 @@ export const ChatsPage = () => {
   const deleteChatMutation = useMutation({
     mutationFn: chatService.deleteChat,
     onSuccess: (_, chatId) => {
-      queryClient.invalidateQueries({ queryKey: ['chats'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['chats'] }).catch(() => { });
       if (selectedChatId === chatId) {
         setSelectedChatId(null);
       }
@@ -463,10 +464,9 @@ export const ChatsPage = () => {
       all: chats.filter((chat) => !archivedChats.has(chat.id)).length,
       unread: chats.filter((chat) => !chat.lastMessageAt && !archivedChats.has(chat.id)).length,
       favorites: chats.filter((chat) => favoriteChats.has(chat.id) && !archivedChats.has(chat.id)).length,
-      groups: chats.filter((chat) => chat.isGroup && !archivedChats.has(chat.id)).length,
-      archived: archivedChatsList.length
+      groups: chats.filter((chat) => chat.isGroup && !archivedChats.has(chat.id)).length
     }),
-    [chats, archivedChats, favoriteChats, archivedChatsList]
+    [chats, archivedChats, favoriteChats]
   );
 
   const activeChat = useMemo(
@@ -508,17 +508,17 @@ export const ChatsPage = () => {
     if (!selectedChatId || (!message.trim() && !attachment)) return;
 
     let attachmentUrl: string | undefined = undefined;
-    
+
     // Si hay un archivo adjunto, procesarlo como data URL
     if (attachment) {
       attachmentUrl = attachment.dataUrl;
     }
 
     sendMessageMutation.mutate(
-      { 
-        chatId: selectedChatId, 
+      {
+        chatId: selectedChatId,
         content: message.trim() || undefined,
-        attachmentUrl 
+        attachmentUrl
       },
       {
         onSuccess: () => {
@@ -541,7 +541,7 @@ export const ChatsPage = () => {
     // Validar tamaño (máximo 10MB)
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert('El archivo es demasiado grande. El tamaño máximo es 10MB.');
+      toast.error('El archivo es demasiado grande. El tamaño máximo es 10MB.');
       return;
     }
 
@@ -558,7 +558,7 @@ export const ChatsPage = () => {
       }
     };
     reader.readAsDataURL(file);
-    
+
     // Limpiar el input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -638,7 +638,7 @@ export const ChatsPage = () => {
       if (openMessageMenuId) {
         const menuElement = messageMenuRefs.current[openMessageMenuId];
         const buttonElement = messageButtonRefs.current[openMessageMenuId];
-        
+
         if (
           menuElement &&
           !menuElement.contains(event.target as Node) &&
@@ -669,7 +669,7 @@ export const ChatsPage = () => {
   const handleMessageMenuToggle = (messageId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     event.preventDefault();
-    
+
     if (openMessageMenuId === messageId) {
       setOpenMessageMenuId(null);
       setMessageMenuPosition(null);
@@ -677,62 +677,62 @@ export const ChatsPage = () => {
       // Cerrar otros menús primero
       setOpenMessageMenuId(null);
       setMessageMenuPosition(null);
-      
+
       // Usar requestAnimationFrame para asegurar que el DOM se haya actualizado
       requestAnimationFrame(() => {
         const buttonElement = messageButtonRefs.current[messageId];
         if (!buttonElement) return;
-        
+
         const buttonRect = buttonElement.getBoundingClientRect();
         const menuWidth = 200;
         const menuHeight = 350; // Altura aproximada del menú
         const padding = 12;
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        
+
         // Calcular posición: mostrar a la izquierda del botón (para mensajes propios)
         let x = buttonRect.left - menuWidth - padding;
         let y = buttonRect.top;
-        
+
         // Si no hay espacio a la izquierda, mostrar a la derecha del botón
         const spaceOnLeft = buttonRect.left;
         const spaceOnRight = viewportWidth - buttonRect.right;
-        
+
         if (spaceOnLeft < menuWidth + padding && spaceOnRight > menuWidth + padding) {
           x = buttonRect.right + padding;
         }
-        
+
         // Si tampoco cabe a la derecha, centrar horizontalmente
         if (x + menuWidth > viewportWidth - padding) {
           x = Math.max(padding, viewportWidth - menuWidth - padding);
         }
-        
+
         // Asegurar que el menú no se salga por la izquierda
         if (x < padding) {
           x = padding;
         }
-        
+
         // Ajustar verticalmente: alinear el menú con el botón
         // Si el menú se sale por abajo, mostrarlo arriba del botón
         if (y + menuHeight > viewportHeight - padding) {
           y = buttonRect.bottom - menuHeight;
         }
-        
+
         // Si aún no cabe arriba, ajustar desde el centro del botón
         if (y < padding) {
           y = buttonRect.top + (buttonRect.height / 2) - (menuHeight / 2);
         }
-        
+
         // Asegurar que el menú no se salga por arriba
         if (y < padding) {
           y = padding;
         }
-        
+
         // Asegurar que el menú no se salga por abajo
         if (y + menuHeight > viewportHeight - padding) {
           y = viewportHeight - menuHeight - padding;
         }
-        
+
         setMessageMenuPosition({ x, y });
         setOpenMessageMenuId(messageId);
       });
@@ -748,11 +748,9 @@ export const ChatsPage = () => {
         if (message.content) {
           try {
             await navigator.clipboard.writeText(message.content);
-            // Mostrar feedback visual (podrías usar un toast aquí)
-            alert('Texto copiado al portapapeles');
+            toast.success('Texto copiado al portapapeles');
           } catch (err) {
-            console.error('Error al copiar:', err);
-            alert('No se pudo copiar el texto');
+            toast.error('No se pudo copiar el texto');
           }
         }
         break;
@@ -771,11 +769,11 @@ export const ChatsPage = () => {
       case 'react':
         // Mostrar selector de emojis para reaccionar
         // Por ahora, solo mostramos un mensaje
-        alert('Funcionalidad de reacciones próximamente');
+        toast.info('Funcionalidad de reacciones próximamente');
         break;
       case 'forward':
         // Preparar reenvío: podría mostrar un modal para seleccionar chat
-        alert('Funcionalidad de reenvío próximamente');
+        toast.info('Funcionalidad de reenvío próximamente');
         break;
       case 'download':
         if (message.attachmentUrl) {
@@ -788,12 +786,12 @@ export const ChatsPage = () => {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            toast.success('Descarga iniciada');
           } catch (err) {
-            console.error('Error al descargar:', err);
-            alert('No se pudo descargar el archivo');
+            toast.error('No se pudo descargar el archivo');
           }
         } else {
-          alert('Este mensaje no tiene archivos adjuntos');
+          toast.warning('Este mensaje no tiene archivos adjuntos');
         }
         break;
       case 'pin':
@@ -802,9 +800,9 @@ export const ChatsPage = () => {
         if (!pinnedMessages.includes(message.id)) {
           pinnedMessages.push(message.id);
           localStorage.setItem('pinnedMessages', JSON.stringify(pinnedMessages));
-          alert('Mensaje fijado');
+          toast.success('Mensaje fijado');
         } else {
-          alert('Este mensaje ya está fijado');
+          toast.info('Este mensaje ya está fijado');
         }
         break;
       case 'star':
@@ -813,19 +811,27 @@ export const ChatsPage = () => {
         if (!starredMessages.includes(message.id)) {
           starredMessages.push(message.id);
           localStorage.setItem('starredMessages', JSON.stringify(starredMessages));
-          alert('Mensaje destacado');
+          toast.success('Mensaje destacado');
         } else {
           const index = starredMessages.indexOf(message.id);
           starredMessages.splice(index, 1);
           localStorage.setItem('starredMessages', JSON.stringify(starredMessages));
-          alert('Mensaje desmarcado');
+          toast.success('Mensaje desmarcado');
         }
         break;
       case 'delete':
-        setDeleteMessageTarget(message.id);
+        if (window.confirm('¿Estás seguro de que deseas eliminar este mensaje? Esta acción no se puede deshacer.')) {
+          try {
+            await chatService.deleteMessage(selectedChatId, message.id);
+            await queryClient.invalidateQueries({ queryKey: ['chats', selectedChatId, 'messages'] });
+            toast.success('Mensaje eliminado');
+          } catch (err) {
+            toast.error('No se pudo eliminar el mensaje');
+          }
+        }
         break;
       default:
-        console.warn(`Acción no implementada: ${action}`);
+        // Acción no implementada - no mostrar nada
     }
   };
 
@@ -842,7 +848,7 @@ export const ChatsPage = () => {
       if (openMenuId) {
         const menuElement = menuRefs.current[openMenuId];
         const buttonElement = menuButtonRefs.current[openMenuId];
-        
+
         if (
           menuElement &&
           !menuElement.contains(event.target as Node) &&
@@ -872,7 +878,7 @@ export const ChatsPage = () => {
 
   const handleMenuToggle = (chatId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    
+
     if (openMenuId === chatId) {
       setOpenMenuId(null);
       setMenuPosition(null);
@@ -880,27 +886,27 @@ export const ChatsPage = () => {
       const buttonRect = event.currentTarget.getBoundingClientRect();
       const listContainer = event.currentTarget.closest('ul');
       const containerRect = listContainer?.getBoundingClientRect();
-      
+
       if (containerRect) {
         const menuWidth = 220;
         const menuHeight = 360;
         const padding = 12;
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        
+
         // Calcular posición: preferir a la derecha del botón
         let x = buttonRect.right + padding;
         let y = buttonRect.top;
-        
+
         // Verificar si hay espacio a la derecha
         const spaceOnRight = viewportWidth - buttonRect.right;
         const spaceOnLeft = buttonRect.left;
-        
+
         // Si no hay suficiente espacio a la derecha, mostrar a la izquierda
         if (spaceOnRight < menuWidth + padding && spaceOnLeft > menuWidth + padding) {
           x = buttonRect.left - menuWidth - padding;
         }
-        
+
         // Ajustar verticalmente si está cerca del borde inferior
         if (y + menuHeight > viewportHeight - padding) {
           y = viewportHeight - menuHeight - padding;
@@ -909,40 +915,42 @@ export const ChatsPage = () => {
             y = buttonRect.top - menuHeight;
           }
         }
-        
+
         // Ajustar verticalmente si está cerca del borde superior
         if (y < padding) {
           y = padding;
         }
-        
+
         // Asegurar que el menú no se salga por la izquierda
         if (x < padding) {
           x = padding;
         }
-        
+
         // Asegurar que el menú no se salga por la derecha
         if (x + menuWidth > viewportWidth - padding) {
           x = viewportWidth - menuWidth - padding;
         }
-        
+
         // Asegurar que el menú no se salga por abajo
         if (y + menuHeight > viewportHeight - padding) {
           y = Math.max(padding, viewportHeight - menuHeight - padding);
         }
-        
+
         setMenuPosition({ x, y });
         setOpenMenuId(chatId);
       }
     }
   };
 
-  const handleMenuAction = (action: string, chatId: string) => {
+  const handleMenuAction = async (action: string, chatId: string) => {
     setOpenMenuId(null);
     setMenuPosition(null);
 
     switch (action) {
       case 'delete':
-        setDeleteChatTarget(chatId);
+        if (window.confirm('¿Estás seguro de que deseas eliminar este chat? Esta acción no se puede deshacer.')) {
+          deleteChatMutation.mutate(chatId);
+        }
         break;
       case 'archive':
         setArchivedChats((prev) => {
@@ -1023,16 +1031,49 @@ export const ChatsPage = () => {
       case 'block':
         const chat = chats.find((c) => c.id === chatId);
         if (chat && !chat.isGroup) {
-          setBlockUserTarget({ chatId, isGroup: chat.isGroup });
+          if (window.confirm('¿Estás seguro de que deseas bloquear a este usuario? No podrás recibir mensajes de ellos.')) {
+            try {
+              // Obtener el ID del otro usuario del chat
+              // Primero intentar obtenerlo de los mensajes del chat seleccionado
+              let otherUserId: string | null = null;
+              
+              if (selectedChatId === chatId && messages.length > 0) {
+                // Si este es el chat seleccionado, buscar en los mensajes
+                const otherUserMessage = messages.find((m) => m.senderId !== authUser?.id);
+                otherUserId = otherUserMessage?.senderId ?? null;
+              }
+              
+              // Si no encontramos el ID en los mensajes, usar createdBy como fallback
+              // En un chat privado, el otro usuario puede ser el creador
+              if (!otherUserId) {
+                otherUserId = chat.createdBy !== authUser?.id ? chat.createdBy : null;
+              }
+              
+              if (!otherUserId) {
+                toast.error('No se pudo identificar al usuario a bloquear');
+                return;
+              }
+              
+              await userService.blockUser(otherUserId);
+              
+              // Eliminar el chat después de bloquear
+              deleteChatMutation.mutate(chatId);
+              toast.success('Usuario bloqueado correctamente');
+            } catch (err) {
+              toast.error('No se pudo bloquear al usuario');
+            }
+          }
+        } else {
+          toast.warning('Solo puedes bloquear usuarios en chats privados.');
         }
         break;
       default:
-        console.warn(`Acción no implementada: ${action}`);
+        // Acción no implementada - no mostrar nada
     }
   };
 
   return (
-    <DashboardLayout fluid contentClassName="h-full p-0 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <DashboardLayout fluid contentClassName="h-full p-0 overflow-hidden">
       <div className="grid h-full grid-cols-[320px_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)] gap-0 min-h-0">
         <Card
           padded={false}
@@ -1068,10 +1109,11 @@ export const ChatsPage = () => {
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
-                  {isMoreMenuOpen && moreMenuPosition && createPortal(
-                    <div
-                      ref={moreMenuRef}
-                      className="fixed w-[220px] rounded-[24px] glass-liquid py-2 z-[999999] relative"
+                  {isMoreMenuOpen && moreMenuPosition && (
+                    createPortal(
+                      <div
+                        ref={moreMenuRef}
+                        className="fixed w-[220px] rounded-[24px] glass-liquid py-2 z-[999999] relative"
                       style={{
                         left: `${moreMenuPosition.x}px`,
                         top: `${moreMenuPosition.y}px`,
@@ -1084,56 +1126,57 @@ export const ChatsPage = () => {
                       <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.15),_transparent_60%)] opacity-40 dark:opacity-8 mix-blend-overlay" />
                       <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-gradient-to-br from-white/8 via-transparent to-white/3 dark:from-white/3 dark:to-transparent opacity-40" />
                       <div className="relative z-10">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMoreMenuOpen(false);
-                          setShowStarredMessages(true);
-                        }}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                      >
-                        <Star className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                        <span className="text-left font-medium">Mensajes destacados</span>
-                      </button>
-                      <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMoreMenuOpen(false);
-                          setIsSelectionMode(true);
-                        }}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                      >
-                        <CheckSquare2 className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                        <span className="text-left font-medium">Seleccionar chats</span>
-                      </button>
-                      <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMoreMenuOpen(false);
-                          // Marcar todos los chats como leídos
-                          const allChatIds = chats.map(chat => chat.id);
-                          setReadChats(new Set(allChatIds));
-                          const now = new Date().toISOString();
-                          const allReadTimes: Record<string, string> = {};
-                          allChatIds.forEach(chatId => {
-                            allReadTimes[chatId] = now;
-                          });
-                          setLastReadTimes(prev => {
-                            const updated = { ...prev, ...allReadTimes };
-                            localStorage.setItem('chatLastReadTimes', JSON.stringify(updated));
-                            return updated;
-                          });
-                        }}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                      >
-                        <CheckCheck className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                        <span className="text-left font-medium">Marcar todos como leído</span>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMoreMenuOpen(false);
+                            setShowStarredMessages(true);
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                        >
+                          <Star className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                          <span className="text-left font-medium">Mensajes destacados</span>
+                        </button>
+                        <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMoreMenuOpen(false);
+                            setIsSelectionMode(true);
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                        >
+                          <CheckSquare2 className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                          <span className="text-left font-medium">Seleccionar chats</span>
+                        </button>
+                        <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMoreMenuOpen(false);
+                            // Marcar todos los chats como leídos
+                            const allChatIds = chats.map(chat => chat.id);
+                            setReadChats(new Set(allChatIds));
+                            const now = new Date().toISOString();
+                            const allReadTimes: Record<string, string> = {};
+                            allChatIds.forEach(chatId => {
+                              allReadTimes[chatId] = now;
+                            });
+                            setLastReadTimes(prev => {
+                              const updated = { ...prev, ...allReadTimes };
+                              localStorage.setItem('chatLastReadTimes', JSON.stringify(updated));
+                              return updated;
+                            });
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                        >
+                          <CheckCheck className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                          <span className="text-left font-medium">Marcar todos como leído</span>
+                        </button>
                       </div>
                     </div>,
                     document.body
+                    )
                   )}
                 </div>
                 <Button
@@ -1182,8 +1225,8 @@ export const ChatsPage = () => {
                           <span
                             className={classNames(
                               'rounded-full px-2 py-0.5 text-[10px] font-bold transition-all',
-                              activeFilter === tab.value 
-                                ? 'bg-white/30 text-white' 
+                              activeFilter === tab.value
+                                ? 'bg-white/30 text-white'
                                 : 'bg-white/30 dark:bg-slate-600/30 text-[var(--color-muted)]'
                             )}
                           >
@@ -1412,8 +1455,8 @@ export const ChatsPage = () => {
                               <span
                                 className={classNames(
                                   'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-slate-800 transition-all duration-200',
-                                  hasUnread 
-                                    ? 'bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_2px_8px_rgba(57,169,0,0.5)]' 
+                                  hasUnread
+                                    ? 'bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_2px_8px_rgba(57,169,0,0.5)]'
                                     : 'bg-transparent'
                                 )}
                               />
@@ -1456,16 +1499,16 @@ export const ChatsPage = () => {
                               <p
                                 className={classNames(
                                   'mt-1 text-xs truncate',
-                                  hasUnread 
-                                    ? 'text-sena-green/90 font-semibold' 
+                                  hasUnread
+                                    ? 'text-sena-green/90 font-semibold'
                                     : 'text-[var(--color-muted)]'
                                 )}
                               >
-                                {chat.lastMessage 
-                                  ? (chat.lastMessage.length > 50 ? chat.lastMessage.substring(0, 50) + '...' : chat.lastMessage)
-                                  : chat.isGroup
-                                    ? 'Grupo colaborativo'
-                                    : 'Sin mensajes'}
+                                {chat.isGroup
+                                  ? 'Grupo colaborativo'
+                                  : hasUnread
+                                    ? 'Nuevo mensaje'
+                                    : 'Nuevo mensaje'}
                               </p>
                             </div>
                           </div>
@@ -1510,8 +1553,8 @@ export const ChatsPage = () => {
                               <span
                                 className={classNames(
                                   'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-slate-800 transition-all duration-200',
-                                  hasUnread 
-                                    ? 'bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_2px_8px_rgba(57,169,0,0.5)]' 
+                                  hasUnread
+                                    ? 'bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_2px_8px_rgba(57,169,0,0.5)]'
                                     : 'bg-transparent'
                                 )}
                               />
@@ -1554,16 +1597,16 @@ export const ChatsPage = () => {
                               <p
                                 className={classNames(
                                   'mt-1 text-xs truncate',
-                                  hasUnread 
-                                    ? 'text-sena-green/90 font-semibold' 
+                                  hasUnread
+                                    ? 'text-sena-green/90 font-semibold'
                                     : 'text-[var(--color-muted)]'
                                 )}
                               >
-                                {chat.lastMessage 
-                                  ? (chat.lastMessage.length > 50 ? chat.lastMessage.substring(0, 50) + '...' : chat.lastMessage)
-                                  : chat.isGroup
-                                    ? 'Grupo colaborativo'
-                                    : 'Sin mensajes'}
+                                {chat.isGroup
+                                  ? 'Grupo colaborativo'
+                                  : hasUnread
+                                    ? 'Nuevo mensaje'
+                                    : 'Nuevo mensaje'}
                               </p>
                             </div>
                             <button
@@ -1584,559 +1627,566 @@ export const ChatsPage = () => {
                             </button>
                           </button>
                         )}
-                        
-                        {!isSelectionMode && openMenuId === chat.id && menuPosition && createPortal(
-                          <div
-                            ref={(el) => {
-                              menuRefs.current[chat.id] = el;
-                            }}
-                            className="fixed w-[220px] rounded-[24px] glass-liquid py-2 relative"
-                            style={{
-                              left: `${menuPosition.x}px`,
-                              top: `${menuPosition.y}px`,
-                              position: 'fixed',
-                              zIndex: 999999,
-                              pointerEvents: 'auto',
-                              isolation: 'isolate',
-                            }}
-                          >
+
+                        {!isSelectionMode && openMenuId === chat.id && menuPosition && (
+                          createPortal(
+                            <div
+                              ref={(el) => {
+                                menuRefs.current[chat.id] = el;
+                              }}
+                              className="fixed w-[220px] rounded-[24px] glass-liquid py-2 relative"
+                              style={{
+                                left: `${menuPosition.x}px`,
+                                top: `${menuPosition.y}px`,
+                                position: 'fixed',
+                                zIndex: 999999,
+                                pointerEvents: 'auto',
+                                isolation: 'isolate',
+                              }}
+                            >
                             {/* Efectos visuales glass liquid */}
                             <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.2),_transparent_60%)] opacity-50 dark:opacity-15 mix-blend-overlay" />
                             <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.15),_transparent_60%)] opacity-40 dark:opacity-8 mix-blend-overlay" />
                             <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-gradient-to-br from-white/8 via-transparent to-white/3 dark:from-white/3 dark:to-transparent opacity-40" />
                             <div className="relative z-10">
-                            {!archivedChats.has(chat.id) ? (
+                              {!archivedChats.has(chat.id) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMenuAction('archive', chat.id)}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                >
+                                  <Archive className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                  <span className="text-left font-medium">Archivar chat</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMenuAction('unarchive', chat.id)}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                >
+                                  <Archive className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                  <span className="text-left font-medium">Desarchivar chat</span>
+                                </button>
+                              )}
+                              <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
+                              {!mutedChats.has(chat.id) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMenuAction('mute', chat.id)}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                >
+                                  <BellOff className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                  <span className="text-left font-medium">Silenciar notificaciones</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMenuAction('unmute', chat.id)}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                >
+                                  <BellOff className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                  <span className="text-left font-medium">Activar notificaciones</span>
+                                </button>
+                              )}
+                              <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
+                              {!pinnedChats.has(chat.id) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMenuAction('pin', chat.id)}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                >
+                                  <Pin className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                  <span className="text-left font-medium">Fijar chat</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMenuAction('unpin', chat.id)}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                >
+                                  <Pin className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                  <span className="text-left font-medium">Desfijar chat</span>
+                                </button>
+                              )}
+                              <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
                               <button
                                 type="button"
-                                onClick={() => handleMenuAction('archive', chat.id)}
+                                onClick={() => handleMenuAction('unread', chat.id)}
                                 className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
                               >
-                                <Archive className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                                <span className="text-left font-medium">Archivar chat</span>
+                                <CircleAlert className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                <span className="text-left font-medium">Marcar como no leído</span>
                               </button>
-                            ) : (
+                              <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
+                              {!favoriteChats.has(chat.id) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMenuAction('favorite', chat.id)}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                >
+                                  <Heart className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                  <span className="text-left font-medium">Añadir a Favoritos</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMenuAction('unfavorite', chat.id)}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-rose-500 transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                >
+                                  <Heart className="h-4 w-4 text-rose-500 flex-shrink-0 fill-rose-500" />
+                                  <span className="text-left font-medium">Quitar de Favoritos</span>
+                                </button>
+                              )}
+                              <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
+                              {!chat.isGroup && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMenuAction('block', chat.id)}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-red-500 transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                >
+                                  <Ban className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                  <span className="text-left font-medium">Bloquear</span>
+                                </button>
+                              )}
+                              <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
                               <button
                                 type="button"
-                                onClick={() => handleMenuAction('unarchive', chat.id)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                onClick={() => handleMenuAction('delete', chat.id)}
+                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:text-red-300 transition-colors hover:bg-red-900/30 dark:hover:bg-red-900/40"
                               >
-                                <Archive className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                                <span className="text-left font-medium">Desarchivar chat</span>
+                                <Trash2 className="h-4 w-4 flex-shrink-0" />
+                                <span className="text-left font-medium">Eliminar chat</span>
                               </button>
-                            )}
-                            <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
-                            {!mutedChats.has(chat.id) ? (
-                              <button
-                                type="button"
-                                onClick={() => handleMenuAction('mute', chat.id)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                              >
-                                <BellOff className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                                <span className="text-left font-medium">Silenciar notificaciones</span>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleMenuAction('unmute', chat.id)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                              >
-                                <BellOff className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                                <span className="text-left font-medium">Activar notificaciones</span>
-                              </button>
-                            )}
-                            <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
-                            {!pinnedChats.has(chat.id) ? (
-                              <button
-                                type="button"
-                                onClick={() => handleMenuAction('pin', chat.id)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                              >
-                                <Pin className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                                <span className="text-left font-medium">Fijar chat</span>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleMenuAction('unpin', chat.id)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                              >
-                                <Pin className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                                <span className="text-left font-medium">Desfijar chat</span>
-                              </button>
-                            )}
-                            <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
-                            <button
-                              type="button"
-                              onClick={() => handleMenuAction('unread', chat.id)}
-                              className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                            >
-                              <CircleAlert className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                              <span className="text-left font-medium">Marcar como no leído</span>
-                            </button>
-                            <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
-                            {!favoriteChats.has(chat.id) ? (
-                              <button
-                                type="button"
-                                onClick={() => handleMenuAction('favorite', chat.id)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                              >
-                                <Heart className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                                <span className="text-left font-medium">Añadir a Favoritos</span>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleMenuAction('unfavorite', chat.id)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-rose-500 transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                              >
-                                <Heart className="h-4 w-4 text-rose-500 flex-shrink-0 fill-rose-500" />
-                                <span className="text-left font-medium">Quitar de Favoritos</span>
-                              </button>
-                            )}
-                            <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
-                            {!chat.isGroup && (
-                              <button
-                                type="button"
-                                onClick={() => handleMenuAction('block', chat.id)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-red-500 transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
-                              >
-                                <Ban className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                                <span className="text-left font-medium">Bloquear</span>
-                              </button>
-                            )}
-                            <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
-                            <button
-                              type="button"
-                              onClick={() => handleMenuAction('delete', chat.id)}
-                              className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:text-red-300 transition-colors hover:bg-red-900/30 dark:hover:bg-red-900/40"
-                            >
-                              <Trash2 className="h-4 w-4 flex-shrink-0" />
-                              <span className="text-left font-medium">Eliminar chat</span>
-                            </button>
                             </div>
-                          </div>,
-                          document.body
+                            </div>,
+                            document.body
+                          )
                         )}
                       </li>
-                    );
+                        );
                   })}
 
-                  {/* Sección de chats archivados - similar a WhatsApp */}
-                  {activeFilter === 'all' && archivedChatsList.length > 0 && (
-                    <>
-                      <li className="sticky top-0 z-10 mt-4 mb-2">
-                        <div className="flex items-center gap-2 px-4 py-2">
-                          <Archive className="h-4 w-4 text-[var(--color-muted)]" />
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
-                            Archivados
-                          </h3>
-                          <div className="flex-1 h-px bg-white/20 dark:bg-white/10"></div>
-                          <button
-                            type="button"
-                            onClick={() => setActiveFilter('archived')}
-                            className="text-xs font-medium text-[var(--color-muted)] hover:text-sena-green transition-colors"
-                          >
-                            Ver todos
-                          </button>
-                        </div>
-                      </li>
-                      {archivedChatsList.slice(0, 3).map((chat) => {
-                        const isActive = chat.id === selectedChatId;
-                        const lastActivity = formatLastActivity(chat.lastMessageAt ?? chat.createdAt);
-                        const chatLabel = getChatName(chat.name, chat.isGroup);
-                        const initials = getInitialsFromLabel(chatLabel);
-                        const gradient = getAvatarGradient(chat.id);
-                        const hasUnread = !chat.lastMessageAt;
-                        const unreadCount = unreadCounts[chat.id] || (hasUnread ? 1 : 0);
-                        const isPinned = pinnedChats.has(chat.id);
-                        const isMuted = mutedChats.has(chat.id);
-                        const isFavorite = favoriteChats.has(chat.id);
-
-                        return (
-                          <li key={chat.id} className="relative" style={{ zIndex: 1 }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedChatId(chat.id);
-                                setOpenMenuId(null);
-                                setMenuPosition(null);
-                                setReadChats((prev) => {
-                                  const newSet = new Set(prev);
-                                  newSet.add(chat.id);
-                                  return newSet;
-                                });
-                                const now = new Date().toISOString();
-                                setLastReadTimes((prev) => {
-                                  const updated = { ...prev, [chat.id]: now };
-                                  localStorage.setItem('chatLastReadTimes', JSON.stringify(updated));
-                                  return updated;
-                                });
-                              }}
-                              className={classNames(
-                                'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200',
-                                isActive
-                                  ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/10 text-sena-green shadow-[0_8px_24px_rgba(57,169,0,0.15)] border border-sena-green/20 scale-[1.02]'
-                                  : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
-                              )}
-                            >
-                              <span className="relative inline-flex flex-shrink-0">
-                                <span
-                                  className={classNames(
-                                    'flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] transition-transform duration-200',
-                                    gradient,
-                                    isActive && 'scale-110 shadow-[0_12px_24px_rgba(0,0,0,0.2)]'
-                                  )}
+                        {/* Sección de chats archivados - similar a WhatsApp */}
+                        {activeFilter === 'all' && archivedChatsList.length > 0 && (
+                          <>
+                            <li className="sticky top-0 z-10 mt-4 mb-2">
+                              <div className="flex items-center gap-2 px-4 py-2">
+                                <Archive className="h-4 w-4 text-[var(--color-muted)]" />
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
+                                  Archivados
+                                </h3>
+                                <div className="flex-1 h-px bg-white/20 dark:bg-white/10"></div>
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveFilter('archived')}
+                                  className="text-xs font-medium text-[var(--color-muted)] hover:text-sena-green transition-colors"
                                 >
-                                  {initials}
-                                </span>
-                                {isPinned && (
-                                  <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-sena-green text-white shadow-lg">
-                                    <Pin className="h-3 w-3" />
-                                  </span>
-                                )}
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className={classNames(
-                                    'truncate font-semibold',
-                                    isActive ? 'text-sm' : 'text-sm',
-                                    hasUnread && !isActive && 'text-[var(--color-text)]'
-                                  )}>
-                                    {chatLabel}
-                                  </p>
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    {unreadCount > 0 && !isActive && (
-                                      <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-r from-sena-green to-emerald-500 text-white text-[10px] font-bold shadow-[0_2px_8px_rgba(57,169,0,0.4)]">
-                                        {unreadCount > 99 ? '99+' : unreadCount}
-                                      </span>
-                                    )}
-                                    <span
-                                      className={classNames(
-                                        'text-[10px] font-medium whitespace-nowrap',
-                                        hasUnread ? 'text-sena-green font-bold' : 'text-[var(--color-muted)]'
-                                      )}
-                                    >
-                                      {lastActivity}
-                                    </span>
-                                  </div>
-                                </div>
-                                <p
-                                  className={classNames(
-                                    'mt-1 text-xs truncate',
-                                    hasUnread 
-                                      ? 'text-sena-green/90 font-semibold' 
-                                      : 'text-[var(--color-muted)]'
-                                  )}
-                                >
-                                  {chat.isGroup
-                                    ? 'Grupo colaborativo'
-                                    : hasUnread
-                                      ? 'Nuevo mensaje'
-                                      : 'Nuevo mensaje'}
-                                </p>
+                                  Ver todos
+                                </button>
                               </div>
-                              <button
-                                ref={(el) => {
-                                  menuButtonRefs.current[chat.id] = el;
-                                }}
-                                type="button"
-                                onClick={(e) => handleMenuToggle(chat.id, e)}
-                                className={classNames(
-                                  'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0',
-                                  openMenuId === chat.id
-                                    ? 'opacity-100 bg-sena-green/20 dark:bg-sena-green/30 text-sena-green shadow-md rotate-180'
-                                    : 'opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:bg-white/20 dark:hover:bg-slate-700/20 hover:text-sena-green'
-                                )}
-                                aria-label="Opciones del chat"
-                              >
-                                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                              </button>
-                            </button>
-                            
-                            {openMenuId === chat.id && menuPosition && createPortal(
-                              <div
-                                ref={(el) => {
-                                  menuRefs.current[chat.id] = el;
-                                }}
-                                className="fixed w-[220px] rounded-2xl bg-slate-800/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2"
-                                style={{
-                                  left: `${menuPosition.x}px`,
-                                  top: `${menuPosition.y}px`,
-                                  position: 'fixed',
-                                  zIndex: 999999,
-                                  pointerEvents: 'auto',
-                                  isolation: 'isolate',
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => handleMenuAction('unarchive', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                >
-                                  <Archive className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                  <span className="text-left font-medium">Desarchivar chat</span>
-                                </button>
-                                {!mutedChats.has(chat.id) ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMenuAction('mute', chat.id)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                  >
-                                    <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Silenciar notificaciones</span>
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMenuAction('unmute', chat.id)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                  >
-                                    <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Activar notificaciones</span>
-                                  </button>
-                                )}
-                                {!pinnedChats.has(chat.id) ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMenuAction('pin', chat.id)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                  >
-                                    <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Fijar chat</span>
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMenuAction('unpin', chat.id)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                  >
-                                    <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Desfijar chat</span>
-                                  </button>
-                                )}
-                                <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
-                                <button
-                                  type="button"
-                                  onClick={() => handleMenuAction('delete', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:text-red-300 transition-colors hover:bg-red-900/30 dark:hover:bg-red-900/40"
-                                >
-                                  <Trash2 className="h-4 w-4 flex-shrink-0" />
-                                  <span className="text-left font-medium">Eliminar chat</span>
-                                </button>
-                              </div>,
-                              document.body
-                            )}
-                          </li>
-                        );
-                      })}
-                    </>
-                  )}
+                            </li>
+                            {archivedChatsList.slice(0, 3).map((chat) => {
+                              const isActive = chat.id === selectedChatId;
+                              const lastActivity = formatLastActivity(chat.lastMessageAt ?? chat.createdAt);
+                              const chatLabel = getChatName(chat.name, chat.isGroup);
+                              const initials = getInitialsFromLabel(chatLabel);
+                              const gradient = getAvatarGradient(chat.id);
+                              const hasUnread = !chat.lastMessageAt;
+                              const unreadCount = unreadCounts[chat.id] || (hasUnread ? 1 : 0);
+                              const isPinned = pinnedChats.has(chat.id);
+                              const isMuted = mutedChats.has(chat.id);
+                              const isFavorite = favoriteChats.has(chat.id);
 
-                  {/* Vista completa de archivados */}
-                  {activeFilter === 'archived' && archivedChatsList.length > 0 && (
-                    <>
-                      <li className="sticky top-0 z-10 mb-2">
-                        <div className="flex items-center gap-2 px-4 py-2">
-                          <Archive className="h-4 w-4 text-[var(--color-muted)]" />
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
-                            Archivados
-                          </h3>
-                          <div className="flex-1 h-px bg-white/20 dark:bg-white/10"></div>
-                        </div>
-                      </li>
-                      {archivedChatsList.map((chat) => {
-                        const isActive = chat.id === selectedChatId;
-                        const lastActivity = formatLastActivity(chat.lastMessageAt ?? chat.createdAt);
-                        const chatLabel = getChatName(chat.name, chat.isGroup);
-                        const initials = getInitialsFromLabel(chatLabel);
-                        const gradient = getAvatarGradient(chat.id);
-                        const hasUnread = !chat.lastMessageAt;
-                        const unreadCount = unreadCounts[chat.id] || (hasUnread ? 1 : 0);
-                        const isPinned = pinnedChats.has(chat.id);
-                        const isMuted = mutedChats.has(chat.id);
-                        const isFavorite = favoriteChats.has(chat.id);
-
-                        return (
-                          <li key={chat.id} className="relative" style={{ zIndex: 1 }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedChatId(chat.id);
-                                setOpenMenuId(null);
-                                setMenuPosition(null);
-                                setReadChats((prev) => {
-                                  const newSet = new Set(prev);
-                                  newSet.add(chat.id);
-                                  return newSet;
-                                });
-                                const now = new Date().toISOString();
-                                setLastReadTimes((prev) => {
-                                  const updated = { ...prev, [chat.id]: now };
-                                  localStorage.setItem('chatLastReadTimes', JSON.stringify(updated));
-                                  return updated;
-                                });
-                              }}
-                              className={classNames(
-                                'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200',
-                                isActive
-                                  ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/10 text-sena-green shadow-[0_8px_24px_rgba(57,169,0,0.15)] border border-sena-green/20 scale-[1.02]'
-                                  : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
-                              )}
-                            >
-                              <span className="relative inline-flex flex-shrink-0">
-                                <span
-                                  className={classNames(
-                                    'flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] transition-transform duration-200',
-                                    gradient,
-                                    isActive && 'scale-110 shadow-[0_12px_24px_rgba(0,0,0,0.2)]'
-                                  )}
-                                >
-                                  {initials}
-                                </span>
-                                {isPinned && (
-                                  <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-sena-green text-white shadow-lg">
-                                    <Pin className="h-3 w-3" />
-                                  </span>
-                                )}
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className={classNames(
-                                    'truncate font-semibold',
-                                    isActive ? 'text-sm' : 'text-sm',
-                                    hasUnread && !isActive && 'text-[var(--color-text)]'
-                                  )}>
-                                    {chatLabel}
-                                  </p>
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    {unreadCount > 0 && !isActive && (
-                                      <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-r from-sena-green to-emerald-500 text-white text-[10px] font-bold shadow-[0_2px_8px_rgba(57,169,0,0.4)]">
-                                        {unreadCount > 99 ? '99+' : unreadCount}
-                                      </span>
+                              return (
+                                <li key={chat.id} className="relative" style={{ zIndex: 1 }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedChatId(chat.id);
+                                      setOpenMenuId(null);
+                                      setMenuPosition(null);
+                                      setReadChats((prev) => {
+                                        const newSet = new Set(prev);
+                                        newSet.add(chat.id);
+                                        return newSet;
+                                      });
+                                      const now = new Date().toISOString();
+                                      setLastReadTimes((prev) => {
+                                        const updated = { ...prev, [chat.id]: now };
+                                        localStorage.setItem('chatLastReadTimes', JSON.stringify(updated));
+                                        return updated;
+                                      });
+                                    }}
+                                    className={classNames(
+                                      'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200',
+                                      isActive
+                                        ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/10 text-sena-green shadow-[0_8px_24px_rgba(57,169,0,0.15)] border border-sena-green/20 scale-[1.02]'
+                                        : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
                                     )}
-                                    <span
-                                      className={classNames(
-                                        'text-[10px] font-medium whitespace-nowrap',
-                                        hasUnread ? 'text-sena-green font-bold' : 'text-[var(--color-muted)]'
+                                  >
+                                    <span className="relative inline-flex flex-shrink-0">
+                                      <span
+                                        className={classNames(
+                                          'flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] transition-transform duration-200',
+                                          gradient,
+                                          isActive && 'scale-110 shadow-[0_12px_24px_rgba(0,0,0,0.2)]'
+                                        )}
+                                      >
+                                        {initials}
+                                      </span>
+                                      {isPinned && (
+                                        <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-sena-green text-white shadow-lg">
+                                          <Pin className="h-3 w-3" />
+                                        </span>
                                       )}
-                                    >
-                                      {lastActivity}
                                     </span>
-                                  </div>
-                                </div>
-                                <p
-                                  className={classNames(
-                                    'mt-1 text-xs truncate',
-                                    hasUnread 
-                                      ? 'text-sena-green/90 font-semibold' 
-                                      : 'text-[var(--color-muted)]'
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <p className={classNames(
+                                          'truncate font-semibold',
+                                          isActive ? 'text-sm' : 'text-sm',
+                                          hasUnread && !isActive && 'text-[var(--color-text)]'
+                                        )}>
+                                          {chatLabel}
+                                        </p>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                          {unreadCount > 0 && !isActive && (
+                                            <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-r from-sena-green to-emerald-500 text-white text-[10px] font-bold shadow-[0_2px_8px_rgba(57,169,0,0.4)]">
+                                              {unreadCount > 99 ? '99+' : unreadCount}
+                                            </span>
+                                          )}
+                                          <span
+                                            className={classNames(
+                                              'text-[10px] font-medium whitespace-nowrap',
+                                              hasUnread ? 'text-sena-green font-bold' : 'text-[var(--color-muted)]'
+                                            )}
+                                          >
+                                            {lastActivity}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <p
+                                        className={classNames(
+                                          'mt-1 text-xs truncate',
+                                          hasUnread
+                                            ? 'text-sena-green/90 font-semibold'
+                                            : 'text-[var(--color-muted)]'
+                                        )}
+                                      >
+                                        {chat.isGroup
+                                          ? 'Grupo colaborativo'
+                                          : hasUnread
+                                            ? 'Nuevo mensaje'
+                                            : 'Nuevo mensaje'}
+                                      </p>
+                                    </div>
+                                    <button
+                                      ref={(el) => {
+                                        menuButtonRefs.current[chat.id] = el;
+                                      }}
+                                      type="button"
+                                      onClick={(e) => handleMenuToggle(chat.id, e)}
+                                      className={classNames(
+                                        'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0',
+                                        openMenuId === chat.id
+                                          ? 'opacity-100 bg-sena-green/20 dark:bg-sena-green/30 text-sena-green shadow-md rotate-180'
+                                          : 'opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:bg-white/20 dark:hover:bg-slate-700/20 hover:text-sena-green'
+                                      )}
+                                      aria-label="Opciones del chat"
+                                    >
+                                      <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                                    </button>
+                                  </button>
+
+                                  {openMenuId === chat.id && menuPosition && (
+                                    createPortal(
+                                      <div
+                                        ref={(el) => {
+                                          menuRefs.current[chat.id] = el;
+                                        }}
+                                        className="fixed w-[220px] rounded-2xl bg-slate-800/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2"
+                                        style={{
+                                          left: `${menuPosition.x}px`,
+                                          top: `${menuPosition.y}px`,
+                                          position: 'fixed',
+                                          zIndex: 999999,
+                                          pointerEvents: 'auto',
+                                          isolation: 'isolate',
+                                        }}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => handleMenuAction('unarchive', chat.id)}
+                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                        >
+                                          <Archive className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                          <span className="text-left font-medium">Desarchivar chat</span>
+                                        </button>
+                                        {!mutedChats.has(chat.id) ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMenuAction('mute', chat.id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                          >
+                                            <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                            <span className="text-left font-medium">Silenciar notificaciones</span>
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMenuAction('unmute', chat.id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                          >
+                                            <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                            <span className="text-left font-medium">Activar notificaciones</span>
+                                          </button>
+                                        )}
+                                        {!pinnedChats.has(chat.id) ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMenuAction('pin', chat.id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                          >
+                                            <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                            <span className="text-left font-medium">Fijar chat</span>
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMenuAction('unpin', chat.id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                          >
+                                            <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                            <span className="text-left font-medium">Desfijar chat</span>
+                                          </button>
+                                        )}
+                                        <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleMenuAction('delete', chat.id)}
+                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:text-red-300 transition-colors hover:bg-red-900/30 dark:hover:bg-red-900/40"
+                                        >
+                                          <Trash2 className="h-4 w-4 flex-shrink-0" />
+                                          <span className="text-left font-medium">Eliminar chat</span>
+                                        </button>
+                                      </div>,
+                                      document.body
+                                    )
                                   )}
-                                >
-                                  {chat.isGroup
-                                    ? 'Grupo colaborativo'
-                                    : hasUnread
-                                      ? 'Nuevo mensaje'
-                                      : 'Nuevo mensaje'}
-                                </p>
+                                </li>
+                              );
+                            })}
+                          </>
+                        )}
+
+                        {/* Vista completa de archivados */}
+                        {activeFilter === 'archived' && archivedChatsList.length > 0 && (
+                          <>
+                            <li className="sticky top-0 z-10 mb-2">
+                              <div className="flex items-center gap-2 px-4 py-2">
+                                <Archive className="h-4 w-4 text-[var(--color-muted)]" />
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
+                                  Archivados
+                                </h3>
+                                <div className="flex-1 h-px bg-white/20 dark:bg-white/10"></div>
                               </div>
-                              <button
-                                ref={(el) => {
-                                  menuButtonRefs.current[chat.id] = el;
-                                }}
-                                type="button"
-                                onClick={(e) => handleMenuToggle(chat.id, e)}
-                                className={classNames(
-                                  'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0',
-                                  openMenuId === chat.id
-                                    ? 'opacity-100 bg-sena-green/20 dark:bg-sena-green/30 text-sena-green shadow-md rotate-180'
-                                    : 'opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:bg-white/20 dark:hover:bg-slate-700/20 hover:text-sena-green'
-                                )}
-                                aria-label="Opciones del chat"
-                              >
-                                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                              </button>
-                            </button>
-                            
-                            {openMenuId === chat.id && menuPosition && createPortal(
-                              <div
-                                ref={(el) => {
-                                  menuRefs.current[chat.id] = el;
-                                }}
-                                className="fixed w-[220px] rounded-2xl bg-slate-800/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2"
-                                style={{
-                                  left: `${menuPosition.x}px`,
-                                  top: `${menuPosition.y}px`,
-                                  position: 'fixed',
-                                  zIndex: 999999,
-                                  pointerEvents: 'auto',
-                                  isolation: 'isolate',
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => handleMenuAction('unarchive', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                >
-                                  <Archive className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                  <span className="text-left font-medium">Desarchivar chat</span>
-                                </button>
-                                {!mutedChats.has(chat.id) ? (
+                            </li>
+                            {archivedChatsList.map((chat) => {
+                              const isActive = chat.id === selectedChatId;
+                              const lastActivity = formatLastActivity(chat.lastMessageAt ?? chat.createdAt);
+                              const chatLabel = getChatName(chat.name, chat.isGroup);
+                              const initials = getInitialsFromLabel(chatLabel);
+                              const gradient = getAvatarGradient(chat.id);
+                              const hasUnread = !chat.lastMessageAt;
+                              const unreadCount = unreadCounts[chat.id] || (hasUnread ? 1 : 0);
+                              const isPinned = pinnedChats.has(chat.id);
+                              const isMuted = mutedChats.has(chat.id);
+                              const isFavorite = favoriteChats.has(chat.id);
+
+                              return (
+                                <li key={chat.id} className="relative" style={{ zIndex: 1 }}>
                                   <button
                                     type="button"
-                                    onClick={() => handleMenuAction('mute', chat.id)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                    onClick={() => {
+                                      setSelectedChatId(chat.id);
+                                      setOpenMenuId(null);
+                                      setMenuPosition(null);
+                                      setReadChats((prev) => {
+                                        const newSet = new Set(prev);
+                                        newSet.add(chat.id);
+                                        return newSet;
+                                      });
+                                      const now = new Date().toISOString();
+                                      setLastReadTimes((prev) => {
+                                        const updated = { ...prev, [chat.id]: now };
+                                        localStorage.setItem('chatLastReadTimes', JSON.stringify(updated));
+                                        return updated;
+                                      });
+                                    }}
+                                    className={classNames(
+                                      'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200',
+                                      isActive
+                                        ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/10 text-sena-green shadow-[0_8px_24px_rgba(57,169,0,0.15)] border border-sena-green/20 scale-[1.02]'
+                                        : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
+                                    )}
                                   >
-                                    <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Silenciar notificaciones</span>
+                                    <span className="relative inline-flex flex-shrink-0">
+                                      <span
+                                        className={classNames(
+                                          'flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] transition-transform duration-200',
+                                          gradient,
+                                          isActive && 'scale-110 shadow-[0_12px_24px_rgba(0,0,0,0.2)]'
+                                        )}
+                                      >
+                                        {initials}
+                                      </span>
+                                      {isPinned && (
+                                        <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-sena-green text-white shadow-lg">
+                                          <Pin className="h-3 w-3" />
+                                        </span>
+                                      )}
+                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <p className={classNames(
+                                          'truncate font-semibold',
+                                          isActive ? 'text-sm' : 'text-sm',
+                                          hasUnread && !isActive && 'text-[var(--color-text)]'
+                                        )}>
+                                          {chatLabel}
+                                        </p>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                          {unreadCount > 0 && !isActive && (
+                                            <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-r from-sena-green to-emerald-500 text-white text-[10px] font-bold shadow-[0_2px_8px_rgba(57,169,0,0.4)]">
+                                              {unreadCount > 99 ? '99+' : unreadCount}
+                                            </span>
+                                          )}
+                                          <span
+                                            className={classNames(
+                                              'text-[10px] font-medium whitespace-nowrap',
+                                              hasUnread ? 'text-sena-green font-bold' : 'text-[var(--color-muted)]'
+                                            )}
+                                          >
+                                            {lastActivity}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <p
+                                        className={classNames(
+                                          'mt-1 text-xs truncate',
+                                          hasUnread
+                                            ? 'text-sena-green/90 font-semibold'
+                                            : 'text-[var(--color-muted)]'
+                                        )}
+                                      >
+                                        {chat.isGroup
+                                          ? 'Grupo colaborativo'
+                                          : hasUnread
+                                            ? 'Nuevo mensaje'
+                                            : 'Nuevo mensaje'}
+                                      </p>
+                                    </div>
+                                    <button
+                                      ref={(el) => {
+                                        menuButtonRefs.current[chat.id] = el;
+                                      }}
+                                      type="button"
+                                      onClick={(e) => handleMenuToggle(chat.id, e)}
+                                      className={classNames(
+                                        'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0',
+                                        openMenuId === chat.id
+                                          ? 'opacity-100 bg-sena-green/20 dark:bg-sena-green/30 text-sena-green shadow-md rotate-180'
+                                          : 'opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:bg-white/20 dark:hover:bg-slate-700/20 hover:text-sena-green'
+                                      )}
+                                      aria-label="Opciones del chat"
+                                    >
+                                      <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                                    </button>
                                   </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMenuAction('unmute', chat.id)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                  >
-                                    <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Activar notificaciones</span>
-                                  </button>
-                                )}
-                                {!pinnedChats.has(chat.id) ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMenuAction('pin', chat.id)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                  >
-                                    <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Fijar chat</span>
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMenuAction('unpin', chat.id)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                  >
-                                    <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Desfijar chat</span>
-                                  </button>
-                                )}
-                                <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
-                                <button
-                                  type="button"
-                                  onClick={() => handleMenuAction('delete', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:text-red-300 transition-colors hover:bg-red-900/30 dark:hover:bg-red-900/40"
-                                >
-                                  <Trash2 className="h-4 w-4 flex-shrink-0" />
-                                  <span className="text-left font-medium">Eliminar chat</span>
-                                </button>
-                              </div>,
-                              document.body
-                            )}
-                          </li>
-                        );
-                      })}
-                    </>
-                  )}
-                </ul>
-              )}
+
+                                  {openMenuId === chat.id && menuPosition && (
+                                    createPortal(
+                                      <div
+                                        ref={(el) => {
+                                          menuRefs.current[chat.id] = el;
+                                        }}
+                                        className="fixed w-[220px] rounded-2xl bg-slate-800/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2"
+                                        style={{
+                                          left: `${menuPosition.x}px`,
+                                          top: `${menuPosition.y}px`,
+                                          position: 'fixed',
+                                          zIndex: 999999,
+                                          pointerEvents: 'auto',
+                                          isolation: 'isolate',
+                                        }}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => handleMenuAction('unarchive', chat.id)}
+                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                        >
+                                          <Archive className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                          <span className="text-left font-medium">Desarchivar chat</span>
+                                        </button>
+                                        {!mutedChats.has(chat.id) ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMenuAction('mute', chat.id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                          >
+                                            <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                            <span className="text-left font-medium">Silenciar notificaciones</span>
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMenuAction('unmute', chat.id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                          >
+                                            <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                            <span className="text-left font-medium">Activar notificaciones</span>
+                                          </button>
+                                        )}
+                                        {!pinnedChats.has(chat.id) ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMenuAction('pin', chat.id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                          >
+                                            <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                            <span className="text-left font-medium">Fijar chat</span>
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMenuAction('unpin', chat.id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                          >
+                                            <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                            <span className="text-left font-medium">Desfijar chat</span>
+                                          </button>
+                                        )}
+                                        <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleMenuAction('delete', chat.id)}
+                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:text-red-300 transition-colors hover:bg-red-900/30 dark:hover:bg-red-900/40"
+                                        >
+                                          <Trash2 className="h-4 w-4 flex-shrink-0" />
+                                          <span className="text-left font-medium">Eliminar chat</span>
+                                        </button>
+                                      </div>,
+                                      document.body
+                                    )
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </>
+                        )}
+                      </ul>
+                    )
+                  }
             </div>
           </div>
         </Card>
@@ -2298,18 +2348,18 @@ export const ChatsPage = () => {
                               )}
                               {entry.attachmentUrl && (() => {
                                 const attachmentUrl = resolveAssetUrl(entry.attachmentUrl);
-                                const isImage = entry.attachmentUrl.match(/^data:image\//) || 
-                                               entry.attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ||
-                                               (attachmentUrl && attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i));
-                                const isPdf = entry.attachmentUrl.match(/\.(pdf)$/i) || 
-                                             (attachmentUrl && attachmentUrl.match(/\.(pdf)$/i));
-                                
+                                const isImage = entry.attachmentUrl.match(/^data:image\//) ||
+                                  entry.attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ||
+                                  (attachmentUrl && attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i));
+                                const isPdf = entry.attachmentUrl.match(/\.(pdf)$/i) ||
+                                  (attachmentUrl && attachmentUrl.match(/\.(pdf)$/i));
+
                                 return (
                                   <div className="mb-2 rounded-xl overflow-hidden">
                                     {isImage && attachmentUrl ? (
-                                      <img 
-                                        src={attachmentUrl} 
-                                        alt="Adjunto" 
+                                      <img
+                                        src={attachmentUrl}
+                                        alt="Adjunto"
                                         className="max-w-full max-h-64 rounded-xl object-cover"
                                       />
                                     ) : (
@@ -2319,8 +2369,8 @@ export const ChatsPage = () => {
                                         rel="noopener noreferrer"
                                         className={classNames(
                                           'flex items-center gap-3 p-3 rounded-xl transition-all hover:opacity-80',
-                                          isOwn 
-                                            ? 'bg-white/20 text-white' 
+                                          isOwn
+                                            ? 'bg-white/20 text-white'
                                             : 'bg-white/30 dark:bg-slate-600/30 text-[var(--color-text)]'
                                         )}
                                       >
@@ -2362,94 +2412,96 @@ export const ChatsPage = () => {
                                 {timestamp}
                               </p>
                             </div>
-                            
+
                             {/* Menú contextual para mensajes propios */}
-                            {isOwn && openMessageMenuId === entry.id && messageMenuPosition && createPortal(
-                              <div
-                                ref={(el) => {
-                                  messageMenuRefs.current[entry.id] = el;
-                                }}
-                                className="fixed w-[200px] rounded-2xl bg-slate-800/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2 z-[999999]"
-                                style={{
-                                  left: `${messageMenuPosition.x}px`,
-                                  top: `${messageMenuPosition.y}px`,
-                                  position: 'fixed',
-                                  pointerEvents: 'auto',
-                                  isolation: 'isolate',
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => handleMessageAction('reply', entry)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                            {isOwn && openMessageMenuId === entry.id && messageMenuPosition && (
+                              createPortal(
+                                <div
+                                  ref={(el) => {
+                                    messageMenuRefs.current[entry.id] = el;
+                                  }}
+                                  className="fixed w-[200px] rounded-2xl bg-slate-800/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2 z-[999999]"
+                                  style={{
+                                    left: `${messageMenuPosition.x}px`,
+                                    top: `${messageMenuPosition.y}px`,
+                                    position: 'fixed',
+                                    pointerEvents: 'auto',
+                                    isolation: 'isolate',
+                                  }}
                                 >
-                                  <Reply className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                  <span className="text-left font-medium">Responder</span>
-                                </button>
-                                {entry.content && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleMessageAction('copy', entry)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                >
-                                  <Copy className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                  <span className="text-left font-medium">Copiar</span>
-                                </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleMessageAction('react', entry)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                >
-                                  <Smile className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                  <span className="text-left font-medium">Reaccionar</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMessageAction('forward', entry)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                >
-                                  <Forward className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                  <span className="text-left font-medium">Reenviar</span>
-                                </button>
-                                {entry.attachmentUrl && (
                                   <button
                                     type="button"
-                                    onClick={() => handleMessageAction('download', entry)}
+                                    onClick={() => handleMessageAction('reply', entry)}
                                     className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
                                   >
-                                    <Download className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                    <span className="text-left font-medium">Descargar</span>
+                                    <Reply className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                    <span className="text-left font-medium">Responder</span>
                                   </button>
-                                )}
-                                <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
-                                <button
-                                  type="button"
-                                  onClick={() => handleMessageAction('pin', entry)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                >
-                                  <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                  <span className="text-left font-medium">Fijar</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMessageAction('star', entry)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
-                                >
-                                  <Star className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                  <span className="text-left font-medium">Destacar</span>
-                                </button>
-                                <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
-                                <button
-                                  type="button"
-                                  onClick={() => handleMessageAction('delete', entry)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:text-red-300 transition-colors hover:bg-red-900/30 dark:hover:bg-red-900/40"
-                                >
-                                  <Trash2 className="h-4 w-4 flex-shrink-0" />
-                                  <span className="text-left font-medium">Eliminar</span>
-                                </button>
-                              </div>,
-                              document.body
+                                  {entry.content && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMessageAction('copy', entry)}
+                                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                    >
+                                      <Copy className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                      <span className="text-left font-medium">Copiar</span>
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMessageAction('react', entry)}
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                  >
+                                    <Smile className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                    <span className="text-left font-medium">Reaccionar</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMessageAction('forward', entry)}
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                  >
+                                    <Forward className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                    <span className="text-left font-medium">Reenviar</span>
+                                  </button>
+                                  {entry.attachmentUrl && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMessageAction('download', entry)}
+                                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                    >
+                                      <Download className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                      <span className="text-left font-medium">Descargar</span>
+                                    </button>
+                                  )}
+                                  <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMessageAction('pin', entry)}
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                  >
+                                    <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                    <span className="text-left font-medium">Fijar</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMessageAction('star', entry)}
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                  >
+                                    <Star className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                    <span className="text-left font-medium">Destacar</span>
+                                  </button>
+                                  <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMessageAction('delete', entry)}
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:text-red-300 transition-colors hover:bg-red-900/30 dark:hover:bg-red-900/40"
+                                  >
+                                    <Trash2 className="h-4 w-4 flex-shrink-0" />
+                                    <span className="text-left font-medium">Eliminar</span>
+                                  </button>
+                                </div>,
+                                document.body
+                              )
                             )}
                           </div>
                         );
@@ -2462,9 +2514,9 @@ export const ChatsPage = () => {
                   {attachment && (
                     <div className="mb-3 flex items-center gap-3 rounded-xl glass-liquid-strong p-3">
                       {attachment.mimeType.startsWith('image/') ? (
-                        <img 
-                          src={attachment.dataUrl} 
-                          alt="Vista previa" 
+                        <img
+                          src={attachment.dataUrl}
+                          alt="Vista previa"
                           className="h-16 w-16 rounded-lg object-cover"
                         />
                       ) : (
@@ -2541,8 +2593,8 @@ export const ChatsPage = () => {
                         onClick={() => setShowEmojiPicker((prev) => !prev)}
                         className={classNames(
                           "flex h-12 w-12 items-center justify-center rounded-2xl glass-liquid transition-all duration-200 hover:scale-110 hover:shadow-lg",
-                          showEmojiPicker 
-                            ? "text-sena-green border-sena-green/50" 
+                          showEmojiPicker
+                            ? "text-sena-green border-sena-green/50"
                             : "text-[var(--color-muted)] hover:text-sena-green"
                         )}
                         aria-label="Insertar emoji"
@@ -2553,8 +2605,8 @@ export const ChatsPage = () => {
                         <div
                           ref={emojiPickerRef}
                           className="fixed z-[100]"
-                          style={{ 
-                            ...(emojiPickerPosition === 'top' 
+                          style={{
+                            ...(emojiPickerPosition === 'top'
                               ? { bottom: `${emojiPickerCoords.bottom}px` }
                               : { top: `${emojiPickerCoords.top}px` }
                             ),
@@ -2566,7 +2618,7 @@ export const ChatsPage = () => {
                           <EmojiPicker
                             onEmojiSelect={handleEmojiSelect}
                             onClose={() => setShowEmojiPicker(false)}
-                            theme={mode === 'dark' ? 'dark' : 'light'}
+                            theme={theme === 'dark' ? 'dark' : 'light'}
                           />
                         </div>
                       )}
@@ -2585,9 +2637,9 @@ export const ChatsPage = () => {
                   <p className="text-sm text-[var(--color-muted)]">para comenzar a chatear.</p>
                   <p className="text-xs text-[var(--color-muted)] mt-3">Crea un nuevo chat para coordinar tus equipos y proyectos.</p>
                 </div>
-                <Button 
-                  size="sm" 
-                  variant="secondary" 
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onClick={() => setShowNewChat(true)}
                   className="px-6 py-2.5 font-semibold shadow-[0_8px_20px_rgba(57,169,0,0.25)] hover:shadow-[0_12px_28px_rgba(57,169,0,0.35)] transition-all hover:scale-105"
                 >
@@ -2957,135 +3009,6 @@ export const ChatsPage = () => {
           </div>
         </div>
       </GlassDialog>
-
-      {/* Modal de confirmación eliminar mensaje */}
-      {deleteMessageTarget && (
-        <GlassDialog
-          open={Boolean(deleteMessageTarget)}
-          onClose={() => setDeleteMessageTarget(null)}
-          size="sm"
-        >
-          <div className="space-y-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
-                  ¿Eliminar mensaje? 💬
-                </h2>
-                <p className="text-base leading-relaxed text-[var(--color-text)]">
-                  ¿Estás seguro de que quieres eliminar este mensaje? Esta acción no se puede deshacer.
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteMessageTarget(null)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={async () => {
-                  try {
-                    await queryClient.invalidateQueries({ queryKey: ['chats', selectedChatId, 'messages'] });
-                    setDeleteMessageTarget(null);
-                  } catch (err) {
-                    console.error('Error al eliminar:', err);
-                  }
-                }}
-                className="bg-rose-500/90 hover:bg-rose-500 text-white"
-              >
-                Sí, eliminar
-              </Button>
-            </div>
-          </div>
-        </GlassDialog>
-      )}
-
-      {/* Modal de confirmación eliminar chat */}
-      {deleteChatTarget && (
-        <GlassDialog
-          open={Boolean(deleteChatTarget)}
-          onClose={() => setDeleteChatTarget(null)}
-          size="sm"
-          preventCloseOnBackdrop={deleteChatMutation.isPending}
-        >
-          <div className="space-y-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
-                  ¿Eliminar conversación? 💭
-                </h2>
-                <p className="text-base leading-relaxed text-[var(--color-text)]">
-                  Esta conversación será eliminada permanentemente. Todos los mensajes se perderán. ¿Estás seguro?
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteChatTarget(null)}
-                disabled={deleteChatMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={() => {
-                  deleteChatMutation.mutate(deleteChatTarget);
-                  setDeleteChatTarget(null);
-                }}
-                loading={deleteChatMutation.isPending}
-                disabled={deleteChatMutation.isPending}
-                className="bg-rose-500/90 hover:bg-rose-500 text-white"
-              >
-                Sí, eliminar
-              </Button>
-            </div>
-          </div>
-        </GlassDialog>
-      )}
-
-      {/* Modal de confirmación bloquear usuario */}
-      {blockUserTarget && !blockUserTarget.isGroup && (
-        <GlassDialog
-          open={Boolean(blockUserTarget)}
-          onClose={() => setBlockUserTarget(null)}
-          size="sm"
-          preventCloseOnBackdrop={deleteChatMutation.isPending}
-        >
-          <div className="space-y-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
-                  ¿Bloquear usuario? 🚫
-                </h2>
-                <p className="text-base leading-relaxed text-[var(--color-text)]">
-                  Ya no recibirás mensajes de este usuario. La conversación se eliminará. ¿Estás seguro?
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => setBlockUserTarget(null)}
-                disabled={deleteChatMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={() => {
-                  deleteChatMutation.mutate(blockUserTarget.chatId);
-                  setBlockUserTarget(null);
-                }}
-                loading={deleteChatMutation.isPending}
-                disabled={deleteChatMutation.isPending}
-                className="bg-rose-500/90 hover:bg-rose-500 text-white"
-              >
-                Sí, bloquear
-              </Button>
-            </div>
-          </div>
-        </GlassDialog>
-      )}
     </DashboardLayout>
   );
 };

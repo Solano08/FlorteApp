@@ -20,7 +20,6 @@ import {
   Rocket,
   Sparkles,
   ArrowUpRight,
-  Users,
   Filter
 } from 'lucide-react';
 
@@ -173,15 +172,6 @@ export const ProjectsPage = () => {
               >
                 Explorar proyectos
                 <ArrowUpRight className="h-5 w-5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full justify-between px-4 py-2.5"
-                onClick={() => navigate('/groups')}
-              >
-                Encontrar grupos
-                <Users className="h-5 w-5" />
               </Button>
               <Button
                 size="sm"

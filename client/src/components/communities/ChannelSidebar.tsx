@@ -1,0 +1,443 @@
+import { FC, useMemo, useState, useRef, useEffect } from 'react';
+import { Hash, UserPlus, ChevronDown, Settings, Plus, FolderPlus, Check, X } from 'lucide-react';
+import { Channel } from '../../types/channel';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { TextArea } from '../ui/TextArea';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Group } from '../../types/group';
+
+const channelSchema = z.object({
+  name: z.string().min(1, 'El nombre del canal es obligatorio'),
+  description: z.string().optional()
+});
+
+type ChannelValues = z.infer<typeof channelSchema>;
+
+interface ChannelSidebarProps {
+  channels: Channel[];
+  community?: Group | null;
+  isLoading?: boolean;
+  isLoadingChannels?: boolean;
+  onCreateChannel?: (values: { name: string; description?: string; categoryId?: string }) => void;
+  onInviteFriends?: () => void;
+  onCommunitySettings?: () => void;
+  onLeaveCommunity?: () => void;
+  isSubmitting?: boolean;
+}
+
+export const ChannelSidebar: FC<ChannelSidebarProps> = ({
+  channels,
+  community,
+  isLoading,
+  isLoadingChannels,
+  onCreateChannel,
+  onInviteFriends,
+  onCommunitySettings,
+  onLeaveCommunity,
+  isSubmitting = false
+}) => {
+  const navigate = useNavigate();
+  const { communityId, channelId } = useParams<{ communityId?: string; channelId?: string }>();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isCommunityMenuOpen, setIsCommunityMenuOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
+  const [isCreatingTextChannel, setIsCreatingTextChannel] = useState(false);
+  const [newTextChannelName, setNewTextChannelName] = useState('');
+  const communityMenuRef = useRef<HTMLDivElement | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors }
+  } = useForm<ChannelValues>({
+    resolver: zodResolver(channelSchema),
+    defaultValues: {
+      name: '',
+      description: ''
+    }
+  });
+
+  const { textChannels, voiceChannels } = useMemo(() => {
+    const sorted = [...channels].sort((a, b) => a.position - b.position);
+    return {
+      textChannels: sorted.filter((channel) => channel.type === 'text'),
+      voiceChannels: sorted.filter((channel) => channel.type === 'voice')
+    };
+  }, [channels]);
+
+  const handleFormSubmit = async (values: ChannelValues) => {
+    if (!onCreateChannel) return;
+    try {
+      await onCreateChannel(values);
+      reset();
+      setShowCreateForm(false);
+    } catch (error) {
+      // El error se maneja en la mutación
+      console.error('Error al crear canal:', error);
+    }
+  };
+
+  const handleCreateTextChannelInline = async () => {
+    if (!onCreateChannel || !newTextChannelName.trim() || isSubmitting) return;
+    try {
+      await onCreateChannel({ name: newTextChannelName.trim() });
+      setNewTextChannelName('');
+      setIsCreatingTextChannel(false);
+    } catch (error) {
+      console.error('Error al crear canal:', error);
+    }
+  };
+
+  // Cerrar menú de comunidad al hacer clic fuera
+  useEffect(() => {
+    if (!isCommunityMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (communityMenuRef.current && !communityMenuRef.current.contains(event.target as Node)) {
+        setIsCommunityMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsCommunityMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isCommunityMenuOpen]);
+
+  // Cerrar menú contextual al hacer clic fuera
+  useEffect(() => {
+    if (!contextMenu) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
+        setContextMenu(null);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setContextMenu(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [contextMenu]);
+
+  // Manejar click derecho en el sidebar
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleChannelSettings = (channelId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/communities/${communityId}/${channelId}/settings`);
+  };
+
+  return (
+    <>
+      <aside
+        ref={sidebarRef}
+        className="flex h-full w-96 flex-col bg-gradient-to-b from-white/60 via-white/40 to-white/60 dark:from-slate-800/60 dark:via-slate-800/40 dark:to-slate-800/60 backdrop-blur-xl shadow-[2px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[2px_0_20px_rgba(0,0,0,0.2)]"
+        onContextMenu={handleContextMenu}
+      >
+        {/* Header con nombre de comunidad */}
+        {community && (
+          <div className="relative border-b border-white/10 dark:border-white/5 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-sm font-semibold text-[var(--color-text)] truncate">
+                    {community.name}
+                  </h2>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsCommunityMenuOpen((prev) => !prev);
+                      }}
+                      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 transition-colors duration-150"
+                      aria-label="Menú de comunidad"
+                    >
+                      <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isCommunityMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Menú desplegable de comunidad */}
+                    {isCommunityMenuOpen && (
+                      <div
+                        ref={communityMenuRef}
+                        className="absolute left-0 top-6 z-30 w-56 rounded-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl py-1.5 text-[12px] text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
+                      >
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-lg mx-1"
+                          onClick={() => {
+                            setIsCommunityMenuOpen(false);
+                            onCommunitySettings?.();
+                          }}
+                        >
+                          <Settings className="h-3.5 w-3.5" />
+                          <span>Ajustes de la comunidad</span>
+                        </button>
+                        <div className="my-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-150 rounded-lg mx-1"
+                          onClick={() => {
+                            setIsCommunityMenuOpen(false);
+                            onLeaveCommunity?.();
+                          }}
+                        >
+                          <span>Abandonar comunidad</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {onInviteFriends && (
+                <button
+                  type="button"
+                  onClick={onInviteFriends}
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-transparent text-[var(--color-muted)] hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-slate-700/80 transition-all duration-200 shadow-none hover:shadow-sm"
+                  aria-label="Invitar amigos"
+                >
+                  <UserPlus className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+      {/* Contenedor de canales con scroll */}
+      <div className="flex flex-1 min-h-0 flex-col px-3 py-3">
+        {/* Lista de canales */}
+        <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+          {isLoadingChannels || isLoading ? (
+            <p className="text-[11px] text-[var(--color-muted)]">Cargando canales...</p>
+          ) : textChannels.length === 0 && voiceChannels.length === 0 ? (
+            <p className="text-[11px] text-[var(--color-muted)]">No hay canales aún.</p>
+          ) : (
+            <>
+              {textChannels.length > 0 && (
+                <div>
+                  <div
+                    className="group mb-1.5 flex items-center gap-1 px-1"
+                    onMouseEnter={() => setHoveredCategory('texto')}
+                    onMouseLeave={() => setHoveredCategory(null)}
+                  >
+                    <ChevronDown className="h-3 w-3 text-[var(--color-muted)]" />
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] flex-1">
+                      Texto
+                    </p>
+                    {hoveredCategory === 'texto' && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsCreatingTextChannel(true);
+                        }}
+                        className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150"
+                        aria-label="Crear canal en Texto"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {isCreatingTextChannel && (
+                    <div className="mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
+                      <Hash className="h-4 w-4 text-[var(--color-muted)]" />
+                      <input
+                        autoFocus
+                        value={newTextChannelName}
+                        onChange={(e) => setNewTextChannelName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            void handleCreateTextChannelInline();
+                          }
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            setIsCreatingTextChannel(false);
+                            setNewTextChannelName('');
+                          }
+                        }}
+                        className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                        placeholder="nombre-del-canal"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handleCreateTextChannelInline()}
+                        disabled={!newTextChannelName.trim() || isSubmitting}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                        aria-label="Crear canal"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCreatingTextChannel(false);
+                          setNewTextChannelName('');
+                        }}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px]"
+                        aria-label="Cancelar"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                  <div className="space-y-0.5">
+                    {textChannels.map((channel) => {
+                      const isActive = channel.id === channelId;
+                      return (
+                        <div
+                          key={channel.id}
+                          className="group relative"
+                          onMouseEnter={() => setHoveredChannel(channel.id)}
+                          onMouseLeave={() => setHoveredChannel(null)}
+                        >
+                          <button
+                            onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
+                            className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] transition-all duration-200 ${
+                              isActive
+                                ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/15 dark:from-sena-green/25 dark:to-emerald-500/25 text-sena-green dark:text-emerald-400 font-medium shadow-sm'
+                                : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-700/60 hover:text-[var(--color-text)]'
+                            }`}
+                          >
+                            <Hash className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate flex-1">{channel.name}</span>
+                            {hoveredChannel === channel.id && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleChannelSettings(channel.id, e)}
+                                className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
+                                aria-label="Ajustes del canal"
+                              >
+                                <Settings className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {voiceChannels.length > 0 && (
+                <div>
+                  <div
+                    className="group mt-3 mb-1.5 flex items-center gap-1 px-1"
+                    onMouseEnter={() => setHoveredCategory('voz')}
+                    onMouseLeave={() => setHoveredCategory(null)}
+                  >
+                    <ChevronDown className="h-3 w-3 text-[var(--color-muted)]" />
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] flex-1">
+                      Voz
+                    </p>
+                    {hoveredCategory === 'voz' && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCreateChannelInCategory('voz');
+                        }}
+                        className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150"
+                        aria-label="Crear canal en Voz"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-0.5">
+                    {voiceChannels.map((channel) => {
+                      const isActive = channel.id === channelId;
+                      return (
+                        <div
+                          key={channel.id}
+                          className="group relative"
+                          onMouseEnter={() => setHoveredChannel(channel.id)}
+                          onMouseLeave={() => setHoveredChannel(null)}
+                        >
+                          <button
+                            onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
+                            className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] transition-all duration-200 ${
+                              isActive
+                                ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/15 dark:from-sena-green/25 dark:to-emerald-500/25 text-sena-green dark:text-emerald-400 font-medium shadow-sm'
+                                : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-700/60 hover:text-[var(--color-text)]'
+                            }`}
+                          >
+                            <Hash className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate flex-1">{channel.name}</span>
+                            {hoveredChannel === channel.id && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleChannelSettings(channel.id, e)}
+                                className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
+                                aria-label="Ajustes del canal"
+                              >
+                                <Settings className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </aside>
+
+    {/* Menú contextual */}
+    {contextMenu && (
+      <div
+        ref={contextMenuRef}
+        className="fixed z-50 w-48 rounded-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl py-1.5 text-[12px] text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
+        style={{ left: contextMenu.x, top: contextMenu.y }}
+      >
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-lg mx-1"
+          onClick={() => {
+            setContextMenu(null);
+            setIsCreatingTextChannel(true);
+          }}
+        >
+          <Hash className="h-3.5 w-3.5" />
+          <span>Crear canal</span>
+        </button>
+      </div>
+    )}
+    </>
+  );
+};

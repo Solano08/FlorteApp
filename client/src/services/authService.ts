@@ -1,3 +1,4 @@
+import { AxiosError } from 'axios';
 import { apiClient } from './apiClient';
 import { storage } from '../utils/storage';
 import { normalizeAuthUserMedia } from '../utils/media';
@@ -27,15 +28,72 @@ const handleAuthResponse = (response: AuthResponse): AuthUser => {
   throw new Error('Respuesta de autenticacion invalida');
 };
 
+const extractErrorMessage = (error: unknown): string => {
+  if (error instanceof AxiosError) {
+    // Error de conexión
+    if (!error.response) {
+      return 'No se pudo conectar con el servidor. Verifica que el servidor esté ejecutándose.';
+    }
+    
+    const responseData = error.response.data;
+    
+    // Error del servidor con mensaje
+    if (responseData?.message) {
+      return responseData.message;
+    }
+    
+    // Errores de validación de Zod
+    if (responseData?.errors && typeof responseData.errors === 'object') {
+      const fieldErrors = responseData.errors.fieldErrors || responseData.errors.formErrors || {};
+      const firstError = Object.values(fieldErrors).flat()[0];
+      if (firstError) {
+        return String(firstError);
+      }
+    }
+    
+    // Error HTTP sin mensaje específico
+    if (error.response.status === 400) {
+      return 'Datos inválidos. Por favor, verifica la información ingresada.';
+    }
+    if (error.response.status === 401) {
+      return 'Credenciales inválidas. Verifica tu correo y contraseña.';
+    }
+    if (error.response.status === 403) {
+      return 'Tu cuenta está suspendida. Contacta a un administrador.';
+    }
+    if (error.response.status === 409) {
+      return 'El correo ya está registrado.';
+    }
+    if (error.response.status >= 500) {
+      return 'Error del servidor. Por favor, intenta más tarde.';
+    }
+    return `Error: ${error.response.status} ${error.response.statusText}`;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Ocurrió un error inesperado. Por favor, intenta nuevamente.';
+};
+
 export const authService = {
   async register(payload: RegisterPayload): Promise<AuthUser> {
-    const { data } = await apiClient.post<AuthResponse>('/auth/register', payload);
-    return handleAuthResponse(data);
+    try {
+      const { data } = await apiClient.post<AuthResponse>('/auth/register', payload);
+      return handleAuthResponse(data);
+    } catch (error) {
+      const message = extractErrorMessage(error);
+      throw new Error(message);
+    }
   },
 
   async login(payload: LoginPayload): Promise<AuthUser> {
-    const { data } = await apiClient.post<AuthResponse>('/auth/login', payload);
-    return handleAuthResponse(data);
+    try {
+      const { data } = await apiClient.post<AuthResponse>('/auth/login', payload);
+      return handleAuthResponse(data);
+    } catch (error) {
+      const message = extractErrorMessage(error);
+      throw new Error(message);
+    }
   },
 
   async logout(): Promise<void> {

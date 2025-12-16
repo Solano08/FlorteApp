@@ -36,6 +36,11 @@ export interface FeedPost {
   attachments?: FeedAttachment[];
 }
 
+export interface ReactionBreakdown {
+  type: ReactionType;
+  count: number;
+}
+
 export interface FeedPostAggregate extends FeedPost {
   author: FeedAuthor;
   reactionCount: number;
@@ -44,6 +49,7 @@ export interface FeedPostAggregate extends FeedPost {
   viewerReaction: ReactionType | null;
   isSaved: boolean;
   latestComments: FeedComment[];
+  reactionBreakdown?: ReactionBreakdown[];
 }
 
 export type ProfilePostSource = 'own' | 'shared';
@@ -61,6 +67,7 @@ export interface PostMetrics {
   shareCount: number;
   viewerReaction: ReactionType | null;
   isSaved: boolean;
+  reactionBreakdown?: ReactionBreakdown[];
 }
 
 export type ReportStatus = 'pending' | 'reviewed';

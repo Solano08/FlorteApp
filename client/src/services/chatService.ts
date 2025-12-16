@@ -24,5 +24,9 @@ export const chatService = {
 
   async deleteChat(chatId: string): Promise<void> {
     await apiClient.delete(`/chats/${chatId}`);
+  },
+
+  async deleteMessage(chatId: string, messageId: string): Promise<void> {
+    await apiClient.delete(`/chats/${chatId}/messages/${messageId}`);
   }
 };

@@ -49,7 +49,8 @@ export const RegisterPage = () => {
       await registerUser(values);
       navigate('/dashboard');
     } catch (error) {
-      setServerError('No pudimos crear tu cuenta. Intenta de nuevo.');
+      const errorMessage = error instanceof Error ? error.message : 'No pudimos crear tu cuenta. Intenta de nuevo.';
+      setServerError(errorMessage);
     }
   };
 

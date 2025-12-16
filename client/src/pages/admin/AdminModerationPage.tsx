@@ -17,6 +17,7 @@ import { Profile } from '../../types/profile';
 import { FeedPostAggregate, FeedReport, ReportStatus } from '../../types/feed';
 import { Shield, ShieldCheck, ShieldHalf, X } from 'lucide-react';
 import { floatingModalContentClass } from '../../utils/modalStyles';
+import { useToast } from '../../hooks/useToast';
 
 const roleFilterOptions: Array<{ value: UserRole | 'all'; label: string }> = [
   { value: 'all', label: 'Todos los roles' },
@@ -79,6 +80,7 @@ type AdminUpdatePayload = Parameters<typeof adminService.updateUser>[1];
 
 export const AdminModerationPage = () => {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
@@ -87,7 +89,6 @@ export const AdminModerationPage = () => {
   const [activeReportPost, setActiveReportPost] = useState<FeedPostAggregate | null>(null);
   const [isReportPostLoading, setReportPostLoading] = useState(false);
   const [reportPostError, setReportPostError] = useState<string | null>(null);
-  const [deleteReportTarget, setDeleteReportTarget] = useState<FeedReport | null>(null);
   const handleCloseReportPost = () => {
     setActiveReport(null);
     setActiveReportPost(null);
@@ -107,7 +108,7 @@ export const AdminModerationPage = () => {
         setReportPostError('No se encontró la publicación reportada.');
       }
     } catch (error) {
-      console.error('No fue posible cargar la publicación', error);
+      toast.error('No fue posible cargar la publicación');
       setReportPostError('No fue posible cargar la publicación.');
     } finally {
       setReportPostLoading(false);
@@ -155,7 +156,7 @@ export const AdminModerationPage = () => {
       handleCloseReportPost();
     },
     onError: (error) => {
-      console.error('No fue posible eliminar la publicación', error);
+      toast.error('No fue posible eliminar la publicación');
     }
   });
 
@@ -300,13 +301,8 @@ export const AdminModerationPage = () => {
   };
 
   const handleDeleteReportedPost = (report: FeedReport) => {
-    setDeleteReportTarget(report);
-  };
-
-  const handleConfirmDeleteReportedPost = () => {
-    if (!deleteReportTarget) return;
-    deletePostMutation.mutate({ postId: deleteReportTarget.postId, reportId: deleteReportTarget.id });
-    setDeleteReportTarget(null);
+    if (!window.confirm('¿Deseas eliminar esta publicación?')) return;
+    deletePostMutation.mutate({ postId: report.postId, reportId: report.id });
   };
 
   return (
@@ -360,7 +356,7 @@ export const AdminModerationPage = () => {
         </Card>
 
         <Card padded={false} className="overflow-hidden">
-          <div className="overflow-x-auto hide-scrollbar">
+          <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-white/10 text-xs text-[var(--color-text)]">
               <thead className="bg-white/5 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
                 <tr>
@@ -885,46 +881,6 @@ export const AdminModerationPage = () => {
               </Button>
             </div>
           </form>
-        </GlassDialog>
-      )}
-
-      {/* Modal de confirmación eliminar publicación reportada */}
-      {deleteReportTarget && (
-        <GlassDialog
-          open={Boolean(deleteReportTarget)}
-          onClose={() => setDeleteReportTarget(null)}
-          size="sm"
-          preventCloseOnBackdrop={deletePostMutation.isPending}
-        >
-          <div className="space-y-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
-                  ¿Eliminar publicación? 🗑️
-                </h2>
-                <p className="text-base leading-relaxed text-[var(--color-text)]">
-                  Esta publicación será eliminada permanentemente. Esta acción no se puede deshacer. ¿Estás seguro?
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteReportTarget(null)}
-                disabled={deletePostMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmDeleteReportedPost}
-                loading={deletePostMutation.isPending}
-                disabled={deletePostMutation.isPending}
-                className="bg-rose-500/90 hover:bg-rose-500 text-white"
-              >
-                Sí, eliminar
-              </Button>
-            </div>
-          </div>
         </GlassDialog>
       )}
     </DashboardLayout>

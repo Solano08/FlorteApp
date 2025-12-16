@@ -42,5 +42,13 @@ export const chatController = {
       attachmentUrl: data.attachmentUrl
     });
     res.status(201).json({ success: true, message });
+  },
+
+  deleteMessage: async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Autenticación requerida', 401);
+    const { chatId, messageId } = req.params;
+    await chatService.deleteMessage(messageId, userId, chatId);
+    res.json({ success: true });
   }
 };

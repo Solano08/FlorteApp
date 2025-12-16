@@ -31,5 +31,29 @@ export const chatService = {
       throw new AppError('El mensaje no puede estar vacío', 400);
     }
     return await chatRepository.createMessage(input);
+  },
+
+  async deleteMessage(messageId: string, userId: string, chatId: string): Promise<void> {
+    // Verificar que el usuario tenga acceso al chat
+    const members = await chatRepository.listChatMembers(chatId);
+    if (!members.includes(userId)) {
+      throw new AppError('No tienes acceso a esta conversación', 403);
+    }
+
+    // Verificar que el mensaje existe y pertenece al chat
+    const message = await chatRepository.findMessageById(messageId);
+    if (!message) {
+      throw new AppError('Mensaje no encontrado', 404);
+    }
+    if (message.chatId !== chatId) {
+      throw new AppError('El mensaje no pertenece a este chat', 403);
+    }
+
+    // Verificar que el usuario sea el autor del mensaje
+    if (message.senderId !== userId) {
+      throw new AppError('Solo puedes eliminar tus propios mensajes', 403);
+    }
+
+    await chatRepository.deleteMessage(messageId);
   }
 };

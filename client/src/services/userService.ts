@@ -47,8 +47,20 @@ export const userService = {
   async restoreUser(id: string): Promise<Profile> {
     const { data } = await apiClient.post<{ success: boolean; user: Profile }>(`/users/${id}/restore`);
     return data.user;
+  },
+
+  async blockUser(userId: string): Promise<void> {
+    await apiClient.post(`/users/${userId}/block`);
+  },
+
+  async unblockUser(userId: string): Promise<void> {
+    await apiClient.delete(`/users/${userId}/block`);
   }
 };
+
+
+
+
 
 
 

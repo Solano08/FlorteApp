@@ -8,5 +8,6 @@ router.post('/', requireAuth, chatController.createChat);
 router.get('/', requireAuth, chatController.listChats);
 router.get('/:chatId/messages', requireAuth, chatController.getMessages);
 router.post('/:chatId/messages', requireAuth, chatController.sendMessage);
+router.delete('/:chatId/messages/:messageId', requireAuth, chatController.deleteMessage);
 
 export default router;

@@ -140,5 +140,21 @@ export const chatRepository = {
       { chatId, limit }
     );
     return rows.map(mapMessage).reverse();
+  },
+
+  async findMessageById(messageId: string): Promise<Message | null> {
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      'SELECT * FROM messages WHERE id = :messageId LIMIT 1',
+      { messageId }
+    );
+    if (rows.length === 0) return null;
+    return mapMessage(rows[0]);
+  },
+
+  async deleteMessage(messageId: string): Promise<void> {
+    await getPool().execute<ResultSetHeader>(
+      'DELETE FROM messages WHERE id = :messageId',
+      { messageId }
+    );
   }
 };

@@ -7,7 +7,9 @@ import { ProfilePage } from '../pages/profile/ProfilePage';
 import { PublicProfilePage } from '../pages/profile/PublicProfilePage';
 import { ChatsPage } from '../pages/chats/ChatsPage';
 import { LibraryPage } from '../pages/library/LibraryPage';
-import { GroupsPage } from '../pages/groups/GroupsPage';
+import { CommunitiesPage } from '../pages/communities/CommunitiesPage';
+import { ChannelSettingsPage } from '../pages/communities/ChannelSettingsPage';
+import { CommunitySettingsPage } from '../pages/communities/CommunitySettingsPage';
 import { ProjectsPage } from '../pages/projects/ProjectsPage';
 import { AdminModerationPage } from '../pages/admin/AdminModerationPage';
 import { SettingsPage } from '../pages/settings/SettingsPage';
@@ -117,10 +119,42 @@ export const AppRoutes = () => (
       }
     />
     <Route
-      path="/groups"
+      path="/communities"
       element={
         <ProtectedRoute>
-          <GroupsPage />
+          <CommunitiesPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/communities/:communityId"
+      element={
+        <ProtectedRoute>
+          <CommunitiesPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/communities/:communityId/:channelId"
+      element={
+        <ProtectedRoute>
+          <CommunitiesPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/communities/:communityId/:channelId/settings"
+      element={
+        <ProtectedRoute>
+          <ChannelSettingsPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/communities/:communityId/settings"
+      element={
+        <ProtectedRoute>
+          <CommunitySettingsPage />
         </ProtectedRoute>
       }
     />

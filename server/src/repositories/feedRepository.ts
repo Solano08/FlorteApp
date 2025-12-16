@@ -207,13 +207,30 @@ const fetchPostMetrics = async (postId: string, userId: string) => {
     { postId, userId }
   );
 
+  // Obtener desglose de reacciones (top 3)
+  const [reactionRows] = await getPool().query<RowDataPacket[]>(
+    `SELECT reaction_type, COUNT(*) as count
+     FROM feed_post_reactions
+     WHERE post_id = :postId
+     GROUP BY reaction_type
+     ORDER BY count DESC, reaction_type ASC
+     LIMIT 3`,
+    { postId }
+  );
+
   const metrics = rows[0];
+  const reactionBreakdown = reactionRows.map(row => ({
+    type: row.reaction_type as ReactionType,
+    count: Number(row.count)
+  }));
+
   return {
     reactionCount: Number(metrics?.reaction_count ?? 0),
     commentCount: Number(metrics?.comment_count ?? 0),
     shareCount: Number(metrics?.share_count ?? 0),
     viewerReaction: (metrics?.viewer_reaction as ReactionType | null) ?? null,
-    isSaved: Boolean(metrics?.is_saved ?? 0)
+    isSaved: Boolean(metrics?.is_saved ?? 0),
+    reactionBreakdown: reactionBreakdown.length > 0 ? reactionBreakdown : undefined
   };
 };
 
@@ -281,6 +298,21 @@ export const feedRepository = {
     const post = mapPost(row);
     const latestComments = await this.getLatestComments([post.id], 3);
     const attachmentsMap = await getPostAttachments([post.id]);
+    
+    // Obtener desglose de reacciones (top 3)
+    const [reactionRows] = await getPool().query<RowDataPacket[]>(
+      `SELECT reaction_type, COUNT(*) as count
+       FROM feed_post_reactions
+       WHERE post_id = :postId
+       GROUP BY reaction_type
+       ORDER BY count DESC, reaction_type ASC
+       LIMIT 3`,
+      { postId: post.id }
+    );
+    const reactionBreakdown = reactionRows.map(r => ({
+      type: r.reaction_type as ReactionType,
+      count: Number(r.count)
+    }));
 
     return {
       ...post,
@@ -291,7 +323,8 @@ export const feedRepository = {
       shareCount: Number(row.share_count ?? 0),
       viewerReaction: (row.viewer_reaction as ReactionType | null) ?? null,
       isSaved: Boolean(row.is_saved ?? 0),
-      latestComments: latestComments.get(post.id) ?? []
+      latestComments: latestComments.get(post.id) ?? [],
+      reactionBreakdown: reactionBreakdown.length > 0 ? reactionBreakdown : undefined
     };
   },
 
@@ -386,6 +419,33 @@ export const feedRepository = {
     const postIds = posts.map(({ base }) => base.id);
     const latestComments = await this.getLatestComments(postIds, 3);
     const attachmentsMap = await getPostAttachments(postIds);
+    
+    // Obtener desglose de reacciones para todos los posts
+    const reactionBreakdownMap = new Map<string, Array<{ type: ReactionType; count: number }>>();
+    if (postIds.length > 0) {
+      const [reactionRows] = await getPool().query<RowDataPacket[]>(
+        `SELECT post_id, reaction_type, COUNT(*) as count
+         FROM feed_post_reactions
+         WHERE post_id IN (${postIds.map(() => '?').join(',')})
+         GROUP BY post_id, reaction_type
+         ORDER BY post_id, count DESC, reaction_type ASC`,
+        postIds
+      );
+      
+      reactionRows.forEach((row) => {
+        const postId = row.post_id;
+        if (!reactionBreakdownMap.has(postId)) {
+          reactionBreakdownMap.set(postId, []);
+        }
+        const breakdown = reactionBreakdownMap.get(postId)!;
+        if (breakdown.length < 3) {
+          breakdown.push({
+            type: row.reaction_type as ReactionType,
+            count: Number(row.count)
+          });
+        }
+      });
+    }
 
     return posts.map(({ base, aggregate }) => ({
       ...base,
@@ -396,7 +456,8 @@ export const feedRepository = {
       shareCount: aggregate.shareCount,
       viewerReaction: aggregate.viewerReaction,
       isSaved: aggregate.isSaved,
-      latestComments: latestComments.get(base.id) ?? []
+      latestComments: latestComments.get(base.id) ?? [],
+      reactionBreakdown: reactionBreakdownMap.get(base.id)
     }));
   },
 

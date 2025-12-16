@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../ui/Button';
 import { GlassDialog } from '../ui/GlassDialog';
-import { Home, Library, Users, FolderKanban, LogOut, Shield, MessageCircle, Settings, User, X } from 'lucide-react';
+import { Home, Library, FolderKanban, LogOut, Shield, MessageCircle, Settings, User, Users, X } from 'lucide-react';
 import classNames from 'classnames';
 import { UserRole } from '../../types/auth';
 import { ThemeToggle } from '../ui/ThemeToggle';
@@ -26,7 +26,7 @@ interface NavItem {
 const baseNavItems: NavItem[] = [
   { to: '/dashboard', label: 'Inicio', icon: Home },
   { to: '/chats', label: 'Chats', icon: MessageCircle },
-  { to: '/groups', label: 'Grupos', icon: Users },
+  { to: '/communities', label: 'Comunidades', icon: Users },
   { to: '/projects', label: 'Proyectos', icon: FolderKanban },
   { to: '/library', label: 'Biblioteca', icon: Library }
 ];
@@ -105,7 +105,12 @@ export const DashboardLayout = ({
   };
 
   return (
-    <div className={classNames("flex bg-[var(--color-background)]", contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen')}>
+    <div
+      className={classNames(
+        'flex bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950',
+        contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen'
+      )}
+    >
       <div className={classNames("flex flex-1 flex-col", contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen')}>
         <header className="sticky top-0 z-40 grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-2.5 glass-liquid transition-[padding] duration-150 md:px-5">
           <div className="flex items-center gap-2">

@@ -100,7 +100,9 @@ export const GlassDialog = ({
             'relative w-full overflow-hidden',
             frameless
               ? 'rounded-none border-none bg-transparent p-0 shadow-none backdrop-blur-none'
-              : 'rounded-[32px] p-6 glass-liquid-deep',
+              : contentClassName?.includes('glass-dialog-delete')
+                ? `rounded-[32px] p-6`
+                : 'rounded-[32px] p-6 glass-liquid-deep',
             frameless ? '' : sizeClasses[size],
             contentClassName,
             motionClassName

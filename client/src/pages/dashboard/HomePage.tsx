@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
+import { useMenuState } from '../../contexts/MenuStateContext';
 import { Card } from '../../components/ui/Card';
 import { TextArea } from '../../components/ui/TextArea';
 import { Button } from '../../components/ui/Button';
@@ -31,12 +32,12 @@ import {
   Sparkles,
   ThumbsUp,
   Trash2,
-  Users,
   Video,
   X
 } from 'lucide-react';
 import { Chat } from '../../types/chat';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 import { FeedAttachment, FeedComment, FeedPostAggregate, ReactionType } from '../../types/feed';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { floatingModalContentClass } from '../../utils/modalStyles';
@@ -206,7 +207,8 @@ type ReportTarget =
 export const HomePage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [messagesOpen, setMessagesOpen] = useState(false);
+  const toast = useToast();
+  const { messagesOpen, setMessagesOpen, setNotificationsOpen } = useMenuState();
   const [openChatIds, setOpenChatIds] = useState<string[]>([]);
   const [storyMediaUrls, setStoryMediaUrls] = useState<string[]>([]);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
@@ -250,6 +252,7 @@ export const HomePage = () => {
   const commentMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const commentFileInputsRef = useRef<Record<string, Partial<Record<AttachmentKind, HTMLInputElement | null>>>>({});
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
+  const emojiButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -323,7 +326,7 @@ export const HomePage = () => {
     commentFileInputsRef.current[postId]?.[kind]?.click();
   };
 
-  const handleCommentToolClick = (postId: string, action: ComposerToolAction) => {
+  const handleCommentToolClick = (postId: string, action: ComposerToolAction, event?: React.MouseEvent) => {
     if (action === 'image') {
       triggerCommentFileInput(postId, 'image');
       return;
@@ -337,9 +340,16 @@ export const HomePage = () => {
       return;
     }
     if (action === 'emoji') {
-      setEmojiPickerTarget((current) =>
-        current?.type === 'comment' && current.postId === postId ? null : { type: 'comment', postId }
-      );
+      event?.stopPropagation();
+      event?.preventDefault();
+      // Si ya está abierto para este post, cerrarlo
+      if (emojiPickerTarget?.type === 'comment' && emojiPickerTarget.postId === postId) {
+        // Usar setTimeout para evitar conflictos con handleClickOutside
+        setTimeout(() => setEmojiPickerTarget(null), 0);
+      } else {
+        // Abrirlo para este post, cerrando cualquier otro
+        setEmojiPickerTarget({ type: 'comment', postId });
+      }
     }
   };
 
@@ -425,13 +435,29 @@ export const HomePage = () => {
   useEffect(() => {
     if (!emojiPickerTarget) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (emojiPickerRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      // No cerrar si el click es en el emoji picker
+      if (emojiPickerRef.current?.contains(target)) {
         return;
+      }
+      // No cerrar si el click es en el botón del emoji que lo abrió
+      if (emojiPickerTarget.type === 'comment') {
+        const emojiButton = emojiButtonRefs.current[emojiPickerTarget.postId];
+        if (emojiButton?.contains(target)) {
+          // Si el click es en el botón, dejar que el onClick del botón maneje el cierre
+          return;
+        }
       }
       setEmojiPickerTarget(null);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    // Usar un pequeño delay para evitar conflictos con el onClick del botón
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside, true);
+    }, 150);
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside, true);
+    };
   }, [emojiPickerTarget]);
 
   useEffect(() => {
@@ -570,7 +596,7 @@ export const HomePage = () => {
       setComposerSuccessMessage('Tu publicacion se ha subido correctamente.');
     },
     onError: (error) => {
-      console.error('No fue posible publicar el contenido', error);
+      toast.error('No fue posible publicar el contenido');
     }
   });
 
@@ -585,7 +611,7 @@ export const HomePage = () => {
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
     },
     onError: (error) => {
-      console.error('No fue posible actualizar la publicacion', error);
+      toast.error('No fue posible actualizar la publicación');
     }
   });
 
@@ -599,7 +625,7 @@ export const HomePage = () => {
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
     },
     onError: (error) => {
-      console.error('No fue posible eliminar la publicacion', error);
+      toast.error('No fue posible eliminar la publicación');
     }
   });
 
@@ -613,12 +639,13 @@ export const HomePage = () => {
         commentCount: metrics.commentCount,
         shareCount: metrics.shareCount,
         viewerReaction: metrics.viewerReaction,
-        isSaved: metrics.isSaved
+        isSaved: metrics.isSaved,
+        reactionBreakdown: metrics.reactionBreakdown
       }));
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
     },
     onError: (error) => {
-      console.error('No fue posible actualizar la reaccion', error);
+      toast.error('No fue posible actualizar la reacción');
     }
   });
 
@@ -639,7 +666,7 @@ export const HomePage = () => {
       );
     },
     onError: (error) => {
-      console.error('No fue posible actualizar el guardado', error);
+      toast.error('No fue posible actualizar el guardado');
     }
   });
 
@@ -672,7 +699,7 @@ export const HomePage = () => {
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
     },
     onError: (error) => {
-      console.error('No fue posible enviar el comentario', error);
+      toast.error('No fue posible enviar el comentario');
     }
   });
 
@@ -694,7 +721,7 @@ export const HomePage = () => {
       setCommentMenuOpenId(null);
     },
     onError: (error) => {
-      console.error('No fue posible actualizar el comentario', error);
+      toast.error('No fue posible actualizar el comentario');
     }
   });
 
@@ -720,7 +747,7 @@ export const HomePage = () => {
       setCommentMenuOpenId(null);
     },
     onError: (error) => {
-      console.error('No fue posible eliminar el comentario', error);
+      toast.error('No fue posible eliminar el comentario');
     }
   });
 
@@ -742,7 +769,7 @@ export const HomePage = () => {
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
     },
     onError: (error) => {
-      console.error('No fue posible compartir la publicacion', error);
+      toast.error('No fue posible compartir la publicación');
     }
   });
 
@@ -762,7 +789,7 @@ export const HomePage = () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => { });
     },
     onError: (error) => {
-      console.error('No fue posible enviar el reporte', error);
+      toast.error('No fue posible enviar el reporte');
       setReportError('No fue posible enviar el reporte. Intentalo nuevamente.');
     }
   });
@@ -1207,12 +1234,31 @@ export const HomePage = () => {
           <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-muted)] sm:text-sm">
             {hasReactions && (
               <div className="flex items-center gap-2 text-[var(--color-text)]">
-                <Heart
-                  className={classNames('h-4 w-4', viewerHasReaction ? 'text-sena-green' : 'text-rose-500')}
-                />
-                <span>
-                  {post.reactionCount} {reactionLabel}
-                </span>
+                {post.reactionBreakdown && post.reactionBreakdown.length > 0 ? (
+                  <div className="flex items-center gap-1.5">
+                    {post.reactionBreakdown.slice(0, 3).map((reaction) => {
+                      const reactionOption = reactionOptions.find(opt => opt.type === reaction.type);
+                      const ReactionIcon = reactionOption?.icon ?? Heart;
+                      return (
+                        <div key={reaction.type} className="flex items-center gap-1" title={reactionOption?.label}>
+                          <ReactionIcon className={classNames('h-4 w-4', reactionOption?.color ?? 'text-rose-500')} />
+                        </div>
+                      );
+                    })}
+                    <span className="ml-0.5">
+                      {post.reactionCount} {reactionLabel}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <Heart
+                      className={classNames('h-4 w-4', viewerHasReaction ? 'text-sena-green' : 'text-rose-500')}
+                    />
+                    <span>
+                      {post.reactionCount} {reactionLabel}
+                    </span>
+                  </>
+                )}
               </div>
             )}
             {(hasComments || hasShares) && (
@@ -1244,38 +1290,54 @@ export const HomePage = () => {
           <div className="relative sm:flex-1" onMouseLeave={handleReactionPickerLeave}>
             <Button
               variant="ghost"
-              className={classNames(
-                'post-action-btn w-full justify-center gap-2 text-xs sm:text-sm min-h-[38px] min-w-[110px]',
-                viewerHasReaction && 'text-sena-green'
-              )}
+              className="post-action-btn w-full justify-center gap-2 text-xs sm:text-sm min-h-[38px] min-w-[110px]"
               onMouseEnter={() => handleReactionHover(post.id)}
-              onClick={() => reactionMutation.mutate({ postId: post.id, reactionType: 'like' })}
+              onClick={() => {
+                if (viewerHasReaction) {
+                  // Si ya tiene reacción, quitar (toggle)
+                  reactionMutation.mutate({ postId: post.id, reactionType: post.viewerReaction! });
+                }
+                // Si no tiene reacción, el hover mostrará el selector
+              }}
               disabled={isReacting}
               loading={isReacting}
             >
               <ReactionIconComponent
                 className={classNames(
                   'h-4 w-4',
-                  selectedReaction?.color ?? (viewerHasReaction ? 'text-sena-green' : 'text-rose-500')
+                  viewerHasReaction 
+                    ? (selectedReaction?.color ?? 'text-sena-green')
+                    : 'text-[var(--color-text)]'
                 )}
               />
-              {reactionButtonLabel}
+              <span
+                className={classNames(
+                  viewerHasReaction 
+                    ? (selectedReaction?.color ?? 'text-sena-green')
+                    : 'text-[var(--color-text)]'
+                )}
+              >
+                {reactionButtonLabel}
+              </span>
             </Button>
             {reactionPickerPost === post.id && (
               <div
-                className="absolute bottom-full left-1/2 z-10 -translate-x-1/2 translate-y-2 rounded-2xl glass-frosted px-4 py-3"
+                className="absolute bottom-full left-1/2 z-10 -translate-x-1/2 translate-y-2 rounded-xl glass-frosted px-2 py-2"
                 onMouseEnter={() => handleReactionHover(post.id)}
               >
-                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap sm:gap-3 hide-scrollbar">
+                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap hide-scrollbar">
                   {reactionOptions.map(({ type, label, icon: Icon, color }) => (
                     <button
                       key={type}
                       type="button"
-                      className="flex items-center gap-2 rounded-full border border-white/50 bg-white px-3 py-1 text-xs font-semibold text-[var(--color-text)] shadow-sm transition hover:-translate-y-0.5 hover:border-sena-green/60 dark:bg-slate-900/90"
+                      className={classNames(
+                        "flex items-center justify-center rounded-full border border-white/50 bg-white h-8 w-8 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sena-green/60 hover:scale-105 dark:bg-slate-900/90",
+                        post.viewerReaction === type && 'ring-1.5 ring-sena-green/50 border-sena-green/60'
+                      )}
                       onClick={() => handleReactionSelect(post.id, type)}
+                      title={label}
                     >
                       <Icon className={classNames('h-4 w-4', color)} />
-                      <span>{label}</span>
                     </button>
                   ))}
                 </div>
@@ -1306,14 +1368,24 @@ export const HomePage = () => {
           <Button
             variant="ghost"
             className={classNames(
-              'post-action-btn justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm min-h-[38px] min-w-[110px]',
-              post.isSaved && 'text-sena-green'
+              'post-action-btn justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm min-h-[38px] min-w-[110px] transition-all duration-300',
+              post.isSaved 
+                ? 'text-sena-green hover:text-sena-green/90 hover:shadow-[0_4px_12px_rgba(57,169,0,0.2)]' 
+                : ''
             )}
             onClick={() => saveMutation.mutate(post.id)}
             disabled={isSavingPost}
             loading={isSavingPost}
           >
-            <Bookmark className="h-4 w-4" /> {post.isSaved ? 'Guardado' : 'Guardar'}
+            <Bookmark 
+              className={classNames(
+                'h-4 w-4 transition-all duration-300',
+                post.isSaved && 'fill-sena-green text-sena-green drop-shadow-[0_2px_4px_rgba(57,169,0,0.3)]'
+              )} 
+            /> 
+            <span className={post.isSaved ? 'font-semibold' : ''}>
+              {post.isSaved ? 'Guardado' : 'Guardar'}
+            </span>
           </Button>
         </div>
 
@@ -1579,9 +1651,20 @@ export const HomePage = () => {
                       >
                         <button
                           type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sena-green transition hover:bg-white/40"
+                          ref={(el) => {
+                            if (isEmojiAction) {
+                              emojiButtonRefs.current[post.id] = el;
+                            }
+                          }}
+                          className={classNames(
+                            "inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-sena-green transition-all duration-200 hover:shadow-[0_0_18px_rgba(57,169,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50",
+                            isEmojiAction && isEmojiOpen && "ring-2 ring-sena-green/50 ring-offset-2 ring-offset-[var(--color-background)]"
+                          )}
                           aria-label={`${label} comentario`}
-                          onClick={() => handleCommentToolClick(post.id, action)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCommentToolClick(post.id, action, e);
+                          }}
                           disabled={isCommenting}
                         >
                           <Icon className="h-4 w-4" />
@@ -1666,24 +1749,15 @@ export const HomePage = () => {
                 <Sparkles className="h-4 w-4 text-sena-green" />
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rápida</h3>
               </div>
-              <div className="space-y-1">
-                <button
-                  onClick={() => navigate('/groups')}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-[var(--color-surface)]/50 hover:shadow-sm"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sena-green/10 text-sena-green transition-colors group-hover:bg-sena-green/20">
-                    <Users className="h-4 w-4" />
-                  </div>
-                  <span className="flex-1 text-sm font-medium text-[var(--color-text)]">Encontrar grupos</span>
-                </button>
+              <div className="space-y-1.5">
                 <button
                   onClick={() => navigate('/projects')}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-[var(--color-surface)]/50 hover:shadow-sm"
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sena-green/10 text-sena-green transition-colors group-hover:bg-sena-green/20">
-                    <FolderKanban className="h-4 w-4" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                    <FolderKanban className="h-5 w-5" />
                   </div>
-                  <span className="flex-1 text-sm font-medium text-[var(--color-text)]">Revisar mis proyectos</span>
+                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Revisar mis proyectos</span>
                 </button>
               </div>
             </div>
@@ -1694,7 +1768,7 @@ export const HomePage = () => {
                 <Sparkles className="h-4 w-4 text-sena-green" />
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Top projects</h3>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {topProjects.length === 0 ? (
                   <p className="px-2 text-xs text-[var(--color-muted)]">
                     Aún no hay proyectos destacados.
@@ -1704,13 +1778,13 @@ export const HomePage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-[var(--color-surface)]/50 hover:shadow-sm"
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                     >
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-sena-green/20 to-emerald-400/20 text-sena-green">
-                        <FolderKanban className="h-4 w-4" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                        <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text)] truncate">{project.title}</p>
+                        <p className="text-sm font-semibold text-[var(--color-text)] truncate">{project.title}</p>
                         <p className="text-xs text-[var(--color-muted)] capitalize">{project.status}</p>
                       </div>
                     </button>
@@ -1752,23 +1826,28 @@ export const HomePage = () => {
                   key={story.id}
                   type="button"
                   onClick={handleStoryClick}
-                  className="flex w-16 flex-shrink-0 flex-col items-center gap-1.5"
+                  className="group relative z-10 flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-300 hover:scale-105 active:scale-95"
                 >
                   <div
-                    className={`relative h-12 w-12 rounded-full p-[2.5px] ${storyMediaUrls.length
-                      ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500'
-                      : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500'
+                    className={`relative h-12 w-12 rounded-full p-[2.5px] transition-all duration-300 ${
+                      storyMediaUrls.length
+                        ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_4px_16px_rgba(57,169,0,0.3)]'
+                        : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_4px_20px_rgba(57,169,0,0.4)] group-hover:scale-105'
                       }`}
+                    style={{ isolation: 'isolate' }}
                   >
-                    <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-surface)]">
+                    <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-surface)] transition-all duration-300 group-hover:border-sena-green/20">
                       {storyMediaUrls.length ? (
-                        <img src={story.avatar} alt={story.name} className="h-full w-full rounded-full object-cover" />
+                        <img src={story.avatar} alt={story.name} className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-110" />
                       ) : (
-                        <Plus className="h-4 w-4 text-sena-green" />
+                        <Plus className="h-4 w-4 text-sena-green transition-all duration-300 group-hover:scale-110 group-hover:rotate-90" />
                       )}
                     </div>
+                    {!storyMediaUrls.length && (
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-sena-green/20 via-sena-light/20 to-emerald-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm -z-10" />
+                    )}
                   </div>
-                  <span className="text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate">
+                  <span className="text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate transition-colors duration-300 group-hover:text-sena-green">
                     {storyMediaUrls.length ? 'Tus historias' : 'Crear historia'}
                   </span>
                 </button>
@@ -1927,7 +2006,7 @@ export const HomePage = () => {
                 <Sparkles className="h-4 w-4 text-sena-green" />
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Avances destacados</h3>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {learningHighlights.length === 0 ? (
                   <p className="px-2 text-xs text-[var(--color-muted)]">
                     Registra tus proyectos para seguir tu progreso.
@@ -1937,13 +2016,13 @@ export const HomePage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-[var(--color-surface)]/50 hover:shadow-sm"
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                     >
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-sena-green/20 to-emerald-400/20 text-sena-green">
-                        <FolderKanban className="h-4 w-4" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                        <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text)] truncate">{project.title}</p>
+                        <p className="text-sm font-semibold text-[var(--color-text)] truncate">{project.title}</p>
                         <p className="text-xs text-[var(--color-muted)] capitalize">{project.status}</p>
                       </div>
                     </button>
@@ -2007,7 +2086,10 @@ export const HomePage = () => {
 
 
         <button
-          onClick={() => setMessagesOpen((prev) => !prev)}
+          onClick={() => {
+            setMessagesOpen(!messagesOpen);
+            setNotificationsOpen(false); // Cerrar notificaciones si están abiertas
+          }}
           className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-surface)]/90 backdrop-blur-xl text-[var(--color-text)] shadow-[0_8px_24px_rgba(0,0,0,0.25)] border border-white/30 transition-all duration-300 hover:scale-105 hover:bg-[var(--color-surface)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.35)] active:scale-95"
           aria-label="Abrir mensajes"
         >
@@ -2417,6 +2499,7 @@ export const HomePage = () => {
             onClose={() => setDeletePostTarget(null)}
             size="sm"
             preventCloseOnBackdrop={deletePostMutation.isPending}
+            contentClassName="glass-dialog-delete"
           >
             <div className="space-y-5">
               <div className="flex items-start justify-between gap-4">
@@ -2441,7 +2524,7 @@ export const HomePage = () => {
                   onClick={handleConfirmDeletePost}
                   loading={deletePostMutation.isPending}
                   disabled={deletePostMutation.isPending}
-                  className="bg-rose-500/90 hover:bg-rose-500 text-white"
+                  className="!bg-rose-500 hover:!bg-rose-600 !text-white focus:!ring-rose-500/50 active:!bg-rose-700 !shadow-[0_4px_14px_rgba(239,68,68,0.4)] hover:!shadow-[0_6px_20px_rgba(239,68,68,0.5)] active:!shadow-[0_2px_8px_rgba(239,68,68,0.4)] border-rose-400/30"
                 >
                   Sí, eliminar
                 </Button>

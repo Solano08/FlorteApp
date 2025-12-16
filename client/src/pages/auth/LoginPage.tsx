@@ -38,7 +38,8 @@ export const LoginPage = () => {
       await login(values);
       navigate('/dashboard');
     } catch (error) {
-      setServerError('No pudimos iniciar sesión. Verifica tus datos e intenta nuevamente.');
+      const errorMessage = error instanceof Error ? error.message : 'No pudimos iniciar sesión. Verifica tus datos e intenta nuevamente.';
+      setServerError(errorMessage);
     }
   };
 
