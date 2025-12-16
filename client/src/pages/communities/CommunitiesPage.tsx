@@ -13,7 +13,6 @@ import { EmptyCommunitiesView } from '../../components/communities/EmptyCommunit
 import { CreateChannelMessagePayload } from '../../types/channel';
 import { useToast } from '../../hooks/useToast';
 import { GlassDialog } from '../../components/ui/GlassDialog';
-import { Button as UIButton } from '../../components/ui/Button';
 import { CreateCommunityDialog } from '../../components/communities/CreateCommunityDialog';
 import { ExploreCommunitiesView } from '../../components/communities/ExploreCommunitiesView';
 import type { Group } from '../../types/group';
@@ -153,6 +152,22 @@ export const CommunitiesPage = () => {
     }
   }, [communityId, isLoadingMyCommunities, myCommunities, isExploring, navigate]);
 
+  // Redirigir al primer canal disponible cuando se entra a una comunidad sin canal seleccionado
+  useEffect(() => {
+    if (
+      communityId &&
+      !channelId &&
+      !isLoadingChannels &&
+      channels.length > 0 &&
+      !isExploring
+    ) {
+      const firstChannel = channels.sort((a, b) => a.position - b.position)[0];
+      if (firstChannel) {
+        navigate(`/communities/${communityId}/${firstChannel.id}`, { replace: true });
+      }
+    }
+  }, [communityId, channelId, isLoadingChannels, channels, isExploring, navigate]);
+
 
   // Acciones layout tipo Discord
   const handleCreateCommunity = () => {
@@ -211,35 +226,6 @@ export const CommunitiesPage = () => {
     }
   };
 
-  const handleCreateCategory = (name: string) => {
-    // TODO: Implementar creación de categoría
-    toast.info('Funcionalidad de crear categoría próximamente');
-  };
-
-  // Mostrar vista de estado vacío sólo cuando no se está explorando
-  if (!communityId && !isExploring && !isLoadingMyCommunities && myCommunities.length === 0) {
-    return (
-      <DashboardLayout contentClassName="flex h-full w-full overflow-hidden p-0">
-        <EmptyCommunitiesView
-          onCreateCommunity={handleCreateCommunity}
-          onExploreCommunities={handleExploreCommunities}
-        />
-      </DashboardLayout>
-    );
-  }
-
-  // Si está cargando o redirigiendo, mostrar loading
-  if (!communityId && (isLoadingMyCommunities || myCommunities.length > 0)) {
-    return (
-      <DashboardLayout contentClassName="flex h-full w-full overflow-hidden p-0">
-        <div className="flex h-full w-full items-center justify-center">
-          <Card className="glass-liquid p-6 text-sm text-[var(--color-muted)]">
-            Cargando...
-          </Card>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   // Vista: Comunidad seleccionada con layout tipo Discord
   const selectedChannel = channels.find((c) => c.id === channelId);
@@ -253,128 +239,166 @@ export const CommunitiesPage = () => {
       );
     }) ?? [];
 
-  return (
-    <DashboardLayout contentClassName="flex h-full w-full overflow-hidden p-0">
-      {isExploring ? (
-        <div className="flex h-full w-full min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-          <div className="flex h-full w-full min-h-0 overflow-hidden bg-transparent">
-            {myCommunities.length > 0 && (
-              <CommunitySidebar
-                communities={myCommunities}
-                isLoading={isLoadingMyCommunities}
-                onCreateCommunity={handleCreateCommunity}
-                onExploreCommunities={handleExploreCommunities}
-              />
-            )}
-            <ExploreCommunitiesView
-              communities={filteredExploreCommunities}
-              isLoading={isLoadingExplore}
-              searchTerm={exploreSearch}
-              onSearchTermChange={setExploreSearch}
-              onSelectCommunity={(id) => joinCommunityMutation.mutate(id)}
-            />
-          </div>
-        </div>
-      ) : isLoadingCommunity ? (
-        <div className="flex h-full w-full items-center justify-center">
-          <Card className="glass-liquid p-6 text-sm text-[var(--color-muted)]">
-            Cargando comunidad...
-          </Card>
-        </div>
-      ) : !community ? (
-        <div className="flex h-full w-full items-center justify-center">
-          <Card className="glass-liquid p-6 text-sm text-[var(--color-muted)]">
-            Comunidad no encontrada
-          </Card>
-        </div>
-      ) : (
-        <div className="flex h-full w-full min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-          <div className="flex h-full w-full min-h-0 overflow-hidden bg-transparent">
+  let content: JSX.Element;
+
+  // Mostrar vista de estado vacío sólo cuando no se está explorando
+  if (!communityId && !isExploring && !isLoadingMyCommunities && myCommunities.length === 0) {
+    content = (
+      <EmptyCommunitiesView
+        onCreateCommunity={handleCreateCommunity}
+        onExploreCommunities={handleExploreCommunities}
+      />
+    );
+  } else if (!communityId && (isLoadingMyCommunities || myCommunities.length > 0)) {
+    // Si está cargando o redirigiendo, mostrar loading
+    content = (
+      <div className="flex h-full w-full items-center justify-center">
+        <Card className="glass-liquid p-6 text-sm text-[var(--color-muted)]">Cargando...</Card>
+      </div>
+    );
+  } else if (isExploring) {
+    content = (
+      <div className="flex h-full w-full min-h-0 overflow-hidden communities-shell">
+        <div className="flex h-full w-full min-h-0 overflow-hidden bg-transparent">
+          {myCommunities.length > 0 && (
             <CommunitySidebar
               communities={myCommunities}
               isLoading={isLoadingMyCommunities}
               onCreateCommunity={handleCreateCommunity}
               onExploreCommunities={handleExploreCommunities}
             />
+          )}
+          <ExploreCommunitiesView
+            communities={filteredExploreCommunities}
+            isLoading={isLoadingExplore}
+            searchTerm={exploreSearch}
+            onSearchTermChange={setExploreSearch}
+            onSelectCommunity={(id) => joinCommunityMutation.mutate(id)}
+            onCreateCommunity={handleCreateCommunity}
+          />
+        </div>
+      </div>
+    );
+  } else if (isLoadingCommunity) {
+    content = (
+      <div className="flex h-full w-full items-center justify-center">
+        <Card className="glass-liquid p-6 text-sm text-[var(--color-muted)]">
+          Cargando comunidad...
+        </Card>
+      </div>
+    );
+  } else if (!community) {
+    content = (
+      <div className="flex h-full w-full items-center justify-center">
+        <Card className="glass-liquid p-6 text-sm text-[var(--color-muted)]">
+          Comunidad no encontrada
+        </Card>
+      </div>
+    );
+  } else {
+    content = (
+      <div className="flex h-full w-full min-h-0 overflow-hidden communities-shell">
+        <div className="flex h-full w-full min-h-0 overflow-hidden bg-transparent">
+          <CommunitySidebar
+            communities={myCommunities}
+            isLoading={isLoadingMyCommunities}
+            onCreateCommunity={handleCreateCommunity}
+            onExploreCommunities={handleExploreCommunities}
+          />
 
-            {/* Zona principal: canales + chat */}
-            <div className="flex flex-1 min-h-0">
-                <ChannelSidebar
-                  channels={channels}
-                  community={community}
-                  isLoadingChannels={isLoadingChannels}
-                  onCreateChannel={(values) => {
-                    return new Promise<void>((resolve, reject) => {
-                      createChannelMutation.mutate(
-                        {
-                          communityId: communityId!,
-                          name: values.name,
-                          description: values.description,
-                          type: 'text'
-                        },
-                        {
-                          onSuccess: () => resolve(),
-                          onError: (error) => reject(error)
-                        }
-                      );
-                    });
-                  }}
-                  onCreateCategory={handleCreateCategory}
-                  onInviteFriends={handleInviteFriends}
-                  onCommunitySettings={handleCommunitySettings}
-                  onLeaveCommunity={handleLeaveCommunity}
-                  isSubmitting={isSubmittingChannel || createChannelMutation.isPending}
-                />
-
-                {channelId && selectedChannel ? (
-                  <ChannelChat
-                    channelName={selectedChannel.name}
-                    channelDescription={selectedChannel.description}
-                    messages={messages}
-                    isLoadingMessages={isLoadingMessages}
-                    onSendMessage={(content) =>
-                      new Promise<void>((resolve, reject) => {
-                        createMessageMutation.mutate(
-                          { content },
-                          {
-                            onSuccess: () => {
-                              resolve();
-                            },
-                            onError: (error) => {
-                              reject(error);
-                            }
-                          }
-                        );
-                      })
+          {/* Zona principal: canales + chat */}
+          <div className="flex flex-1 min-h-0">
+            <ChannelSidebar
+              channels={channels}
+              community={community}
+              isLoadingChannels={isLoadingChannels}
+              onCreateChannel={(values) => {
+                return new Promise<void>((resolve, reject) => {
+                  createChannelMutation.mutate(
+                    {
+                      communityId: communityId!,
+                      name: values.name,
+                      description: values.description,
+                      type: 'text'
+                    },
+                    {
+                      onSuccess: () => resolve(),
+                      onError: (error) => reject(error)
                     }
-                  />
-                ) : (
-                  <div className="flex flex-1 items-center justify-center">
-                    <Card className="glass-liquid max-w-md p-6 text-center">
-                      <h2 className="text-lg font-semibold text-[var(--color-text)]">
-                        Selecciona un canal
-                      </h2>
-                      <p className="mt-2 text-sm text-[var(--color-muted)]">
-                        Elige uno de los canales del panel izquierdo para comenzar a chatear o crea un
-                        nuevo canal.
-                      </p>
-                      <Button
-                        variant="primary"
-                        className="mt-4"
-                        onClick={() => {
-                          const form = document.getElementById('create-channel-form');
-                          form?.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                      >
-                        Crear canal
-                      </Button>
-                    </Card>
+                  );
+                });
+              }}
+              onInviteFriends={handleInviteFriends}
+              onCommunitySettings={handleCommunitySettings}
+              onLeaveCommunity={handleLeaveCommunity}
+              isSubmitting={isSubmittingChannel || createChannelMutation.isPending}
+            />
+
+            {channelId && selectedChannel ? (
+              <ChannelChat
+                channelName={selectedChannel.name}
+                channelDescription={selectedChannel.description}
+                messages={messages}
+                isLoadingMessages={isLoadingMessages}
+                onSendMessage={(content) =>
+                  new Promise<void>((resolve, reject) => {
+                    createMessageMutation.mutate(
+                      { content },
+                      {
+                        onSuccess: () => {
+                          resolve();
+                        },
+                        onError: (error) => {
+                          reject(error);
+                        }
+                      }
+                    );
+                  })
+                }
+              />
+            ) : (
+              <div className="flex flex-1 items-center justify-center px-4">
+                <Card className="glass-liquid relative max-w-lg overflow-hidden rounded-3xl border border-white/35 bg-white/90 p-7 text-center shadow-[0_18px_45px_rgba(15,23,42,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/90">
+                  <div className="pointer-events-none absolute -right-24 -top-24 h-40 w-40 rounded-full bg-sena-green/10 blur-3xl dark:bg-sena-green/20" />
+                  <div className="pointer-events-none absolute -left-16 bottom-[-40px] h-36 w-36 rounded-full bg-emerald-500/8 blur-3xl dark:bg-emerald-500/15" />
+
+                  <div className="relative flex flex-col items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sena-green/12 text-sena-green shadow-[0_10px_30px_rgba(18,55,29,0.35)]">
+                      <span className="text-xl">💬</span>
+                    </div>
+                    <h2 className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
+                      Elige un canal para comenzar
+                    </h2>
+                    <p className="max-w-md text-sm text-[var(--color-muted)]">
+                      Selecciona uno de los canales del panel izquierdo para ver los mensajes de tu
+                      comunidad o crea un nuevo canal para iniciar una conversación.
+                    </p>
                   </div>
-                )}
+
+                  <div className="relative mt-5 flex justify-center">
+                    <Button
+                      variant="primary"
+                      className="px-5"
+                      onClick={() => {
+                        const form = document.getElementById('create-channel-form');
+                        form?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                    >
+                      Crear nuevo canal
+                    </Button>
+                  </div>
+                </Card>
               </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <DashboardLayout contentClassName="flex h-full w-full overflow-hidden p-0 communities-shell">
+      {content}
 
       {/* Diálogo para abandonar comunidad */}
       <GlassDialog open={leaveDialogOpen} onClose={() => (!isLeaving ? setLeaveDialogOpen(false) : undefined)} size="sm">
@@ -389,22 +413,23 @@ export const CommunitiesPage = () => {
             </p>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <UIButton
+            <Button
               type="button"
               variant="ghost"
               onClick={() => setLeaveDialogOpen(false)}
               disabled={isLeaving}
             >
               Cancelar
-            </UIButton>
-            <UIButton
+            </Button>
+            <Button
               type="button"
-              variant="destructive"
+              variant="primary"
+              className="bg-red-500/90 hover:bg-red-600/90 text-white border-red-400/30 focus:ring-red-400/35"
               onClick={() => void confirmLeaveCommunity()}
               loading={isLeaving}
             >
               Abandonar comunidad
-            </UIButton>
+            </Button>
           </div>
           <p className="text-[11px] text-[var(--color-muted)]">
             Si eres el dueño de la comunidad, primero debes eliminarla desde los ajustes de la comunidad.
@@ -430,7 +455,7 @@ export const CommunitiesPage = () => {
             </label>
             <div className="flex items-center gap-2 rounded-xl border border-white/40 bg-white/80 px-3 py-2 text-xs text-[var(--color-text)] shadow-sm dark:border-white/10 dark:bg-slate-900/80">
               <span className="flex-1 truncate">{inviteLink}</span>
-              <UIButton
+              <Button
                 type="button"
                 size="sm"
                 variant="secondary"
@@ -445,16 +470,34 @@ export const CommunitiesPage = () => {
                 }}
               >
                 Copiar
-              </UIButton>
+              </Button>
             </div>
           </div>
           <div className="flex justify-end pt-2">
-            <UIButton type="button" variant="ghost" onClick={() => setInviteDialogOpen(false)}>
+            <Button type="button" variant="ghost" onClick={() => setInviteDialogOpen(false)}>
               Cerrar
-            </UIButton>
+            </Button>
           </div>
         </div>
       </GlassDialog>
+
+      {/* Diálogo para crear comunidad */}
+      <CreateCommunityDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onSubmit={async ({ name, iconFile }) => {
+          const group = await groupService.createGroup({ name });
+          if (iconFile) {
+            await groupService.uploadCommunityIcon(group.id, iconFile);
+          }
+          await queryClient.invalidateQueries({ queryKey: ['myGroups'] });
+          toast.success('Tu nueva comunidad está lista ✨');
+          setCreateDialogOpen(false);
+          setIsExploring(false);
+          navigate(`/communities/${group.id}`);
+        }}
+        isLoading={createCommunityMutation.isPending}
+      />
     </DashboardLayout>
   );
 };

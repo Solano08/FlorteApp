@@ -53,6 +53,32 @@ CREATE TABLE IF NOT EXISTS user_blocks (
     INDEX idx_blocked (blocked_id)
 ) ENGINE=InnoDB;
 
+-- Friend requests and friendships
+CREATE TABLE IF NOT EXISTS friend_requests (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    sender_id CHAR(36) NOT NULL,
+    receiver_id CHAR(36) NOT NULL,
+    status ENUM('pending','accepted','rejected') NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_friend_request (sender_id, receiver_id),
+    FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE,
+    INDEX idx_friend_requests_sender (sender_id),
+    INDEX idx_friend_requests_receiver (receiver_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS friends (
+    user_id CHAR(36) NOT NULL,
+    friend_id CHAR(36) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, friend_id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users (id) ON DELETE CASCADE,
+    INDEX idx_friends_user (user_id),
+    INDEX idx_friends_friend (friend_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS chats (
     id CHAR(36) NOT NULL PRIMARY KEY,
     name VARCHAR(160),

@@ -1,21 +1,8 @@
 import { FC, useMemo, useState, useRef, useEffect } from 'react';
-import { Hash, UserPlus, ChevronDown, Settings, Plus, FolderPlus, Check, X } from 'lucide-react';
+import { Hash, UserPlus, ChevronDown, Settings, Plus, Check, X } from 'lucide-react';
 import { Channel } from '../../types/channel';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { TextArea } from '../ui/TextArea';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Group } from '../../types/group';
-
-const channelSchema = z.object({
-  name: z.string().min(1, 'El nombre del canal es obligatorio'),
-  description: z.string().optional()
-});
-
-type ChannelValues = z.infer<typeof channelSchema>;
 
 interface ChannelSidebarProps {
   channels: Channel[];
@@ -42,7 +29,6 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const { communityId, channelId } = useParams<{ communityId?: string; channelId?: string }>();
-  const [showCreateForm, setShowCreateForm] = useState(false);
   const [isCommunityMenuOpen, setIsCommunityMenuOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
@@ -53,19 +39,6 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors }
-  } = useForm<ChannelValues>({
-    resolver: zodResolver(channelSchema),
-    defaultValues: {
-      name: '',
-      description: ''
-    }
-  });
-
   const { textChannels, voiceChannels } = useMemo(() => {
     const sorted = [...channels].sort((a, b) => a.position - b.position);
     return {
@@ -74,22 +47,10 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     };
   }, [channels]);
 
-  const handleFormSubmit = async (values: ChannelValues) => {
-    if (!onCreateChannel) return;
-    try {
-      await onCreateChannel(values);
-      reset();
-      setShowCreateForm(false);
-    } catch (error) {
-      // El error se maneja en la mutación
-      console.error('Error al crear canal:', error);
-    }
-  };
-
-  const handleCreateTextChannelInline = async () => {
+  const handleCreateTextChannelInline = () => {
     if (!onCreateChannel || !newTextChannelName.trim() || isSubmitting) return;
     try {
-      await onCreateChannel({ name: newTextChannelName.trim() });
+      onCreateChannel({ name: newTextChannelName.trim() });
       setNewTextChannelName('');
       setIsCreatingTextChannel(false);
     } catch (error) {
@@ -237,7 +198,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
       {/* Contenedor de canales con scroll */}
       <div className="flex flex-1 min-h-0 flex-col px-3 py-3">
         {/* Lista de canales */}
-        <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+          <div className="flex-1 space-y-3 overflow-y-auto pr-1">
           {isLoadingChannels || isLoading ? (
             <p className="text-[11px] text-[var(--color-muted)]">Cargando canales...</p>
           ) : textChannels.length === 0 && voiceChannels.length === 0 ? (
@@ -255,19 +216,18 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] flex-1">
                       Texto
                     </p>
-                    {hoveredCategory === 'texto' && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsCreatingTextChannel(true);
-                        }}
-                        className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150"
-                        aria-label="Crear canal en Texto"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsCreatingTextChannel(true);
+                      }}
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150
+                        ${hoveredCategory === 'texto' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                      aria-label="Crear canal en Texto"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                   {isCreatingTextChannel && (
                     <div className="mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
@@ -324,24 +284,23 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                         >
                           <button
                             onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
-                            className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] transition-all duration-200 ${
+                            className={`relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
                               isActive
-                                ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/15 dark:from-sena-green/25 dark:to-emerald-500/25 text-sena-green dark:text-emerald-400 font-medium shadow-sm'
-                                : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-700/60 hover:text-[var(--color-text)]'
+                                ? 'bg-white/80 dark:bg-slate-800/80 text-sena-green dark:text-emerald-400 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 dark:before:bg-emerald-500/60 before:rounded-full'
+                                : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-slate-700/50 hover:text-[var(--color-text)]'
                             }`}
                           >
                             <Hash className="h-4 w-4 flex-shrink-0" />
                             <span className="truncate flex-1">{channel.name}</span>
-                            {hoveredChannel === channel.id && (
-                              <button
-                                type="button"
-                                onClick={(e) => handleChannelSettings(channel.id, e)}
-                                className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
-                                aria-label="Ajustes del canal"
-                              >
-                                <Settings className="h-3.5 w-3.5" />
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => handleChannelSettings(channel.id, e)}
+                              className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
+                              aria-label="Ajustes del canal"
+                              style={{ pointerEvents: hoveredChannel === channel.id ? 'auto' : 'none' }}
+                            >
+                              <Settings className="h-3.5 w-3.5" />
+                            </button>
                           </button>
                         </div>
                       );
@@ -361,19 +320,18 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] flex-1">
                       Voz
                     </p>
-                    {hoveredCategory === 'voz' && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCreateChannelInCategory('voz');
-                        }}
-                        className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150"
-                        aria-label="Crear canal en Voz"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsCreatingTextChannel(true);
+                      }}
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150
+                        ${hoveredCategory === 'voz' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                      aria-label="Crear canal en Voz"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                   <div className="space-y-0.5">
                     {voiceChannels.map((channel) => {
@@ -387,24 +345,23 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                         >
                           <button
                             onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
-                            className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] transition-all duration-200 ${
+                            className={`relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
                               isActive
-                                ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/15 dark:from-sena-green/25 dark:to-emerald-500/25 text-sena-green dark:text-emerald-400 font-medium shadow-sm'
-                                : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-700/60 hover:text-[var(--color-text)]'
+                                ? 'bg-white/80 dark:bg-slate-800/80 text-sena-green dark:text-emerald-400 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 dark:before:bg-emerald-500/60 before:rounded-full'
+                                : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-slate-700/50 hover:text-[var(--color-text)]'
                             }`}
                           >
                             <Hash className="h-4 w-4 flex-shrink-0" />
                             <span className="truncate flex-1">{channel.name}</span>
-                            {hoveredChannel === channel.id && (
-                              <button
-                                type="button"
-                                onClick={(e) => handleChannelSettings(channel.id, e)}
-                                className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
-                                aria-label="Ajustes del canal"
-                              >
-                                <Settings className="h-3.5 w-3.5" />
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => handleChannelSettings(channel.id, e)}
+                              className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
+                              aria-label="Ajustes del canal"
+                              style={{ pointerEvents: hoveredChannel === channel.id ? 'auto' : 'none' }}
+                            >
+                              <Settings className="h-3.5 w-3.5" />
+                            </button>
                           </button>
                         </div>
                       );

@@ -8,6 +8,8 @@ import libraryRoutes from './libraryRoutes';
 import adminRoutes from './adminRoutes';
 import userRoutes from './userRoutes';
 import feedRoutes from './feedRoutes';
+import friendRoutes from './friendRoutes';
+import notificationRoutes from './notificationRoutes';
 
 export const router = Router();
 
@@ -20,3 +22,5 @@ router.use('/library', libraryRoutes);
 router.use('/admin', adminRoutes);
 router.use('/users', userRoutes);
 router.use('/feed', feedRoutes);
+router.use('/friends', friendRoutes);
+router.use('/notifications', notificationRoutes);

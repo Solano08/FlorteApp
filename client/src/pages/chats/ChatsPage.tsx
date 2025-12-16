@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { chatService } from '../../services/chatService';
 import { userService } from '../../services/userService';
+import { friendService } from '../../services/friendService';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { GlassDialog } from '../../components/ui/GlassDialog';
@@ -54,6 +55,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useToast } from '../../hooks/useToast';
 import { resolveAssetUrl } from '../../utils/media';
 import { Message } from '../../types/chat';
+import type { Profile } from '../../types/profile';
 
 type ChatFilter = 'all' | 'unread' | 'favorites' | 'groups' | 'archived';
 
@@ -65,52 +67,16 @@ const filterTabs: Array<{ value: ChatFilter; label: string; icon?: typeof Star |
   { value: 'archived', label: 'Archivados', icon: Archive }
 ];
 
-const createChatSchema = z
-  .object({
-    chatType: z.enum(['direct', 'group']),
-    name: z.string().trim().optional(),
-    memberIds: z.string().min(1, 'Ingresa al menos un identificador')
-  })
-  .superRefine((values, ctx) => {
-    const members = values.memberIds
-      .split(',')
-      .map((id) => id.trim())
-      .filter(Boolean);
-
-    if (members.length === 0) {
-      ctx.addIssue({
-        path: ['memberIds'],
-        code: 'custom',
-        message: 'Ingresa al menos un identificador valido'
-      });
-    }
-
-    if (values.chatType === 'direct' && members.length !== 1) {
-      ctx.addIssue({
-        path: ['memberIds'],
-        code: 'custom',
-        message: 'Los chats privados requieren exactamente un destinatario'
-      });
-    }
-
-    if (values.chatType === 'group') {
-      const name = values.name?.trim();
-      if (!name || name.length < 3) {
-        ctx.addIssue({
-          path: ['name'],
-          code: 'custom',
-          message: 'Define un nombre para el grupo (minimo 3 caracteres)'
-        });
-      }
-    }
-  });
+const createChatSchema = z.object({
+  chatType: z.enum(['direct', 'group']),
+  name: z.string().trim().optional()
+});
 
 type CreateChatValues = z.infer<typeof createChatSchema>;
 
 const initialCreateChatValues: CreateChatValues = {
   chatType: 'direct',
-  name: '',
-  memberIds: ''
+  name: ''
 };
 
 const formatLastActivity = (iso: string) => {
@@ -167,12 +133,12 @@ export const ChatsPage = () => {
   const queryClient = useQueryClient();
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
 
   const [activeFilter, setActiveFilter] = useState<ChatFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const [showNewChat, setShowNewChat] = useState(false);
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const [newChatType, setNewChatType] = useState<'direct' | 'group' | null>(null);
   const [message, setMessage] = useState('');
@@ -231,6 +197,9 @@ export const ChatsPage = () => {
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
+  const [selectedFriendIds, setSelectedFriendIds] = useState<Set<string>>(new Set());
+  const [createChatError, setCreateChatError] = useState<string | null>(null);
+
   const { data: chats = [], isLoading: isLoadingChats } = useQuery({
     queryKey: ['chats'],
     queryFn: chatService.listChats,
@@ -238,10 +207,22 @@ export const ChatsPage = () => {
   });
 
   useEffect(() => {
-    if (!selectedChatId && chats.length > 0) {
+    if (chats.length === 0) return;
+
+    const params = new URLSearchParams(location.search);
+    const targetChatId = params.get('chatId');
+
+    if (targetChatId && chats.some((chat) => chat.id === targetChatId)) {
+      if (selectedChatId !== targetChatId) {
+        setSelectedChatId(targetChatId);
+      }
+      return;
+    }
+
+    if (!selectedChatId) {
       setSelectedChatId(chats[0].id);
     }
-  }, [chats, selectedChatId]);
+  }, [chats, selectedChatId, location.search]);
 
   // Marcar chat como leído cuando se selecciona
   useEffect(() => {
@@ -260,6 +241,11 @@ export const ChatsPage = () => {
       });
     }
   }, [selectedChatId]);
+
+  const { data: friends = [], isLoading: isLoadingFriends } = useQuery<Profile[]>({
+    queryKey: ['friends'],
+    queryFn: friendService.listFriends
+  });
 
   const { data: messages = [], isFetching: isFetchingMessages } = useQuery({
     enabled: Boolean(selectedChatId),
@@ -475,15 +461,47 @@ export const ChatsPage = () => {
   );
 
   const handleCreateChat = handleSubmit((values) => {
-    const members = values.memberIds
-      .split(',')
-      .map((id) => id.trim())
-      .filter(Boolean);
+    setCreateChatError(null);
+
+    const members = Array.from(selectedFriendIds);
+
+    if (!newChatType) {
+      setCreateChatError('Selecciona el tipo de conversación.');
+      return;
+    }
+
+    if (newChatType === 'direct') {
+      if (members.length !== 1) {
+        setCreateChatError('Selecciona exactamente un amigo para el chat privado.');
+        return;
+      }
+    }
+
+    if (newChatType === 'group') {
+      if (members.length === 0) {
+        setCreateChatError('Selecciona al menos un amigo para el grupo.');
+        return;
+      }
+      const name = values.name?.trim();
+      if (!name || name.length < 3) {
+        setCreateChatError('Define un nombre para el grupo (mínimo 3 caracteres).');
+        return;
+      }
+    }
+
+    // Para chats privados, usar el nombre del amigo seleccionado como nombre del chat
+    let chatName: string | undefined;
+    if (newChatType === 'direct' && members.length === 1) {
+      const friend = friends.find((f) => f.id === members[0]);
+      if (friend) {
+        chatName = `${friend.firstName} ${friend.lastName}`.trim() || undefined;
+      }
+    }
 
     createChatMutation.mutate(
       {
-        name: values.chatType === 'group' ? values.name?.trim() || undefined : undefined,
-        isGroup: values.chatType === 'group',
+        name: newChatType === 'group' ? values.name?.trim() || undefined : chatName,
+        isGroup: newChatType === 'group',
         memberIds: members
       },
       {
@@ -492,6 +510,7 @@ export const ChatsPage = () => {
           setShowNewChat(false);
           setShowNewChatDialog(false);
           setNewChatType(null);
+          setSelectedFriendIds(new Set());
         }
       }
     );
@@ -500,7 +519,8 @@ export const ChatsPage = () => {
   const handleNewChatTypeSelection = (type: 'direct' | 'group') => {
     setNewChatType(type);
     setValue('chatType', type);
-    setShowNewChat(true);
+    setSelectedFriendIds(new Set());
+    setCreateChatError(null);
   };
 
   const handleSendMessage = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -1239,97 +1259,7 @@ export const ChatsPage = () => {
                 })}
               </div>
 
-              {showNewChat && (
-                <form
-                  className="space-y-4 rounded-[24px] px-4 py-4 text-xs text-[var(--color-text)] glass-liquid-strong"
-                  onSubmit={handleCreateChat}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                    <span>Tipo de chat</span>
-                    <div className="flex items-center gap-1 rounded-full bg-white/15 p-1">
-                      <label
-                        className={classNames(
-                          'flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 transition',
-                          chatType === 'direct'
-                            ? 'bg-white text-sena-green shadow-[0_10px_20px_rgba(57,169,0,0.18)]'
-                            : 'text-[var(--color-muted)]'
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          value="direct"
-                          className="hidden"
-                          {...register('chatType')}
-                          checked={chatType === 'direct'}
-                        />
-                        <UserIcon className="h-3.5 w-3.5" />
-                        Privado
-                      </label>
-                      <label
-                        className={classNames(
-                          'flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 transition',
-                          chatType === 'group'
-                            ? 'bg-white text-sena-green shadow-[0_10px_20px_rgba(57,169,0,0.18)]'
-                            : 'text-[var(--color-muted)]'
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          value="group"
-                          className="hidden"
-                          {...register('chatType')}
-                          checked={chatType === 'group'}
-                        />
-                        <UsersIcon className="h-3.5 w-3.5" />
-                        Grupo
-                      </label>
-                    </div>
-                  </div>
-
-                  {chatType === 'group' && (
-                    <div className="flex flex-col gap-2 text-xs font-medium">
-                      <span>Nombre del grupo</span>
-                      <input
-                        type="text"
-                        placeholder="Proyecto de innovacion"
-                        className="rounded-xl glass-liquid px-3 py-2 text-xs outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
-                        {...register('name')}
-                      />
-                      {errors.name && <span className="text-[11px] text-rose-400">{errors.name.message}</span>}
-                    </div>
-                  )}
-
-                  <div className="flex flex-col gap-2 text-xs font-medium">
-                    <span>{chatType === 'group' ? 'Integrantes' : 'Destinatario'}</span>
-                    <textarea
-                      rows={chatType === 'group' ? 3 : 2}
-                      placeholder={chatType === 'group' ? 'ID1, ID2, ID3...' : 'ID del destinatario'}
-                      className="resize-none rounded-xl glass-liquid px-3 py-2 text-xs outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
-                      {...register('memberIds')}
-                    />
-                    {errors.memberIds && <span className="text-[11px] text-rose-400">{errors.memberIds.message}</span>}
-                    <span className="text-[10px] text-[var(--color-muted)]">Separa cada identificador con una coma.</span>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="px-2.5 text-[11px]"
-                      onClick={() => {
-                        reset(initialCreateChatValues);
-                        setShowNewChat(false);
-                      }}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button type="submit" size="sm" className="px-3 text-[11px]" loading={createChatMutation.isPending}>
-                      Crear chat
-                    </Button>
-                  </div>
-                </form>
-              )}
+              {/* Formulario inline de creación de chat eliminado; ahora sólo se usa el diálogo modal. */}
             </div>
 
             {isSelectionMode && selectedChats.size > 0 && (
@@ -2853,10 +2783,7 @@ export const ChatsPage = () => {
 
           {newChatType && showNewChat && (
             <div className="mt-4 rounded-2xl border border-white/20 bg-white/5 p-4">
-              <form
-                onSubmit={handleCreateChat}
-                className="space-y-4"
-              >
+              <form onSubmit={handleCreateChat} className="space-y-4">
                 {newChatType === 'group' && (
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-semibold text-[var(--color-text)]">Nombre del grupo</label>
@@ -2872,16 +2799,78 @@ export const ChatsPage = () => {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-semibold text-[var(--color-text)]">
-                    {newChatType === 'group' ? 'Integrantes' : 'Destinatario'}
+                    {newChatType === 'group' ? 'Selecciona amigos para el grupo' : 'Elige un amigo para chatear'}
                   </label>
-                  <textarea
-                    rows={newChatType === 'group' ? 3 : 2}
-                    placeholder={newChatType === 'group' ? 'ID1, ID2, ID3...' : 'ID del destinatario'}
-                    className="resize-none rounded-xl glass-liquid px-3 py-2 text-sm outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
-                    {...register('memberIds')}
-                  />
-                  {errors.memberIds && <span className="text-[11px] text-rose-400">{errors.memberIds.message}</span>}
-                  <span className="text-[10px] text-[var(--color-muted)]">Separa cada identificador con una coma.</span>
+                  {isLoadingFriends ? (
+                    <p className="text-xs text-[var(--color-muted)]">Cargando amigos…</p>
+                  ) : friends.length === 0 ? (
+                    <p className="text-xs text-[var(--color-muted)]">
+                      Aún no tienes amigos agregados. Envía solicitudes desde los perfiles públicos.
+                    </p>
+                  ) : (
+                    <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
+                      {friends.map((friend) => {
+                        const isSelected = selectedFriendIds.has(friend.id);
+                        const avatarUrl =
+                          friend.avatarUrl ??
+                          `https://avatars.dicebear.com/api/initials/${encodeURIComponent(
+                            `${friend.firstName} ${friend.lastName}`
+                          )}.svg`;
+                        return (
+                          <button
+                            key={friend.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedFriendIds((prev) => {
+                                const next = new Set(prev);
+                                if (newChatType === 'direct') {
+                                  next.clear();
+                                  next.add(friend.id);
+                                } else {
+                                  if (next.has(friend.id)) {
+                                    next.delete(friend.id);
+                                  } else {
+                                    next.add(friend.id);
+                                  }
+                                }
+                                return next;
+                              });
+                              setCreateChatError(null);
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition ${
+                              isSelected
+                                ? 'bg-sena-green/10 border border-sena-green/40'
+                                : 'glass-liquid hover:bg-white/40'
+                            }`}
+                          >
+                            <img
+                              src={resolveAssetUrl(avatarUrl) ?? avatarUrl}
+                              alt={friend.firstName}
+                              className="h-9 w-9 rounded-full object-cover"
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-[var(--color-text)]">
+                                {friend.firstName} {friend.lastName}
+                              </p>
+                              {friend.headline && (
+                                <p className="text-[11px] text-[var(--color-muted)] line-clamp-1">
+                                  {friend.headline}
+                                </p>
+                              )}
+                            </div>
+                            <div
+                              className={`h-4 w-4 rounded-full border ${
+                                isSelected ? 'bg-sena-green border-sena-green' : 'border-[var(--color-muted)]'
+                              }`}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {createChatError && (
+                    <span className="text-[11px] text-rose-400">{createChatError}</span>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2">
@@ -2894,6 +2883,8 @@ export const ChatsPage = () => {
                       reset(initialCreateChatValues);
                       setNewChatType(null);
                       setShowNewChat(false);
+                      setSelectedFriendIds(new Set());
+                      setCreateChatError(null);
                     }}
                   >
                     Cancelar

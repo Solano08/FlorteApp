@@ -39,7 +39,7 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
               <button
                 key={community.id}
                 onClick={() => navigate(`/communities/${community.id}`)}
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-3xl transition-all duration-200 ${
+                className={`group relative flex h-12 w-12 items-center justify-center rounded-3xl overflow-visible transition-all duration-200 ${
                   isActive
                     ? 'bg-white/95 dark:bg-slate-900/90 text-[var(--color-text)] shadow-[0_6px_18px_rgba(15,23,42,0.18)] ring-2 ring-sena-green/60'
                     : 'bg-white/70 dark:bg-slate-700/70 text-[var(--color-text)] hover:bg-white/90 dark:hover:bg-slate-700/90 hover:shadow-md'

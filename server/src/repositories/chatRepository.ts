@@ -21,6 +21,20 @@ const mapMessage = (row: RowDataPacket): Message => ({
 });
 
 export const chatRepository = {
+  async findDirectChatBetween(userA: string, userB: string): Promise<Chat | null> {
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      `SELECT c.*
+       FROM chats c
+       INNER JOIN chat_members m1 ON m1.chat_id = c.id AND m1.user_id = :userA
+       INNER JOIN chat_members m2 ON m2.chat_id = c.id AND m2.user_id = :userB
+       WHERE c.is_group = 0
+       LIMIT 1`,
+      { userA, userB }
+    );
+    if (rows.length === 0) return null;
+    return mapChat(rows[0]);
+  },
+
   async createChat(input: CreateChatInput): Promise<Chat> {
     const connection = await getConnection();
     const chatId = crypto.randomUUID();

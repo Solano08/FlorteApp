@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { profileService } from '../../services/profileService';
 import { useAuth } from '../../hooks/useAuth';
 import { Github, Instagram, Facebook, Mail, Twitter, type LucideIcon } from 'lucide-react';
+import { friendService } from '../../services/friendService';
+import { chatService } from '../../services/chatService';
+import { useToast } from '../../hooks/useToast';
 
 type SocialKey = 'instagramUrl' | 'githubUrl' | 'facebookUrl' | 'xUrl' | 'contactEmail';
 
@@ -22,6 +25,7 @@ export const PublicProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useToast();
 
   useEffect(() => {
     if (userId && user?.id === userId) {
@@ -38,6 +42,59 @@ export const PublicProfilePage = () => {
   if (!userId) {
     return <Navigate to="/dashboard" replace />;
   }
+
+  const { data: friendRequests = [] } = useQuery({
+    queryKey: ['friendRequests'],
+    queryFn: friendService.listRequests
+  });
+
+  const sendRequestMutation = useMutation({
+    mutationFn: () => friendService.sendRequest(userId),
+    onSuccess: () => {
+      toast.success('Solicitud de amistad enviada');
+    },
+    onError: () => {
+      toast.error('No se pudo enviar la solicitud. Intenta nuevamente.');
+    }
+  });
+
+  const cancelRequestMutation = useMutation({
+    mutationFn: (requestId: string) => friendService.cancelRequest(requestId),
+    onSuccess: () => {
+      toast.success('Solicitud de amistad cancelada');
+    },
+    onError: () => {
+      toast.error('No se pudo cancelar la solicitud. Intenta nuevamente.');
+    }
+  });
+
+  const existingRequest = friendRequests.find((req) => {
+    if (!user) return false;
+    return (
+      (req.sender.id === user.id && req.receiver.id === userId) ||
+      (req.sender.id === userId && req.receiver.id === user.id)
+    );
+  });
+
+  const isOwnPendingRequest =
+    !!existingRequest && existingRequest.sender.id === user?.id && existingRequest.status === 'pending';
+  const isFriend =
+    !!existingRequest && existingRequest.status === 'accepted';
+
+  const startChatMutation = useMutation({
+    mutationFn: async () =>
+      await chatService.createChat({
+        isGroup: false,
+        memberIds: [userId],
+        name: profile ? `${profile.firstName} ${profile.lastName}` : undefined
+      }),
+    onSuccess: (chat) => {
+      navigate(`/chats?chatId=${chat.id}`);
+    },
+    onError: () => {
+      toast.error('No se pudo iniciar el chat. Intenta nuevamente.');
+    }
+  });
 
   return (
     <DashboardLayout
@@ -88,9 +145,32 @@ export const PublicProfilePage = () => {
                     {profile.role === 'admin' ? 'Administrador' : profile.role === 'instructor' ? 'Instructor' : 'Aprendiz'}
                   </p>
                 </div>
-                <div className="flex flex-1 justify-end">
-                  <Button variant="secondary" onClick={() => navigate('/chats')}>
+                <div className="flex flex-1 justify-end gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => startChatMutation.mutate()}
+                    loading={startChatMutation.isPending}
+                    disabled={startChatMutation.isPending || user?.id === profile.id}
+                  >
                     Enviar mensaje
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      if (isOwnPendingRequest && existingRequest) {
+                        cancelRequestMutation.mutate(existingRequest.id);
+                      } else {
+                        sendRequestMutation.mutate();
+                      }
+                    }}
+                    loading={sendRequestMutation.isPending || cancelRequestMutation.isPending}
+                    disabled={user?.id === profile.id || isFriend}
+                  >
+                    {isFriend
+                      ? 'Ya son amigos'
+                      : isOwnPendingRequest
+                        ? 'Solicitud enviada'
+                        : 'Enviar solicitud'}
                   </Button>
                 </div>
               </div>

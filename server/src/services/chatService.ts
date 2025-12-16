@@ -7,6 +7,14 @@ export const chatService = {
     if (input.memberIds.length === 0) {
       throw new AppError('Debes agregar al menos un integrante', 400);
     }
+    // Para chats privados (no grupo, exactamente 1 miembro) intentar reutilizar conversación existente
+    if (!input.isGroup && input.memberIds.length === 1) {
+      const otherUserId = input.memberIds[0];
+      const existing = await chatRepository.findDirectChatBetween(input.createdBy, otherUserId);
+      if (existing) {
+        return existing;
+      }
+    }
     return await chatRepository.createChat(input);
   },
 
