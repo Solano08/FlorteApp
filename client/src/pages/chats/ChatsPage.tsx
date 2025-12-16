@@ -209,6 +209,17 @@ export const ChatsPage = () => {
     refetchInterval: 5000, // Refrescar cada 5 segundos para obtener nuevos mensajes
   });
 
+  // Obtener chats ordenados por último mensaje (para seleccionar el más reciente)
+  const sortedChatsForSelection = useMemo(() => {
+    return [...chats]
+      .filter((chat) => !archivedChats.has(chat.id))
+      .sort((a, b) => {
+        const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
+  }, [chats, archivedChats]);
+
   useEffect(() => {
     if (chats.length === 0) return;
 
@@ -222,10 +233,11 @@ export const ChatsPage = () => {
       return;
     }
 
-    if (!selectedChatId) {
-      setSelectedChatId(chats[0].id);
+    // Seleccionar el último chat (el más reciente por mensaje)
+    if (!selectedChatId && sortedChatsForSelection.length > 0) {
+      setSelectedChatId(sortedChatsForSelection[0].id);
     }
-  }, [chats, selectedChatId, location.search]);
+  }, [chats, selectedChatId, location.search, sortedChatsForSelection]);
 
   // Marcar chat como leído cuando se selecciona
   useEffect(() => {
@@ -337,18 +349,30 @@ export const ChatsPage = () => {
   }, [messages]);
 
   // Scroll automático a los últimos mensajes cuando se cargan o cambian
+  const previousChatIdRef = useRef<string | null>(null);
   useEffect(() => {
+    const chatChanged = previousChatIdRef.current !== selectedChatId;
+    previousChatIdRef.current = selectedChatId;
+    
     if (messageListRef.current) {
-      // Usar requestAnimationFrame y setTimeout para asegurar que el DOM se haya actualizado completamente
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          if (messageListRef.current) {
-            messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
-          }
-        }, 150);
-      });
+      const container = messageListRef.current;
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+      
+      // Hacer scroll automático si:
+      // 1. Cambió el chat (siempre mostrar últimos mensajes al entrar)
+      // 2. El usuario está cerca del final (dentro de 150px)
+      // 3. O si estamos cargando mensajes por primera vez
+      if (chatChanged || isNearBottom || isFetchingMessages) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (container) {
+              container.scrollTop = container.scrollHeight;
+            }
+          });
+        });
+      }
     }
-  }, [sortedMessages, selectedChatId, isFetchingMessages]);
+  }, [sortedMessages.length, selectedChatId, isFetchingMessages]);
 
   const createChatMutation = useMutation({
     mutationFn: chatService.createChat,
@@ -604,6 +628,14 @@ export const ChatsPage = () => {
         onSuccess: () => {
           setMessage('');
           setAttachment(null);
+          // Scroll suave al final después de enviar el mensaje
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (messageListRef.current) {
+                messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+              }
+            });
+          });
         }
       }
     );
@@ -1351,7 +1383,7 @@ export const ChatsPage = () => {
               {/* Formulario inline de creación de chat eliminado; ahora sólo se usa el diálogo modal. */}
             </div>
 
-            {archivedChats.size > 0 && (
+            {tabStats.archived > 0 && (
               <div className="px-6 py-2">
                 <button
                   type="button"

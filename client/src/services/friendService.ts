@@ -1,6 +1,7 @@
 import { apiClient } from './apiClient';
 import type { Profile } from '../types/profile';
 import { normalizeProfile } from '../utils/media';
+import { mockDataService } from './mockDataService';
 
 export interface FriendRequest {
   id: string;
@@ -39,6 +40,9 @@ export const friendService = {
   },
 
   async listFriends(): Promise<Profile[]> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      return await mockDataService.getFriends();
+    }
     const { data } = await apiClient.get<{ success: boolean; friends: Profile[] }>('/friends');
     return data.friends.map(normalizeProfile);
   }

@@ -1,13 +1,20 @@
 import { apiClient } from './apiClient';
 import { CreateGroupPayload, Group } from '../types/group';
+import { mockDataService } from './mockDataService';
 
 export const groupService = {
   async listGroups(): Promise<Group[]> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      return await mockDataService.getAllGroups();
+    }
     const { data } = await apiClient.get<{ success: boolean; groups: Group[] }>('/groups');
     return data.groups;
   },
 
   async listMyGroups(): Promise<Group[]> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      return await mockDataService.getMyGroups();
+    }
     const { data } = await apiClient.get<{ success: boolean; groups: Group[] }>('/groups/me');
     return data.groups;
   },
@@ -18,6 +25,11 @@ export const groupService = {
   },
 
   async getGroup(groupId: string): Promise<Group> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      const group = await mockDataService.getGroupById(groupId);
+      if (!group) throw new Error('Comunidad no encontrada');
+      return group;
+    }
     const { data } = await apiClient.get<{ success: boolean; group: Group }>(`/groups/${groupId}`);
     return data.group;
   },

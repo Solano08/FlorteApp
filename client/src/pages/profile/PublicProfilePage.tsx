@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { UserAvatar } from '../../components/ui/UserAvatar';
 import { profileService } from '../../services/profileService';
 import { useAuth } from '../../hooks/useAuth';
 import { Github, Instagram, Facebook, Mail, Twitter, type LucideIcon } from 'lucide-react';
@@ -124,16 +125,15 @@ export const PublicProfilePage = () => {
             />
             <div className="-mt-14 px-6 pb-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                <img
-                  src={
-                    profile.avatarUrl ??
-                    `https://avatars.dicebear.com/api/initials/${encodeURIComponent(
-                      `${profile.firstName} ${profile.lastName}`
-                    )}.svg`
-                  }
-                  alt={profile.firstName}
-                  className="h-20 w-20 rounded-2xl border-4 border-white object-cover shadow-[0_10px_20px_rgba(18,55,29,0.25)]"
-                />
+                <div className="[&>div>div]:border-4 [&>div>div]:border-white [&>div>div]:rounded-full">
+                  <UserAvatar
+                    firstName={profile.firstName}
+                    lastName={profile.lastName}
+                    avatarUrl={profile.avatarUrl}
+                    size="xl"
+                    className="shadow-[0_10px_20px_rgba(18,55,29,0.25)]"
+                  />
+                </div>
                 <div className="space-y-1">
                   <h1 className="text-2xl font-semibold text-[var(--color-text)]">
                     {profile.firstName} {profile.lastName}

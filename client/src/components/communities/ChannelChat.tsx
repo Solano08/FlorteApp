@@ -1,8 +1,9 @@
 import { FC, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Hash, Send, MoreVertical, Plus, Smile, Info, Users, Pin, X } from 'lucide-react';
+import { Hash, Send, MoreVertical, Plus, Smile, Info, Users, Pin, X, Reply, Copy, Forward, Star, Flag, Trash2 } from 'lucide-react';
 import { ChannelMessage } from '../../types/channel';
 import { Button } from '../ui/Button';
 import { GlassDialog } from '../ui/GlassDialog';
+import { EmojiPicker } from '../ui/EmojiPicker';
 import { resolveAssetUrl } from '../../utils/media';
 import { useAuthContext } from '../../contexts/AuthContext';
 
@@ -26,10 +27,12 @@ export const ChannelChat: FC<ChannelChatProps> = ({
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [openMessageMenuId, setOpenMessageMenuId] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [pinnedMenuOpen, setPinnedMenuOpen] = useState(false);
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [pollDialogOpen, setPollDialogOpen] = useState(false);
   const [pollTitle, setPollTitle] = useState('');
@@ -38,6 +41,9 @@ export const ChannelChat: FC<ChannelChatProps> = ({
   const [pollVotes, setPollVotes] = useState<Record<string, string | null>>({});
   const pinnedMenuRef = useRef<HTMLDivElement | null>(null);
   const membersPanelRef = useRef<HTMLElement | null>(null);
+  const messageMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Cerrar menú de mensajes fijados al hacer clic fuera
   useEffect(() => {
@@ -75,6 +81,45 @@ export const ChannelChat: FC<ChannelChatProps> = ({
     };
   }, [membersOpen]);
 
+  // Cerrar menú de mensajes al hacer clic fuera
+  useEffect(() => {
+    if (!openMessageMenuId) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const menuRef = messageMenuRefs.current[openMessageMenuId];
+      if (menuRef && !menuRef.contains(event.target as Node)) {
+        setOpenMessageMenuId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMessageMenuId]);
+
+  // Cerrar emoji picker al hacer clic fuera
+  useEffect(() => {
+    if (!emojiPickerOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(target) &&
+        emojiButtonRef.current &&
+        !emojiButtonRef.current.contains(target)
+      ) {
+        setEmojiPickerOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [emojiPickerOpen]);
+
   const getAvatarColorClasses = (id?: string | null) => {
     const palette = [
       'bg-sena-green/15 text-sena-green',
@@ -91,11 +136,25 @@ export const ChannelChat: FC<ChannelChatProps> = ({
     return palette[sum % palette.length];
   };
 
+  const previousChannelNameRef = useRef<string>('');
   useEffect(() => {
-    if (messages.length > 0) {
-      endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const channelChanged = previousChannelNameRef.current !== channelName;
+    previousChannelNameRef.current = channelName;
+    
+    // Siempre hacer scroll al final cuando:
+    // 1. Cambia el canal (entrar a un nuevo canal)
+    // 2. Se cargan mensajes por primera vez
+    // 3. Hay nuevos mensajes
+    if (channelChanged || (!isLoadingMessages && messages.length > 0)) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (endRef.current) {
+            endRef.current.scrollIntoView({ behavior: channelChanged ? 'auto' : 'smooth' });
+          }
+        });
+      });
     }
-  }, [messages]);
+  }, [messages, channelName, isLoadingMessages]);
 
   const activeMembers = useMemo(() => {
     const map = new Map<string, { id: string; name: string; avatarUrl?: string | null }>();
@@ -398,20 +457,106 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                           <p className="flex-1 break-words">
                             {message.content}
                           </p>
-                          <button
-                            type="button"
-                            className={`ml-2 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[var(--color-muted)] transition-all duration-150 hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-slate-700/80 ${
-                              hoveredMessageId === message.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                            }`}
-                            onClick={() => {
-                              if (message.content) {
-                                void navigator.clipboard.writeText(message.content);
-                              }
-                            }}
-                            aria-label="Opciones del mensaje"
-                          >
-                            <MoreVertical className="h-3.5 w-3.5" />
-                          </button>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              className={`ml-2 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[var(--color-muted)] transition-all duration-150 hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-slate-700/80 ${
+                                hoveredMessageId === message.id || openMessageMenuId === message.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                              }`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMessageMenuId(openMessageMenuId === message.id ? null : message.id);
+                              }}
+                              aria-label="Opciones del mensaje"
+                            >
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </button>
+                            {openMessageMenuId === message.id && (
+                              <div
+                                ref={(el) => {
+                                  messageMenuRefs.current[message.id] = el;
+                                }}
+                                className={`absolute ${isOwn ? 'left-0' : 'right-0'} top-8 z-50 w-48 rounded-2xl glass-frosted p-2 text-sm text-[var(--color-text)]`}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setContent(`@${message.sender?.firstName || 'Usuario'} `);
+                                    setOpenMessageMenuId(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                >
+                                  <Reply className="h-4 w-4 text-sena-green" /> Responder
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (message.content) {
+                                      void navigator.clipboard.writeText(message.content);
+                                    }
+                                    setOpenMessageMenuId(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                >
+                                  <Copy className="h-4 w-4 text-sena-green" /> Copiar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (message.content) {
+                                      setContent(message.content);
+                                    }
+                                    setOpenMessageMenuId(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                >
+                                  <Forward className="h-4 w-4 text-sena-green" /> Reenviar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    // TODO: Implementar fijar mensaje
+                                    setOpenMessageMenuId(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                >
+                                  <Pin className="h-4 w-4 text-sena-green" /> Fijar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    // TODO: Implementar destacar mensaje
+                                    setOpenMessageMenuId(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                >
+                                  <Star className="h-4 w-4 text-sena-green" /> Destacar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    // TODO: Implementar reportar mensaje
+                                    setOpenMessageMenuId(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                                >
+                                  <Flag className="h-4 w-4 text-rose-500" /> Reportar
+                                </button>
+                                {isOwn && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      // TODO: Implementar eliminar mensaje
+                                      setOpenMessageMenuId(null);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-rose-500" /> Eliminar
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className={`mt-1 flex items-center text-[10px] text-[var(--color-muted)] ${isOwn ? 'justify-end' : 'justify-start'} gap-2`}>
                           <span>
@@ -513,12 +658,27 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                 onChange={(e) => setContent(e.target.value)}
                 className="flex-1 h-full border-none bg-transparent px-0 text-sm leading-snug placeholder:text-[var(--color-muted)] text-[var(--color-text)] outline-none focus:ring-0 focus:outline-none"
               />
-              <button
-                type="button"
-                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white/70 dark:bg-slate-800/70 text-[var(--color-muted)] transition-all duration-200 hover:bg-white/90 dark:hover:bg-slate-700/90 hover:text-sena-green hover:scale-105"
-              >
-                <Smile className="h-4 w-4" />
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  ref={emojiButtonRef}
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white/70 dark:bg-slate-800/70 text-[var(--color-muted)] transition-all duration-200 hover:bg-white/90 dark:hover:bg-slate-700/90 hover:text-sena-green hover:scale-105"
+                  onClick={() => setEmojiPickerOpen((prev) => !prev)}
+                >
+                  <Smile className="h-4 w-4" />
+                </button>
+                {emojiPickerOpen && (
+                  <div className="absolute bottom-full mb-2 right-0 z-50" ref={emojiPickerRef}>
+                    <EmojiPicker
+                      onEmojiSelect={(emoji) => {
+                        setContent((prev) => prev + emoji);
+                        setEmojiPickerOpen(false);
+                      }}
+                      onClose={() => setEmojiPickerOpen(false)}
+                    />
+                  </div>
+                )}
+              </div>
               <Button
                 type="submit"
                 size="sm"
@@ -568,7 +728,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
       {membersOpen && (
         <>
           <div
-            className="fixed inset-0 z-[100] bg-slate-950/20 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[100] bg-slate-950/20"
             onClick={() => setMembersOpen(false)}
           />
           <aside

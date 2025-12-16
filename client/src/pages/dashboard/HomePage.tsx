@@ -8,6 +8,7 @@ import { TextArea } from '../../components/ui/TextArea';
 import { Button } from '../../components/ui/Button';
 import { GlassDialog } from '../../components/ui/GlassDialog';
 import { EmojiPicker } from '../../components/ui/EmojiPicker';
+import { UserAvatar } from '../../components/ui/UserAvatar';
 import classNames from 'classnames';
 import { chatService } from '../../services/chatService';
 import { projectService } from '../../services/projectService';
@@ -36,6 +37,7 @@ import {
   Video,
   X,
   Users,
+  Users as UsersIcon,
   BookOpen
 } from 'lucide-react';
 import { Chat } from '../../types/chat';
@@ -260,9 +262,6 @@ export const HomePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const userDisplayName = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'FlorteApp';
-  const composerAvatarUrl =
-    resolveAssetUrl(user?.avatarUrl) ??
-    `https://avatars.dicebear.com/api/initials/${encodeURIComponent(userDisplayName)}.svg`;
 
   const appendEmoji = (value: string, emoji: string) => {
     const trimmed = value.trimEnd();
@@ -1086,9 +1085,6 @@ export const HomePage = () => {
     const isCommenting = commentMutation.isPending && commentMutation.variables?.postId === post.id;
     const viewerHasReaction = Boolean(post.viewerReaction);
     const formattedTime = formatTimeAgo(post.createdAt);
-    const authorAvatar =
-      resolveAssetUrl(post.author.avatarUrl) ??
-      `https://avatars.dicebear.com/api/initials/${encodeURIComponent(post.author.fullName)}.svg`;
     const reactionLabel = post.reactionCount === 1 ? 'reaccion' : 'reacciones';
     const commentLabel = post.commentCount === 1 ? 'comentario' : 'comentarios';
     const shareLabel = post.shareCount === 1 ? 'compartido' : 'compartidos';
@@ -1131,9 +1127,14 @@ export const HomePage = () => {
           <button
             type="button"
             onClick={() => handleNavigateToProfile(post.authorId)}
-            className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full glass-liquid p-[1px] transition hover:border-sena-green/50 sm:h-11 sm:w-11"
+            className="flex-shrink-0 overflow-visible transition hover:scale-105 sm:h-11 sm:w-11"
           >
-            <img src={authorAvatar} alt={post.author.fullName} className="h-full w-full rounded-full object-cover" />
+            <UserAvatar
+              fullName={post.author.fullName}
+              avatarUrl={post.author.avatarUrl}
+              size="md"
+              className="glass-liquid p-[1px] hover:border-sena-green/50"
+            />
           </button>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -1403,9 +1404,6 @@ export const HomePage = () => {
             ) : (
               <div className="space-y-3">
                 {comments.map((comment) => {
-                  const commentAvatar =
-                    resolveAssetUrl(comment.author.avatarUrl) ??
-                    `https://avatars.dicebear.com/api/initials/${encodeURIComponent(comment.author.fullName)}.svg`;
                   const resolvedCommentAttachmentUrl = comment.attachmentUrl ? resolveAssetUrl(comment.attachmentUrl) : null;
                   const commentAttachmentType = resolvedCommentAttachmentUrl ? detectMediaType(resolvedCommentAttachmentUrl) : null;
                   const commentAttachmentName = resolvedCommentAttachmentUrl ? extractFileName(resolvedCommentAttachmentUrl) : '';
@@ -1416,9 +1414,14 @@ export const HomePage = () => {
                       <button
                         type="button"
                         onClick={() => handleNavigateToProfile(comment.userId)}
-                        className="h-8 w-8 overflow-hidden rounded-full glass-liquid p-[1px] transition hover:border-sena-green/50"
+                        className="overflow-visible transition hover:scale-105"
                       >
-                        <img src={commentAvatar} alt={comment.author.fullName} className="h-full w-full rounded-full object-cover" />
+                        <UserAvatar
+                          fullName={comment.author.fullName}
+                          avatarUrl={comment.author.avatarUrl}
+                          size="sm"
+                          className="glass-liquid p-[1px] hover:border-sena-green/50"
+                        />
                       </button>
                       <div className="relative flex-1 rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
                         {isEditingComment ? (
@@ -1474,7 +1477,7 @@ export const HomePage = () => {
                                   <MoreHorizontal className="h-4 w-4" />
                                 </button>
                                 {commentMenuOpenId === comment.id && (
-                                  <div className="absolute right-0 top-8 z-20 w-48 rounded-2xl glass-frosted p-2 text-sm text-[var(--color-text)]">
+                                  <div className="absolute right-0 top-8 z-[200] w-48 rounded-2xl glass-frosted p-2 text-sm text-[var(--color-text)]">
                                     {canManageComment && (
                                       <button
                                         type="button"
@@ -1673,7 +1676,7 @@ export const HomePage = () => {
                           <Icon className="h-4 w-4" />
                         </button>
                         {isEmojiAction && isEmojiOpen && (
-                          <div className="absolute right-0 top-full z-50 mt-2" ref={emojiPickerRef}>
+                          <div className="absolute right-0 bottom-full z-50 mb-2" ref={emojiPickerRef}>
                             <EmojiPicker onEmojiSelect={handleEmojiSelect} onClose={closeEmojiPicker} />
                           </div>
                         )}
@@ -1886,11 +1889,16 @@ export const HomePage = () => {
 
           <Card className="relative z-30 overflow-visible glass-liquid p-4 sm:p-5 lg:p-6 mt-0" style={{ boxShadow: 'none' }}>
             <div className="flex items-start gap-2 sm:gap-3">
-              <img
-                src={composerAvatarUrl}
-                alt="composer"
-                className="h-9 w-9 flex-shrink-0 rounded-full object-cover shadow-[0_10px_18px_rgba(18,55,29,0.14)] sm:h-10 sm:w-10"
-              />
+              {user && (
+                <div className="flex-shrink-0 shadow-[0_10px_18px_rgba(18,55,29,0.14)]">
+                  <UserAvatar
+                    firstName={user.firstName}
+                    lastName={user.lastName}
+                    avatarUrl={user.avatarUrl}
+                    size="md"
+                  />
+                </div>
+              )}
               <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
                 <TextArea
                   placeholder="Comparte un nuevo avance, recurso o proyecto..."
@@ -2323,13 +2331,10 @@ export const HomePage = () => {
 
               <div className="rounded-2xl glass-liquid px-4 py-4 text-sm text-[var(--color-text)]">
                 <div className="flex items-start gap-3">
-                  <img
-                    src={
-                      resolveAssetUrl(shareTarget.author.avatarUrl) ??
-                      `https://avatars.dicebear.com/api/initials/${encodeURIComponent(shareTarget.author.fullName)}.svg`
-                    }
-                    alt={shareTarget.author.fullName}
-                    className="h-10 w-10 rounded-full object-cover"
+                  <UserAvatar
+                    fullName={shareTarget.author.fullName}
+                    avatarUrl={shareTarget.author.avatarUrl}
+                    size="md"
                   />
                   <div className="min-w-0">
                     <p className="font-semibold">{shareTarget.author.fullName}</p>
@@ -2453,7 +2458,7 @@ export const HomePage = () => {
           </GlassDialog>
         )}
 
-        {activeModalPost && (
+        {activeModalPost && !(reportTarget && reportTarget.type === 'comment') && (
           <GlassDialog
             open={Boolean(activeModalPost)}
             onClose={handleCloseCommentsModal}
@@ -2567,6 +2572,7 @@ export const HomePage = () => {
             onClose={() => setDeleteCommentTarget(null)}
             size="sm"
             preventCloseOnBackdrop={deleteCommentMutation.isPending}
+            contentClassName="glass-dialog-delete"
           >
             <div className="space-y-5">
               <div className="flex items-start justify-between gap-4">
@@ -2591,7 +2597,7 @@ export const HomePage = () => {
                   onClick={handleConfirmDeleteComment}
                   loading={deleteCommentMutation.isPending}
                   disabled={deleteCommentMutation.isPending}
-                  className="bg-rose-500/90 hover:bg-rose-500 text-white"
+                  className="!bg-rose-500 hover:!bg-rose-600 !text-white focus:!ring-rose-500/50 active:!bg-rose-700 !shadow-[0_4px_14px_rgba(239,68,68,0.4)] hover:!shadow-[0_6px_20px_rgba(239,68,68,0.5)] active:!shadow-[0_2px_8px_rgba(239,68,68,0.4)] border-rose-400/30"
                 >
                   Sí, eliminar
                 </Button>
@@ -2634,6 +2640,7 @@ export const HomePage = () => {
 const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [message, setMessage] = useState('');
 
   const { data: messages = [], isLoading } = useQuery({
@@ -2680,6 +2687,29 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
     return senderId; // Fallback al ID si no se encuentra
   };
 
+  // Obtener información del otro usuario del chat (solo si no es grupo)
+  const otherUser = useMemo(() => {
+    if (chat.isGroup) return null;
+    // Buscar en los mensajes
+    const otherUserMessage = messages.find((msg) => msg.senderId !== user?.id);
+    if (otherUserMessage) {
+      const friend = friends.find((f) => f.id === otherUserMessage.senderId);
+      if (friend) return friend;
+    }
+    // Si no encontramos en mensajes, usar createdBy
+    if (chat.createdBy !== user?.id) {
+      const friend = friends.find((f) => f.id === chat.createdBy);
+      if (friend) return friend;
+    }
+    return null;
+  }, [chat, messages, friends, user?.id]);
+
+  // Función para navegar al perfil
+  const handleNavigateToProfile = () => {
+    if (chat.isGroup || !otherUser) return;
+    navigate(`/profile/${otherUser.id}`);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9, y: 20, x: 20 }}
@@ -2696,14 +2726,36 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
     >
       <Card padded={false} className="flex h-96 flex-col overflow-hidden rounded-3xl glass-liquid-strong">
         <div className="flex items-center justify-between border-b border-white/20 px-4 py-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <img
-              src={`https://avatars.dicebear.com/api/initials/${encodeURIComponent(chat.name ?? 'Chat')}.svg`}
-              alt={chat.name ?? 'Chat'}
-              className="h-9 w-9 rounded-full object-cover flex-shrink-0"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-[var(--color-text)] truncate">{chat.name ?? 'Chat sin ttulo'}</p>
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            {chat.isGroup ? (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex-shrink-0 shadow-[0_8px_16px_rgba(0,0,0,0.15)]">
+                <UsersIcon className="h-5 w-5 text-white" />
+              </div>
+            ) : otherUser ? (
+              <div onClick={handleNavigateToProfile} className="cursor-pointer flex-shrink-0">
+                <UserAvatar
+                  firstName={otherUser.firstName}
+                  lastName={otherUser.lastName}
+                  avatarUrl={otherUser.avatarUrl}
+                  size="sm"
+                />
+              </div>
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex-shrink-0">
+                <UsersIcon className="h-5 w-5 text-white" />
+              </div>
+            )}
+            <div 
+              className="min-w-0 flex-1 cursor-pointer"
+              onClick={handleNavigateToProfile}
+            >
+              <p className="text-sm font-semibold text-[var(--color-text)] truncate hover:text-sena-green transition-colors">
+                {chat.isGroup 
+                  ? (chat.name ?? 'Grupo sin título')
+                  : otherUser
+                    ? `${otherUser.firstName} ${otherUser.lastName}`.trim() || otherUser.firstName || 'Usuario'
+                    : chat.name ?? 'Chat sin título'}
+              </p>
               <p className="text-xs text-[var(--color-muted)] truncate">
                 {lastMessage 
                   ? (lastMessage.content.length > 30 ? lastMessage.content.substring(0, 30) + '...' : lastMessage.content)

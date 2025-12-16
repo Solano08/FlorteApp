@@ -8,6 +8,7 @@ import {
   ReactionType
 } from '../types/feed';
 import { normalizeFeedComment, normalizeFeedPost, normalizeFeedReport } from '../utils/media';
+import { mockDataService } from './mockDataService';
 
 interface ListPostsResponse {
   success: boolean;
@@ -111,6 +112,18 @@ const normalizeReport = (report: FeedReport): FeedReport => normalizeFeedReport(
 
 export const feedService = {
   async listPosts(params?: { limit?: number; offset?: number }): Promise<FeedPostAggregate[]> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      const posts = await mockDataService.getAllPosts();
+      // Aplicar limit y offset si se proporcionan
+      let result = posts;
+      if (params?.offset) {
+        result = result.slice(params.offset);
+      }
+      if (params?.limit) {
+        result = result.slice(0, params.limit);
+      }
+      return result;
+    }
     const { data } = await apiClient.get<ListPostsResponse>('/feed', { params });
     return data.posts.map(normalizePost);
   },
@@ -159,6 +172,9 @@ export const feedService = {
   },
 
   async listComments(postId: string): Promise<FeedComment[]> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      return await mockDataService.getPostComments(postId);
+    }
     const { data } = await apiClient.get<CommentsListResponse>(`/feed/${postId}/comments`);
     return data.comments.map(normalizeComment);
   },

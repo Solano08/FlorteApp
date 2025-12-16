@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../ui/Button';
 import { GlassDialog } from '../ui/GlassDialog';
+import { UserAvatar } from '../ui/UserAvatar';
 import { Home, Library, FolderKanban, LogOut, Shield, MessageCircle, Settings, User, Users, X } from 'lucide-react';
 import classNames from 'classnames';
 import { UserRole } from '../../types/auth';
@@ -168,11 +169,15 @@ export const DashboardLayout = ({
                     {user?.firstName} {user?.lastName}
                   </p>
                 </div>
-                <img
-                  src={user?.avatarUrl ?? 'https://avatars.dicebear.com/api/initials/SENA.svg'}
-                  alt={user?.firstName}
-                  className="h-7 w-7 rounded-full object-cover shadow-[0_6px_14px_rgba(18,55,29,0.14)] md:h-8 md:w-8"
-                />
+                {user && (
+                  <UserAvatar
+                    firstName={user.firstName}
+                    lastName={user.lastName}
+                    avatarUrl={user.avatarUrl}
+                    size="sm"
+                    className="shadow-[0_6px_14px_rgba(18,55,29,0.14)]"
+                  />
+                )}
               </button>
               {isProfileMenuOpen && (
                 <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] rounded-2xl p-2.5 text-sm text-[var(--color-text)] glass-frosted">
@@ -263,11 +268,14 @@ export const DashboardLayout = ({
                 </span>
               )}
             </div>
-            <img
-              src={user?.avatarUrl ?? 'https://avatars.dicebear.com/api/initials/SENA.svg'}
-              alt={user?.firstName}
-              className="h-9 w-9 rounded-full object-cover"
-            />
+            {user && (
+              <UserAvatar
+                firstName={user.firstName}
+                lastName={user.lastName}
+                avatarUrl={user.avatarUrl}
+                size="md"
+              />
+            )}
           </button>
           <Button
             variant="ghost"
@@ -300,11 +308,15 @@ export const DashboardLayout = ({
 
         <div className="mt-6 space-y-4">
           <div className="flex items-center gap-4">
-            <img
-              src={user?.avatarUrl ?? 'https://avatars.dicebear.com/api/initials/SENA.svg'}
-              alt={user?.firstName}
-              className="h-16 w-16 rounded-full object-cover shadow-lg"
-            />
+            {user && (
+              <UserAvatar
+                firstName={user.firstName}
+                lastName={user.lastName}
+                avatarUrl={user.avatarUrl}
+                size="xl"
+                className="shadow-lg"
+              />
+            )}
             <div>
               <p className="text-lg font-semibold text-[var(--color-text)]">
                 {user?.firstName} {user?.lastName}

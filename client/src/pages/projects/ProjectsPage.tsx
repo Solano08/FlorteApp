@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { TextArea } from '../../components/ui/TextArea';
 import { GlassDialog } from '../../components/ui/GlassDialog';
+import { useAuth } from '../../hooks/useAuth';
 import {
   ClipboardList,
   Hammer,
@@ -23,7 +24,10 @@ import {
   ArrowUpRight,
   Filter,
   Plus,
-  X
+  X,
+  MoreHorizontal,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 const TITLE_MAX_LENGTH = 60;
@@ -45,6 +49,21 @@ const statusLabels: Record<'draft' | 'in_progress' | 'completed', string> = {
 };
 
 const statusOrder: Array<'draft' | 'in_progress' | 'completed'> = ['draft', 'in_progress', 'completed'];
+
+// Categorías de proyectos
+const projectCategories = [
+  { id: 'all', label: 'Todas las categorías', icon: FolderKanban },
+  { id: 'web', label: 'Web', icon: FolderKanban },
+  { id: 'mobile', label: 'Móvil', icon: FolderKanban },
+  { id: 'backend', label: 'Backend', icon: FolderKanban },
+  { id: 'frontend', label: 'Frontend', icon: FolderKanban },
+  { id: 'fullstack', label: 'Full Stack', icon: FolderKanban },
+  { id: 'ai', label: 'Inteligencia Artificial', icon: FolderKanban },
+  { id: 'iot', label: 'IoT', icon: FolderKanban },
+  { id: 'desktop', label: 'Escritorio', icon: FolderKanban }
+] as const;
+
+type ProjectCategory = typeof projectCategories[number]['id'];
 
 const statusDisplay: Record<
   'draft' | 'in_progress' | 'completed',
@@ -73,9 +92,16 @@ const statusDisplay: Record<
 export const ProjectsPage = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'in_progress' | 'completed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<ProjectCategory>('all');
+  const [showFiltersMenu, setShowFiltersMenu] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects'],
@@ -100,6 +126,24 @@ export const ProjectsPage = () => {
     }
   });
 
+  const editProjectMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { title?: string; description?: string; repositoryUrl?: string; status?: 'draft' | 'in_progress' | 'completed' } }) =>
+      projectService.updateProject(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
+      setProjectToEdit(null);
+      reset();
+    }
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: (id: string) => projectService.deleteProject(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
+      setProjectToDelete(null);
+    }
+  });
+
   const {
     register,
     handleSubmit,
@@ -117,12 +161,77 @@ export const ProjectsPage = () => {
     }
   });
 
+  // Cerrar menú al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!openMenuId) return;
+      const menuElement = menuRefs.current[openMenuId];
+      if (menuElement && !menuElement.contains(event.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuId]);
+
+
+  // Preparar formulario cuando se abre el diálogo de edición
+  useEffect(() => {
+    if (projectToEdit) {
+      setValue('title', projectToEdit.title);
+      setValue('description', projectToEdit.description || '');
+      setValue('repositoryUrl', projectToEdit.repositoryUrl || '');
+      setValue('status', projectToEdit.status);
+    }
+  }, [projectToEdit, setValue]);
+
+  // Función para obtener la categoría de un proyecto (simulado basado en palabras clave)
+  const getProjectCategory = (project: Project): ProjectCategory => {
+    const title = project.title.toLowerCase();
+    const description = (project.description || '').toLowerCase();
+    const text = `${title} ${description}`;
+
+    if (text.includes('mobile') || text.includes('móvil') || text.includes('android') || text.includes('ios') || text.includes('react native')) {
+      return 'mobile';
+    }
+    if (text.includes('backend') || text.includes('api') || text.includes('servidor') || text.includes('express') || text.includes('node')) {
+      return 'backend';
+    }
+    if (text.includes('frontend') || text.includes('react') || text.includes('vue') || text.includes('angular') || text.includes('ui')) {
+      return 'frontend';
+    }
+    if (text.includes('full stack') || text.includes('fullstack')) {
+      return 'fullstack';
+    }
+    if (text.includes('ia') || text.includes('ai') || text.includes('machine learning') || text.includes('ml') || text.includes('inteligencia artificial')) {
+      return 'ai';
+    }
+    if (text.includes('iot') || text.includes('internet of things')) {
+      return 'iot';
+    }
+    if (text.includes('desktop') || text.includes('escritorio') || text.includes('electron')) {
+      return 'desktop';
+    }
+    if (text.includes('web') || text.includes('sitio') || text.includes('página')) {
+      return 'web';
+    }
+    return 'web'; // Por defecto
+  };
+
   const filteredProjects = useMemo(() => {
     let filtered = projects;
     
     // Filtrar por estado
     if (statusFilter !== 'all') {
       filtered = filtered.filter((project: Project) => project.status === statusFilter);
+    }
+    
+    // Filtrar por categoría
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter((project: Project) => getProjectCategory(project) === categoryFilter);
     }
     
     // Filtrar por término de búsqueda
@@ -136,7 +245,7 @@ export const ProjectsPage = () => {
     }
     
     return filtered;
-  }, [projects, statusFilter, searchTerm]);
+  }, [projects, statusFilter, categoryFilter, searchTerm]);
 
   const stats = useMemo(
     () =>
@@ -156,6 +265,23 @@ export const ProjectsPage = () => {
   const learningHighlights = useMemo(() => {
     return projects.slice(0, 3);
   }, [projects]);
+
+  const handleMenuToggle = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpenMenuId((prev) => (prev === projectId ? null : projectId));
+  };
+
+  const handleEditProject = (project: Project, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProjectToEdit(project);
+    setOpenMenuId(null);
+  };
+
+  const handleDeleteProject = (project: Project, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProjectToDelete(project);
+    setOpenMenuId(null);
+  };
 
   return (
     <DashboardLayout
@@ -234,22 +360,55 @@ export const ProjectsPage = () => {
         <section className="mx-auto flex min-w-0 w-full max-w-3xl flex-col gap-5">
           {/* Barra de búsqueda */}
           <Card className="glass-liquid shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <div className="relative mx-auto w-full max-w-3xl">
+            <div className="flex items-center gap-3">
               <Input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Buscar proyectos, grupos o hashtags..."
-                className="pr-24 text-center placeholder:text-center rounded-2xl border-white/50 dark:border-white/15 focus:border-sena-green/40 focus:ring-2 focus:ring-sena-green/20"
+                className="flex-1 rounded-2xl border-white/50 dark:border-white/15 focus:border-sena-green/40 focus:ring-2 focus:ring-sena-green/20"
               />
               <Button
                 type="button"
                 variant="secondary"
-                className="absolute bottom-2 right-2 px-3 py-2 text-xs shadow-[0_4px_12px_rgba(57,169,0,0.2)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.3)] transition-all"
+                onClick={() => setShowFiltersMenu(!showFiltersMenu)}
+                className={`px-4 py-2 text-xs shadow-[0_4px_12px_rgba(57,169,0,0.2)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.3)] transition-all ${
+                  categoryFilter !== 'all' ? 'bg-sena-green/20 ring-2 ring-sena-green/40' : ''
+                }`}
                 leftIcon={<Filter className="h-4 w-4" />}
               >
                 Filtros
               </Button>
             </div>
+            {showFiltersMenu && (
+              <div className="mt-4 pt-4 border-t border-white/20 dark:border-white/10">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                  Categorías
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {projectCategories.map((category) => {
+                    const Icon = category.icon;
+                    const isSelected = categoryFilter === category.id;
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => setCategoryFilter(category.id)}
+                        className={`flex flex-col items-center gap-2 rounded-xl p-3 text-center transition-all duration-200 hover:scale-105 ${
+                          isSelected
+                            ? 'bg-sena-green/20 ring-2 ring-sena-green/40 shadow-lg'
+                            : 'bg-white/50 dark:bg-slate-800/50 hover:bg-white/70 dark:hover:bg-slate-700/70'
+                        }`}
+                      >
+                        <Icon className={`h-5 w-5 ${isSelected ? 'text-sena-green' : 'text-[var(--color-muted)]'}`} />
+                        <span className={`text-xs font-medium ${isSelected ? 'font-semibold text-sena-green' : 'text-[var(--color-text)]'}`}>
+                          {category.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Botón para crear nuevo proyecto */}
@@ -297,27 +456,63 @@ export const ProjectsPage = () => {
 
             {!isLoading && filteredProjects.length > 0 && (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredProjects.map((project: Project) => (
+                {filteredProjects.map((project: Project) => {
+                  const isOwner = user?.id === project.ownerId;
+                  return (
                   <Card
                     key={project.id}
-                    className="group flex flex-col space-y-4 transition-all duration-300 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:scale-[1.02] cursor-pointer"
+                    className="group relative flex flex-col space-y-4 transition-all duration-300 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:scale-[1.02] cursor-pointer"
                     onClick={() => navigate(`/projects/${project.id}`)}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 rounded-xl bg-gradient-to-br from-sena-green/20 to-emerald-500/20 p-2.5 text-sena-green transition-transform group-hover:scale-110">
-                        <FolderKanban className="h-5 w-5" />
+                    {/* Botón de menú en la esquina superior derecha */}
+                    {isOwner && (
+                      <div className="absolute right-2 top-2 z-10" ref={(el) => { menuRefs.current[project.id] = el; }}>
+                        <button
+                          type="button"
+                          onClick={(e) => handleMenuToggle(project.id, e)}
+                          className="flex-shrink-0 rounded-lg p-1.5 text-[var(--color-muted)] transition-all hover:bg-white/40 dark:hover:bg-slate-700/40 hover:text-[var(--color-text)] opacity-0 group-hover:opacity-100"
+                          aria-label="Opciones del proyecto"
+                        >
+                          <MoreHorizontal className="h-5 w-5" />
+                        </button>
+                        {openMenuId === project.id && (
+                          <div className="absolute right-0 top-8 z-50 w-48 rounded-xl glass-liquid-strong border border-white/20 p-1 shadow-lg">
+                            <button
+                              onClick={(e) => handleEditProject(project, e)}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--color-text)] transition-colors hover:bg-white/20"
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span>Editar</span>
+                            </button>
+                            <button
+                              onClick={(e) => handleDeleteProject(project, e)}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span>Eliminar</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-3 pr-8">
+                      <div className="flex-shrink-0 rounded-xl bg-gradient-to-br from-sena-green/20 to-emerald-500/20 p-3 text-sena-green transition-transform group-hover:scale-110">
+                        <FolderKanban className="h-6 w-6" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="truncate text-lg font-semibold text-[var(--color-text)] group-hover:text-sena-green transition-colors">
                           {project.title}
                         </h3>
-                        <p className="mt-1 text-xs text-[var(--color-muted)]">
+                        <p className="mt-1.5 text-xs text-[var(--color-muted)]">
                           Actualizado el {new Date(project.updatedAt).toLocaleDateString('es-CO')}
                         </p>
+                        <div className="mt-2">
+                          <span className="inline-flex rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green ring-1 ring-sena-green/20">
+                            {statusLabels[project.status]}
+                          </span>
+                        </div>
                       </div>
-                      <span className="ml-auto flex-shrink-0 rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green ring-1 ring-sena-green/20">
-                        {statusLabels[project.status]}
-                      </span>
                     </div>
 
                     <p className="flex-1 text-sm leading-relaxed text-[var(--color-muted)] line-clamp-3">
@@ -357,7 +552,8 @@ export const ProjectsPage = () => {
                       ))}
                     </div>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -375,7 +571,7 @@ export const ProjectsPage = () => {
             <p className="mt-4 text-sm leading-relaxed text-[var(--color-muted)]">
               Visualiza el estado de cada iniciativa y cambia de fase con un clic.
             </p>
-            <div className="mt-5 space-y-3">
+            <div className="mt-5 grid grid-cols-3 gap-3">
               {statusOrder.map((status) => {
                 const { icon: Icon, accent, helper, badge } = statusDisplay[status];
                 const isActive = statusFilter === status;
@@ -384,24 +580,17 @@ export const ProjectsPage = () => {
                     key={status}
                     type="button"
                     onClick={() => setStatusFilter((prev) => (prev === status ? 'all' : status))}
-                    className={`group relative flex h-full flex-col rounded-2xl border px-4 py-3.5 text-left transition-all duration-300 ${
+                    title={statusLabels[status]}
+                    className={`group relative flex flex-col items-center justify-center rounded-2xl border p-4 transition-all duration-300 ${
                       isActive
                         ? 'border-sena-green/40 bg-gradient-to-br from-sena-green/10 to-emerald-500/5 shadow-[0_8px_24px_rgba(57,169,0,0.15)] scale-[1.02]'
                         : 'border-white/30 dark:border-white/10 bg-white/40 dark:bg-slate-800/40 hover:border-sena-green/30 hover:bg-white/60 dark:hover:bg-slate-700/60 hover:shadow-md hover:scale-[1.01]'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className={`flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110 ${badge}`}>
-                        <Icon className={`h-5 w-5 ${accent}`} />
-                      </span>
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">
-                          {statusLabels[status]}
-                        </p>
-                        <p className="text-2xl font-bold text-[var(--color-text)]">{stats[status]}</p>
-                      </div>
-                    </div>
-                    <p className="mt-2.5 text-[11px] leading-relaxed text-[var(--color-muted)]">{helper}</p>
+                    <span className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-110 ${badge}`}>
+                      <Icon className={`h-6 w-6 ${accent}`} />
+                    </span>
+                    <p className="mt-3 text-2xl font-bold text-[var(--color-text)]">{stats[status]}</p>
                   </button>
                 );
               })}
@@ -542,6 +731,192 @@ export const ProjectsPage = () => {
               </Button>
             </div>
           </form>
+        </div>
+      </GlassDialog>
+
+      {/* Diálogo para editar proyecto */}
+      <GlassDialog
+        open={!!projectToEdit}
+        onClose={() => {
+          setProjectToEdit(null);
+          reset();
+        }}
+        size="md"
+      >
+        <div className="space-y-6">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sena-green">
+              <Edit className="h-3 w-3" />
+              <span>Editar Proyecto</span>
+            </div>
+            <h2 className="text-xl font-semibold text-[var(--color-text)]">
+              Editar proyecto
+            </h2>
+            <p className="text-sm text-[var(--color-muted)]">
+              Actualiza la información de tu proyecto.
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleSubmit((values: ProjectValues) => {
+              if (projectToEdit) {
+                editProjectMutation.mutate({
+                  id: projectToEdit.id,
+                  data: {
+                    title: values.title,
+                    description: values.description,
+                    repositoryUrl: values.repositoryUrl || undefined,
+                    status: values.status
+                  }
+                });
+              }
+            })}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <label htmlFor="edit-project-title" className="block text-xs font-medium text-[var(--color-text)]">
+                Título del proyecto
+              </label>
+              <Input
+                id="edit-project-title"
+                placeholder="Ej: Sistema de gestión, App móvil, API REST"
+                error={errors.title?.message}
+                maxLength={TITLE_MAX_LENGTH}
+                {...register('title')}
+                className="text-base rounded-2xl"
+              />
+              <div className="flex justify-between text-[10px] text-[var(--color-muted)]">
+                <span>
+                  {watch('title')?.length || 0} / {TITLE_MAX_LENGTH} caracteres
+                </span>
+                {watch('title') && watch('title').length > 0 && (
+                  <span>
+                    {TITLE_MAX_LENGTH - (watch('title')?.length || 0)} restantes
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="edit-project-description" className="block text-xs font-medium text-[var(--color-text)]">
+                Descripción (opcional)
+              </label>
+              <TextArea
+                id="edit-project-description"
+                rows={4}
+                placeholder="Describe el objetivo y alcance del proyecto..."
+                error={errors.description?.message}
+                maxLength={DESCRIPTION_MAX_LENGTH}
+                {...register('description')}
+                className="text-sm rounded-2xl resize-none"
+              />
+              <div className="flex justify-between text-[10px] text-[var(--color-muted)]">
+                <span>
+                  {watch('description')?.length || 0} / {DESCRIPTION_MAX_LENGTH} caracteres
+                </span>
+                {watch('description') && watch('description').length > 0 && (
+                  <span>
+                    {DESCRIPTION_MAX_LENGTH - (watch('description')?.length || 0)} restantes
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="edit-project-repository" className="block text-xs font-medium text-[var(--color-text)]">
+                Repositorio (opcional)
+              </label>
+              <Input
+                id="edit-project-repository"
+                placeholder="https://github.com/usuario/repositorio"
+                error={errors.repositoryUrl?.message}
+                {...register('repositoryUrl')}
+                className="text-sm rounded-2xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="edit-project-status" className="block text-xs font-medium text-[var(--color-text)]">
+                Estado
+              </label>
+              <select
+                id="edit-project-status"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] transition-colors focus:border-sena-green focus:outline-none focus:ring-2 focus:ring-sena-green/20"
+                {...register('status')}
+              >
+                <option value="draft">Planificación</option>
+                <option value="in_progress">En progreso</option>
+                <option value="completed">Completado</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setProjectToEdit(null);
+                  reset();
+                }}
+                disabled={isSubmitting || editProjectMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                loading={isSubmitting || editProjectMutation.isPending}
+                disabled={!watch('title')?.trim()}
+              >
+                Guardar cambios
+              </Button>
+            </div>
+          </form>
+        </div>
+      </GlassDialog>
+
+      {/* Diálogo para confirmar eliminación */}
+      <GlassDialog
+        open={!!projectToDelete}
+        onClose={() => setProjectToDelete(null)}
+        size="sm"
+      >
+        <div className="space-y-6">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 rounded-full bg-red-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-red-500">
+              <Trash2 className="h-3 w-3" />
+              <span>Eliminar Proyecto</span>
+            </div>
+            <h2 className="text-xl font-semibold text-[var(--color-text)]">
+              ¿Eliminar proyecto?
+            </h2>
+            <p className="text-sm text-[var(--color-muted)]">
+              Esta acción no se puede deshacer. El proyecto "{projectToDelete?.title}" será eliminado permanentemente.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setProjectToDelete(null)}
+              disabled={deleteProjectMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                if (projectToDelete) {
+                  deleteProjectMutation.mutate(projectToDelete.id);
+                }
+              }}
+              loading={deleteProjectMutation.isPending}
+              className="bg-red-500/10 text-red-500 hover:bg-red-500/20"
+            >
+              Eliminar
+            </Button>
+          </div>
         </div>
       </GlassDialog>
     </DashboardLayout>

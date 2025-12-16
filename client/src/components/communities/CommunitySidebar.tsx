@@ -21,9 +21,9 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
   const { communityId } = useParams<{ communityId?: string }>();
 
   return (
-    <aside className="relative z-20 flex h-full w-[80px] flex-col items-center justify-between bg-gradient-to-b from-white/70 via-white/50 to-white/70 dark:from-slate-800/70 dark:via-slate-800/50 dark:to-slate-800/70 backdrop-blur-xl px-2 py-3 shadow-[2px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[2px_0_20px_rgba(0,0,0,0.2)]">
+    <aside className="relative z-[100] flex h-full w-[80px] flex-col items-center justify-between bg-gradient-to-b from-white/70 via-white/50 to-white/70 dark:from-slate-800/70 dark:via-slate-800/50 dark:to-slate-800/70 backdrop-blur-xl px-2 py-3 shadow-[2px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[2px_0_20px_rgba(0,0,0,0.2)]">
       {/* Lista de comunidades */}
-      <div className="relative z-10 flex flex-1 flex-col items-center gap-2 overflow-y-auto">
+      <div className="relative z-[100] flex flex-1 flex-col items-center gap-2 overflow-y-auto overflow-x-visible">
         {isLoading ? (
           <div className="mt-4 text-[10px] text-[var(--color-muted)]">Cargando...</div>
         ) : communities.length === 0 ? (
@@ -39,7 +39,7 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
               <button
                 key={community.id}
                 onClick={() => navigate(`/communities/${community.id}`)}
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-3xl overflow-visible transition-all duration-200 ${
+                className={`group relative z-[200] flex h-12 w-12 items-center justify-center rounded-3xl overflow-visible transition-all duration-200 ${
                   isActive
                     ? 'bg-gradient-to-b from-sena-green/15 via-emerald-500/8 to-sena-green/15 text-[var(--color-text)] shadow-[0_10px_24px_rgba(57,169,0,0.25)] ring-2 ring-sena-green/60 border border-white/60 dark:border-slate-700/60 scale-[1.02]'
                     : 'bg-white/80 dark:bg-slate-700/80 text-[var(--color-text)] hover:bg-white/95 dark:hover:bg-slate-700/95 hover:shadow-md'
@@ -58,7 +58,7 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
                     {community.name.charAt(0).toUpperCase()}
                   </span>
                 )}
-                <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-sm px-3 py-1.5 text-[10px] font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.3)] group-hover:block">
+                <span className="pointer-events-none absolute bottom-full left-1/2 z-[110] mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-sm px-3 py-1.5 text-[10px] font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.3)] group-hover:block">
                   {community.name}
                 </span>
               </button>

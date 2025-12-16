@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import { Profile } from '../types/profile';
+import { mockDataService } from './mockDataService';
 
 export interface CreateUserPayload {
   firstName: string;
@@ -20,11 +21,19 @@ export interface UpdateUserPayload {
 
 export const userService = {
   async getAllUsers(): Promise<Profile[]> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      return await mockDataService.getAllUsers();
+    }
     const { data } = await apiClient.get<{ success: boolean; users: Profile[] }>('/users');
     return data.users;
   },
 
   async getUserById(id: string): Promise<Profile> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      const user = await mockDataService.getUserById(id);
+      if (!user) throw new Error('Usuario no encontrado');
+      return user;
+    }
     const { data } = await apiClient.get<{ success: boolean; user: Profile }>(`/users/${id}`);
     return data.user;
   },

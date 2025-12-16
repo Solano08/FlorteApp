@@ -1,5 +1,5 @@
 import { FC, useMemo, useState, useRef, useEffect } from 'react';
-import { Hash, UserPlus, ChevronDown, Settings, Plus, Check, X } from 'lucide-react';
+import { Hash, UserPlus, ChevronDown, ChevronRight, Settings, Plus, Check, X } from 'lucide-react';
 import { Channel } from '../../types/channel';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Group } from '../../types/group';
@@ -35,6 +35,16 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
   const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
   const [isCreatingTextChannel, setIsCreatingTextChannel] = useState(false);
   const [newTextChannelName, setNewTextChannelName] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; communityId: string }>>(() => {
+    // Cargar categorías desde localStorage
+    if (!communityId) return [];
+    const stored = localStorage.getItem(`categories_${communityId}`);
+    return stored ? JSON.parse(stored) : [];
+  });
   const communityMenuRef = useRef<HTMLDivElement | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
@@ -50,13 +60,66 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
   const handleCreateTextChannelInline = () => {
     if (!onCreateChannel || !newTextChannelName.trim() || isSubmitting) return;
     try {
-      onCreateChannel({ name: newTextChannelName.trim() });
+      onCreateChannel({ 
+        name: newTextChannelName.trim(),
+        categoryId: selectedCategoryId || undefined
+      });
       setNewTextChannelName('');
+      setSelectedCategoryId(null);
       setIsCreatingTextChannel(false);
     } catch (error) {
       console.error('Error al crear canal:', error);
     }
   };
+
+  const toggleCategoryCollapse = (categoryId: string) => {
+    setCollapsedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
+  const getChannelsInCategory = (categoryId: string) => {
+    // Por ahora, los canales no tienen categoryId en el tipo Channel
+    // Esto requeriría modificar el tipo o usar localStorage para almacenar la relación
+    // Por simplicidad, retornamos un array vacío por ahora
+    // TODO: Implementar cuando los canales tengan categoryId
+    return [];
+  };
+
+  const handleCreateCategoryInline = () => {
+    if (!newCategoryName.trim() || !communityId) return;
+    
+    const newCategory = {
+      id: crypto.randomUUID(),
+      name: newCategoryName.trim(),
+      communityId
+    };
+    
+    const updatedCategories = [...categories, newCategory];
+    setCategories(updatedCategories);
+    
+    // Guardar en localStorage
+    localStorage.setItem(`categories_${communityId}`, JSON.stringify(updatedCategories));
+    
+    setNewCategoryName('');
+    setIsCreatingCategory(false);
+  };
+
+  // Actualizar categorías cuando cambia el communityId
+  useEffect(() => {
+    if (!communityId) {
+      setCategories([]);
+      return;
+    }
+    const stored = localStorage.getItem(`categories_${communityId}`);
+    setCategories(stored ? JSON.parse(stored) : []);
+  }, [communityId]);
 
   // Cerrar menú de comunidad al hacer clic fuera
   useEffect(() => {
@@ -199,12 +262,151 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
       <div className="flex flex-1 min-h-0 flex-col px-3 py-3 bg-transparent">
         {/* Lista de canales */}
           <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+          {isCreatingCategory && (
+            <div className="mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
+              <Folder className="h-4 w-4 text-[var(--color-muted)]" />
+              <input
+                autoFocus
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleCreateCategoryInline();
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setIsCreatingCategory(false);
+                    setNewCategoryName('');
+                  }
+                }}
+                className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                placeholder="Nombre de la categoría"
+              />
+              <button
+                type="button"
+                onClick={handleCreateCategoryInline}
+                disabled={!newCategoryName.trim()}
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                aria-label="Crear categoría"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreatingCategory(false);
+                  setNewCategoryName('');
+                }}
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px]"
+                aria-label="Cancelar"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
           {isLoadingChannels || isLoading ? (
             <p className="text-[11px] text-[var(--color-muted)]">Cargando canales...</p>
-          ) : textChannels.length === 0 && voiceChannels.length === 0 ? (
+          ) : textChannels.length === 0 && voiceChannels.length === 0 && categories.length === 0 ? (
             <p className="text-[11px] text-[var(--color-muted)]">No hay canales aún.</p>
           ) : (
             <>
+              {/* Mostrar categorías creadas */}
+              {categories.map((category) => {
+                const isCollapsed = collapsedCategories.has(category.id);
+                const categoryChannels = getChannelsInCategory(category.id);
+                return (
+                  <div key={category.id} className="mb-2">
+                    <div className="group mb-1.5 flex items-center gap-1 px-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCategoryCollapse(category.id);
+                        }}
+                        className="flex items-center justify-center rounded hover:bg-white/50 dark:hover:bg-slate-700/50 transition-all"
+                        aria-label={isCollapsed ? 'Expandir categoría' : 'Colapsar categoría'}
+                      >
+                        {isCollapsed ? (
+                          <ChevronRight className="h-3 w-3 text-[var(--color-muted)]" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3 text-[var(--color-muted)]" />
+                        )}
+                      </button>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] flex-1">
+                        {category.name}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setContextMenu(null);
+                          setSelectedCategoryId(category.id);
+                          setIsCreatingTextChannel(true);
+                          setNewTextChannelName('');
+                        }}
+                        className="opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-slate-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
+                        aria-label="Crear canal en categoría"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                    {!isCollapsed && categoryChannels.length > 0 && (
+                      <div className="ml-4 space-y-1">
+                        {/* Aquí se mostrarían los canales de la categoría */}
+                        {categoryChannels.map((channel) => (
+                          <div key={channel.id}>Canal {channel.name}</div>
+                        ))}
+                      </div>
+                    )}
+                    {isCreatingTextChannel && selectedCategoryId === category.id && (
+                      <div className="ml-4 mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
+                        <Hash className="h-4 w-4 text-[var(--color-muted)]" />
+                        <input
+                          autoFocus
+                          value={newTextChannelName}
+                          onChange={(e) => setNewTextChannelName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              void handleCreateTextChannelInline();
+                            }
+                            if (e.key === 'Escape') {
+                              e.preventDefault();
+                              setIsCreatingTextChannel(false);
+                              setNewTextChannelName('');
+                              setSelectedCategoryId(null);
+                            }
+                          }}
+                          className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                          placeholder="nombre-del-canal"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void handleCreateTextChannelInline()}
+                          disabled={!newTextChannelName.trim() || isSubmitting}
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                          aria-label="Crear canal"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCreatingTextChannel(false);
+                            setNewTextChannelName('');
+                            setSelectedCategoryId(null);
+                          }}
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px]"
+                          aria-label="Cancelar"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {textChannels.length > 0 && (
                 <div>
                   <div
@@ -392,6 +594,17 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
         >
           <Hash className="h-3.5 w-3.5" />
           <span>Crear canal</span>
+        </button>
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-lg mx-1"
+          onClick={() => {
+            setContextMenu(null);
+            setIsCreatingCategory(true);
+          }}
+        >
+          <Folder className="h-3.5 w-3.5" />
+          <span>Crear categoría</span>
         </button>
       </div>
     )}
