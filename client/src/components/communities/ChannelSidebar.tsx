@@ -123,12 +123,12 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     <>
       <aside
         ref={sidebarRef}
-        className="flex h-full w-96 flex-col bg-gradient-to-b from-white/60 via-white/40 to-white/60 dark:from-slate-800/60 dark:via-slate-800/40 dark:to-slate-800/60 backdrop-blur-xl shadow-[2px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[2px_0_20px_rgba(0,0,0,0.2)]"
+        className="relative z-10 flex h-full w-96 flex-col bg-gradient-to-b from-white/70 via-white/50 to-white/60 dark:from-slate-900/70 dark:via-slate-900/50 dark:to-slate-900/60 backdrop-blur-xl shadow-[2px_0_24px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_24px_rgba(0,0,0,0.35)]"
         onContextMenu={handleContextMenu}
       >
         {/* Header con nombre de comunidad */}
         {community && (
-          <div className="relative border-b border-white/10 dark:border-white/5 px-4 py-3">
+          <div className="relative border-b border-white/10 dark:border-white/5 bg-white/85 dark:bg-slate-900/90 px-4 py-3 shadow-[0_4px_10px_rgba(15,23,42,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.6)]">
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -196,7 +196,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
         )}
 
       {/* Contenedor de canales con scroll */}
-      <div className="flex flex-1 min-h-0 flex-col px-3 py-3">
+      <div className="flex flex-1 min-h-0 flex-col px-3 py-3 bg-transparent">
         {/* Lista de canales */}
           <div className="flex-1 space-y-3 overflow-y-auto pr-1">
           {isLoadingChannels || isLoading ? (

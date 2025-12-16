@@ -13,6 +13,7 @@ import { chatService } from '../../services/chatService';
 import { projectService } from '../../services/projectService';
 import { libraryService } from '../../services/libraryService';
 import { feedService } from '../../services/feedService';
+import { friendService } from '../../services/friendService';
 import {
   Bookmark,
   ChevronLeft,
@@ -33,7 +34,9 @@ import {
   ThumbsUp,
   Trash2,
   Video,
-  X
+  X,
+  Users,
+  BookOpen
 } from 'lucide-react';
 import { Chat } from '../../types/chat';
 import { useAuth } from '../../hooks/useAuth';
@@ -1759,6 +1762,24 @@ export const HomePage = () => {
                   </div>
                   <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Revisar mis proyectos</span>
                 </button>
+                <button
+                  onClick={() => navigate('/communities')}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(37,99,235,0.18)] active:scale-[0.98]"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sky-500 transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(37,99,235,0.35)]">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Explorar comunidades</span>
+                </button>
+                <button
+                  onClick={() => navigate('/library')}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(8,47,73,0.18)] active:scale-[0.98]"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sky-800 transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(8,47,73,0.35)]">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Ir a biblioteca</span>
+                </button>
               </div>
             </div>
 
@@ -1820,31 +1841,39 @@ export const HomePage = () => {
               className="hidden"
               onChange={handleStoryFileChange}
             />
-            <div className="flex gap-2.5 overflow-x-auto pb-1 hide-scrollbar -mx-1 px-1">
+            <div className="flex gap-2.5 overflow-x-auto pb-1 hide-scrollbar -mx-1 px-1" style={{ overflow: 'visible' }}>
               {storiesWithAvatars.map((story) => (
                 <button
                   key={story.id}
                   type="button"
                   onClick={handleStoryClick}
-                  className="group relative z-10 flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-300 hover:scale-105 active:scale-95"
+                  className="group relative z-[60] flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-300 hover:scale-105 active:scale-95"
+                  style={{ zIndex: 60, position: 'relative' }}
                 >
                   <div
                     className={`relative h-12 w-12 rounded-full p-[2.5px] transition-all duration-300 ${
                       storyMediaUrls.length
-                        ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_4px_16px_rgba(57,169,0,0.3)]'
-                        : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_4px_20px_rgba(57,169,0,0.4)] group-hover:scale-105'
+                        ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_6px_24px_rgba(57,169,0,0.35)]'
+                        : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_8px_28px_rgba(57,169,0,0.45)] group-hover:scale-105'
                       }`}
-                    style={{ isolation: 'isolate' }}
+                    style={{ zIndex: 61, position: 'relative' }}
                   >
-                    <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-surface)] transition-all duration-300 group-hover:border-sena-green/20">
+                    <div className="relative flex h-full w-full items-center justify-center rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-surface)] transition-all duration-300 group-hover:border-sena-green/30" style={{ zIndex: 62 }}>
                       {storyMediaUrls.length ? (
-                        <img src={story.avatar} alt={story.name} className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                        <img
+                          src={story.avatar}
+                          alt={story.name}
+                          className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        />
                       ) : (
-                        <Plus className="h-4 w-4 text-sena-green transition-all duration-300 group-hover:scale-110 group-hover:rotate-90" />
+                        <Plus className="h-5 w-5 text-sena-green transition-all duration-300 group-hover:scale-125 group-hover:rotate-90 drop-shadow-[0_2px_4px_rgba(57,169,0,0.3)]" />
                       )}
                     </div>
                     {!storyMediaUrls.length && (
-                      <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-sena-green/20 via-sena-light/20 to-emerald-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm -z-10" />
+                      <>
+                        <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-sena-green/30 via-sena-light/30 to-emerald-500/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md" style={{ zIndex: 59, position: 'absolute' }} />
+                        <div className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-tr from-sena-green/15 via-sena-light/15 to-emerald-500/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl animate-pulse" style={{ zIndex: 58, position: 'absolute' }} />
+                      </>
                     )}
                   </div>
                   <span className="text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate transition-colors duration-300 group-hover:text-sena-green">
@@ -2068,10 +2097,8 @@ export const HomePage = () => {
                     type="button"
                     onClick={() => setActiveAnnouncement(index)}
                     className={classNames(
-                      'h-2 w-8 rounded-full transition-all duration-200',
-                      index === activeAnnouncement 
-                        ? 'bg-sena-green shadow-sm' 
-                        : 'bg-[var(--color-surface)]/40 hover:bg-[var(--color-surface)]/60'
+                      'h-2 w-8 rounded-full transition-all duration-200 bg-[var(--color-surface)]/40 hover:bg-[var(--color-surface)]/70',
+                      index === activeAnnouncement && 'shadow-sm'
                     )}
                     aria-label={`Mostrar anuncio ${index + 1}`}
                   />
@@ -2439,7 +2466,7 @@ export const HomePage = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 28 }}
               transition={{ type: 'spring', stiffness: 170, damping: 24 }}
-              className="relative mx-auto w-full max-w-3xl overflow-visible rounded-[36px] glass-liquid-strong p-6"
+              className="relative mx-auto w-full max-w-3xl overflow-visible rounded-[36px] p-6"
             >
               <div className="relative flex flex-col items-center gap-1 pb-4 text-center">
                 <Button
@@ -2606,12 +2633,19 @@ export const HomePage = () => {
 
 const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [message, setMessage] = useState('');
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['home', 'chat', chat.id],
     queryFn: async () => await chatService.listMessages(chat.id),
     enabled: Boolean(chat.id)
+  });
+
+  // Cargar amigos para obtener nombres de usuarios
+  const { data: friends = [] } = useQuery({
+    queryKey: ['friends'],
+    queryFn: friendService.listFriends
   });
 
   const sendMessageMutation = useMutation({
@@ -2632,6 +2666,19 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
   }, [messages, isLoading]);
 
   const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+
+  // Función para obtener el nombre del remitente
+  const getSenderName = (senderId: string) => {
+    if (senderId === user?.id) {
+      return 'Tú';
+    }
+    const friend = friends.find((f) => f.id === senderId);
+    if (friend) {
+      return `${friend.firstName} ${friend.lastName}`.trim() || friend.firstName || 'Usuario';
+    }
+    // Si no se encuentra en amigos, intentar obtener de todos los usuarios
+    return senderId; // Fallback al ID si no se encuentra
+  };
 
   return (
     <motion.div
@@ -2675,17 +2722,46 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
           {!isLoading && messages.length === 0 && (
             <p className="text-xs text-[var(--color-muted)]">An no hay mensajes en este chat.</p>
           )}
-          {messages.map((msg) => (
-            <div key={msg.id} className="rounded-2xl glass-liquid px-3 py-2 text-sm text-[var(--color-text)]">
-              <p>{msg.content}</p>
-              <p className="text-xs text-[var(--color-muted)]">
-                {new Date(msg.createdAt).toLocaleTimeString('es-CO', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </p>
-            </div>
-          ))}
+          {messages.map((msg) => {
+            const isOwn = msg.senderId === user?.id;
+            const senderName = getSenderName(msg.senderId);
+            const messageDate = new Date(msg.createdAt);
+            const formattedTime = messageDate.toLocaleTimeString('es-CO', {
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+            const formattedDate = messageDate.toLocaleDateString('es-CO', {
+              day: '2-digit',
+              month: 'short'
+            });
+
+            return (
+              <div key={msg.id} className="rounded-2xl glass-liquid px-3 py-2 text-sm text-[var(--color-text)]">
+                {chat.isGroup && !isOwn && (
+                  <div className="mb-1 flex items-center gap-2">
+                    <p className="text-xs font-semibold text-[var(--color-text)]">{senderName}</p>
+                    <p className="text-[10px] text-[var(--color-muted)]">
+                      {formattedDate} {formattedTime}
+                    </p>
+                  </div>
+                )}
+                {chat.isGroup && isOwn && (
+                  <div className="mb-1 flex items-center gap-2">
+                    <p className="text-xs font-semibold text-[var(--color-text)]">{senderName}</p>
+                    <p className="text-[10px] text-[var(--color-muted)]">
+                      {formattedDate} {formattedTime}
+                    </p>
+                  </div>
+                )}
+                <p>{msg.content}</p>
+                {!chat.isGroup && (
+                  <p className="text-xs text-[var(--color-muted)]">
+                    {formattedTime}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
         <form
           className="border-t border-white/20 px-4 py-3"

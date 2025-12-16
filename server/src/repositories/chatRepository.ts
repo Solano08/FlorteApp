@@ -170,5 +170,12 @@ export const chatRepository = {
       'DELETE FROM messages WHERE id = :messageId',
       { messageId }
     );
+  },
+
+  async deleteChat(chatId: string): Promise<void> {
+    await getPool().execute<ResultSetHeader>(
+      'DELETE FROM chats WHERE id = :chatId',
+      { chatId }
+    );
   }
 };

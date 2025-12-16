@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { groupService } from '../../services/groupService';
 import { channelService } from '../../services/channelService';
+import { friendService } from '../../services/friendService';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { CommunitySidebar } from '../../components/communities/CommunitySidebar';
@@ -28,6 +30,7 @@ export const CommunitiesPage = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isExploring, setIsExploring] = useState(false);
   const [exploreSearch, setExploreSearch] = useState('');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const toast = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +69,12 @@ export const CommunitiesPage = () => {
     queryKey: ['channelMessages', channelId],
     queryFn: () => channelService.listMessages(channelId!),
     enabled: !!channelId
+  });
+
+  // Lista de amigos para invitar
+  const { data: friends = [], isLoading: isLoadingFriends } = useQuery({
+    queryKey: ['friends'],
+    queryFn: friendService.listFriends
   });
 
   // Mutación para crear canal
@@ -109,7 +118,8 @@ export const CommunitiesPage = () => {
     },
     onSuccess: async (groupId) => {
       await queryClient.invalidateQueries({ queryKey: ['myGroups'] });
-      toast.success('Te uniste a la comunidad ✨');
+      setSuccessMessage('Te uniste a la comunidad ✨');
+      setTimeout(() => setSuccessMessage(null), 1500);
       setIsExploring(false);
       navigate(`/communities/${groupId}`);
     },
@@ -340,10 +350,10 @@ export const CommunitiesPage = () => {
                 channelDescription={selectedChannel.description}
                 messages={messages}
                 isLoadingMessages={isLoadingMessages}
-                onSendMessage={(content) =>
+                onSendMessage={(payload) =>
                   new Promise<void>((resolve, reject) => {
                     createMessageMutation.mutate(
-                      { content },
+                      { content: payload.content, attachmentUrl: payload.attachmentUrl },
                       {
                         onSuccess: () => {
                           resolve();
@@ -445,11 +455,67 @@ export const CommunitiesPage = () => {
               Invitar amigos
             </h2>
             <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Comparte este enlace para que tus amigos se unan rápidamente a{' '}
+              Invita a tus amigos a unirse rápidamente a{' '}
               <span className="font-semibold">{community?.name}</span>.
             </p>
           </div>
-          <div className="space-y-2">
+
+          {/* Lista de amigos */}
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+              Tus amigos
+            </p>
+            {isLoadingFriends ? (
+              <p className="text-xs text-[var(--color-muted)]">Cargando amigos...</p>
+            ) : friends.length === 0 ? (
+              <p className="text-xs text-[var(--color-muted)]">
+                Aún no tienes amigos agregados. Comparte el enlace de invitación directamente.
+              </p>
+            ) : (
+              friends.map((friend) => (
+                <div
+                  key={friend.id}
+                  className="flex items-center gap-3 rounded-xl bg-white/70 px-3 py-2 text-sm text-[var(--color-text)] shadow-sm dark:bg-slate-900/80"
+                >
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-sena-green/10 text-xs font-semibold text-sena-green overflow-hidden">
+                    {friend.avatarUrl ? (
+                      <img
+                        src={friend.avatarUrl}
+                        alt={friend.fullName}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      (friend.fullName || friend.firstName || 'U').charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{friend.fullName || `${friend.firstName} ${friend.lastName}`}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="secondary"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(inviteLink);
+                        setSuccessMessage(`Enlace copiado para invitar a ${friend.fullName || friend.firstName}`);
+                        setTimeout(() => setSuccessMessage(null), 1500);
+                      } catch (error) {
+                        console.error('Error al copiar link:', error);
+                        toast.error('No se pudo copiar el link. Por favor, intenta nuevamente.');
+                      }
+                    }}
+                    className="text-[11px] px-2 py-1"
+                  >
+                    + Invitar
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Enlace de invitación */}
+          <div className="space-y-2 pt-1 border-t border-white/30 dark:border-white/10">
             <label className="block text-xs font-medium text-[var(--color-muted)]">
               Enlace de invitación
             </label>
@@ -462,7 +528,8 @@ export const CommunitiesPage = () => {
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(inviteLink);
-                    toast.success('Link copiado al portapapeles');
+                    setSuccessMessage('Link copiado al portapapeles');
+                    setTimeout(() => setSuccessMessage(null), 1500);
                   } catch (error) {
                     console.error('Error al copiar link:', error);
                     toast.error('No se pudo copiar el link. Por favor, intenta nuevamente.');
@@ -473,6 +540,7 @@ export const CommunitiesPage = () => {
               </Button>
             </div>
           </div>
+
           <div className="flex justify-end pt-2">
             <Button type="button" variant="ghost" onClick={() => setInviteDialogOpen(false)}>
               Cerrar
@@ -491,13 +559,41 @@ export const CommunitiesPage = () => {
             await groupService.uploadCommunityIcon(group.id, iconFile);
           }
           await queryClient.invalidateQueries({ queryKey: ['myGroups'] });
-          toast.success('Tu nueva comunidad está lista ✨');
+          setSuccessMessage('Tu nueva comunidad está lista ✨');
+          setTimeout(() => setSuccessMessage(null), 1500);
           setCreateDialogOpen(false);
           setIsExploring(false);
           navigate(`/communities/${group.id}`);
         }}
         isLoading={createCommunityMutation.isPending}
       />
+
+      {/* Mensaje de éxito */}
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div
+            key="success-message"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ 
+              duration: 0.3, 
+              ease: [0.16, 1, 0.3, 1],
+              exit: { duration: 0.25, ease: [0.16, 1, 0.3, 1] }
+            }}
+            className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
+            style={{ willChange: 'transform, opacity' }}
+          >
+            <p className="text-sm font-medium text-[var(--color-text)] whitespace-nowrap relative z-10">{successMessage}</p>
+            <motion.div
+              initial={{ width: '100%' }}
+              animate={{ width: '0%' }}
+              transition={{ duration: 1.5, ease: 'linear' }}
+              className="absolute bottom-0 left-0 h-1 bg-sena-green"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 };

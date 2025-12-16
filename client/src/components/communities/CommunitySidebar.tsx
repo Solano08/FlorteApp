@@ -21,7 +21,7 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
   const { communityId } = useParams<{ communityId?: string }>();
 
   return (
-    <aside className="flex h-full w-[80px] flex-col items-center justify-between bg-gradient-to-b from-white/70 via-white/50 to-white/70 dark:from-slate-800/70 dark:via-slate-800/50 dark:to-slate-800/70 backdrop-blur-xl px-2 py-3 shadow-[2px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[2px_0_20px_rgba(0,0,0,0.2)]">
+    <aside className="relative z-20 flex h-full w-[80px] flex-col items-center justify-between bg-gradient-to-b from-white/70 via-white/50 to-white/70 dark:from-slate-800/70 dark:via-slate-800/50 dark:to-slate-800/70 backdrop-blur-xl px-2 py-3 shadow-[2px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[2px_0_20px_rgba(0,0,0,0.2)]">
       {/* Lista de comunidades */}
       <div className="relative z-10 flex flex-1 flex-col items-center gap-2 overflow-y-auto">
         {isLoading ? (
@@ -41,8 +41,8 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
                 onClick={() => navigate(`/communities/${community.id}`)}
                 className={`group relative flex h-12 w-12 items-center justify-center rounded-3xl overflow-visible transition-all duration-200 ${
                   isActive
-                    ? 'bg-white/95 dark:bg-slate-900/90 text-[var(--color-text)] shadow-[0_6px_18px_rgba(15,23,42,0.18)] ring-2 ring-sena-green/60'
-                    : 'bg-white/70 dark:bg-slate-700/70 text-[var(--color-text)] hover:bg-white/90 dark:hover:bg-slate-700/90 hover:shadow-md'
+                    ? 'bg-gradient-to-b from-sena-green/15 via-emerald-500/8 to-sena-green/15 text-[var(--color-text)] shadow-[0_10px_24px_rgba(57,169,0,0.25)] ring-2 ring-sena-green/60 border border-white/60 dark:border-slate-700/60 scale-[1.02]'
+                    : 'bg-white/80 dark:bg-slate-700/80 text-[var(--color-text)] hover:bg-white/95 dark:hover:bg-slate-700/95 hover:shadow-md'
                 }`}
               >
                 {community.iconUrl ? (

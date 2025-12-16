@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { chatService } from '../../services/chatService';
 import { userService } from '../../services/userService';
@@ -29,7 +30,6 @@ import {
   BellOff,
   Pin,
   CircleAlert,
-  Heart,
   Ban,
   Trash2,
   X,
@@ -63,8 +63,7 @@ const filterTabs: Array<{ value: ChatFilter; label: string; icon?: typeof Star |
   { value: 'all', label: 'Todos' },
   { value: 'unread', label: 'No leidos' },
   { value: 'favorites', label: 'Favoritos', icon: Star },
-  { value: 'groups', label: 'Grupos' },
-  { value: 'archived', label: 'Archivados', icon: Archive }
+  { value: 'groups', label: 'Grupos' }
 ];
 
 const createChatSchema = z.object({
@@ -97,6 +96,7 @@ const formatLastActivity = (iso: string) => {
   });
 };
 
+// Función helper fuera del componente para casos simples
 const getChatName = (name: string | null | undefined, isGroup: boolean) =>
   name?.trim() && name.trim().length > 0 ? name.trim() : isGroup ? 'Grupo sin titulo' : 'Chat privado';
 
@@ -154,6 +154,7 @@ export const ChatsPage = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedChats, setSelectedChats] = useState<Set<string>>(new Set());
   const [showStarredMessages, setShowStarredMessages] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
   const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -199,6 +200,8 @@ export const ChatsPage = () => {
 
   const [selectedFriendIds, setSelectedFriendIds] = useState<Set<string>>(new Set());
   const [createChatError, setCreateChatError] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
 
   const { data: chats = [], isLoading: isLoadingChats } = useQuery({
     queryKey: ['chats'],
@@ -352,6 +355,9 @@ export const ChatsPage = () => {
     onSuccess: (chat) => {
       queryClient.invalidateQueries({ queryKey: ['chats'] }).catch(() => { });
       setSelectedChatId(chat.id);
+      setShowNewChatDialog(false);
+      setNewChatType(null);
+      setSelectedFriendIds(new Set());
     }
   });
 
@@ -419,7 +425,7 @@ export const ChatsPage = () => {
 
         if (!normalized) return true;
 
-        const name = getChatName(chat.name, chat.isGroup).toLowerCase();
+        const name = getChatDisplayName(chat).toLowerCase();
         return name.includes(normalized) || chat.id.toLowerCase().includes(normalized);
       })
       .sort((a, b) => {
@@ -441,16 +447,18 @@ export const ChatsPage = () => {
     return filteredChats.filter((chat) => !archivedChats.has(chat.id));
   }, [filteredChats, archivedChats]);
 
+  // Lista real de chats archivados (independiente del filtro de búsqueda) para evitar desajustes
   const archivedChatsList = useMemo(() => {
-    return filteredChats.filter((chat) => archivedChats.has(chat.id));
-  }, [filteredChats, archivedChats]);
+    return chats.filter((chat) => archivedChats.has(chat.id));
+  }, [chats, archivedChats]);
 
   const tabStats = useMemo<Record<ChatFilter, number>>(
     () => ({
       all: chats.filter((chat) => !archivedChats.has(chat.id)).length,
       unread: chats.filter((chat) => !chat.lastMessageAt && !archivedChats.has(chat.id)).length,
       favorites: chats.filter((chat) => favoriteChats.has(chat.id) && !archivedChats.has(chat.id)).length,
-      groups: chats.filter((chat) => chat.isGroup && !archivedChats.has(chat.id)).length
+      groups: chats.filter((chat) => chat.isGroup && !archivedChats.has(chat.id)).length,
+      archived: chats.filter((chat) => archivedChats.has(chat.id)).length
     }),
     [chats, archivedChats, favoriteChats]
   );
@@ -459,6 +467,59 @@ export const ChatsPage = () => {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId]
   );
+
+  // Función helper para obtener el nombre del chat, incluyendo el nombre del usuario en chats directos
+  const getChatDisplayName = useMemo(() => {
+    return (chat: { id: string; name?: string | null; isGroup: boolean; createdBy: string }) => {
+      // Si el chat tiene nombre, usarlo
+      if (chat.name?.trim() && chat.name.trim().length > 0) {
+        return chat.name.trim();
+      }
+      
+      // Si es un grupo sin nombre
+      if (chat.isGroup) {
+        return 'Grupo sin titulo';
+      }
+      
+      // Para chats directos, intentar obtener el nombre del otro usuario
+      // Buscar en los mensajes del chat para encontrar el senderId del otro usuario
+      const chatMessages = allChatMessages.data?.[chat.id] || [];
+      if (chatMessages.length > 0) {
+        const otherUserMessage = chatMessages.find((msg) => msg.senderId !== authUser?.id);
+        if (otherUserMessage) {
+          const otherUser = friends.find((f) => f.id === otherUserMessage.senderId);
+          if (otherUser) {
+            return `${otherUser.firstName} ${otherUser.lastName}`.trim() || otherUser.firstName || 'Usuario';
+          }
+        }
+      }
+      
+      // Si no encontramos en mensajes, intentar con createdBy
+      if (chat.createdBy !== authUser?.id) {
+        const otherUser = friends.find((f) => f.id === chat.createdBy);
+        if (otherUser) {
+          return `${otherUser.firstName} ${otherUser.lastName}`.trim() || otherUser.firstName || 'Usuario';
+        }
+      }
+      
+      // Fallback
+      return 'Chat privado';
+    };
+  }, [friends, authUser?.id, allChatMessages.data]);
+
+  // Función helper para obtener el nombre del remitente de un mensaje
+  const getSenderName = useMemo(() => {
+    return (senderId: string) => {
+      if (senderId === authUser?.id) {
+        return 'Tú';
+      }
+      const friend = friends.find((f) => f.id === senderId);
+      if (friend) {
+        return `${friend.firstName} ${friend.lastName}`.trim() || friend.firstName || 'Usuario';
+      }
+      return senderId; // Fallback al ID si no se encuentra
+    };
+  }, [friends, authUser?.id]);
 
   const handleCreateChat = handleSubmit((values) => {
     setCreateChatError(null);
@@ -507,7 +568,6 @@ export const ChatsPage = () => {
       {
         onSuccess: () => {
           reset(initialCreateChatValues);
-          setShowNewChat(false);
           setShowNewChatDialog(false);
           setNewChatType(null);
           setSelectedFriendIds(new Set());
@@ -768,7 +828,8 @@ export const ChatsPage = () => {
         if (message.content) {
           try {
             await navigator.clipboard.writeText(message.content);
-            toast.success('Texto copiado al portapapeles');
+            setSuccessMessage('Texto copiado al portapapeles');
+            setTimeout(() => setSuccessMessage(null), 1500);
           } catch (err) {
             toast.error('No se pudo copiar el texto');
           }
@@ -806,7 +867,8 @@ export const ChatsPage = () => {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            toast.success('Descarga iniciada');
+            setSuccessMessage('Descarga iniciada');
+          setTimeout(() => setSuccessMessage(null), 1500);
           } catch (err) {
             toast.error('No se pudo descargar el archivo');
           }
@@ -820,7 +882,8 @@ export const ChatsPage = () => {
         if (!pinnedMessages.includes(message.id)) {
           pinnedMessages.push(message.id);
           localStorage.setItem('pinnedMessages', JSON.stringify(pinnedMessages));
-          toast.success('Mensaje fijado');
+          setSuccessMessage('Mensaje fijado');
+          setTimeout(() => setSuccessMessage(null), 1500);
         } else {
           toast.info('Este mensaje ya está fijado');
         }
@@ -831,12 +894,14 @@ export const ChatsPage = () => {
         if (!starredMessages.includes(message.id)) {
           starredMessages.push(message.id);
           localStorage.setItem('starredMessages', JSON.stringify(starredMessages));
-          toast.success('Mensaje destacado');
+          setSuccessMessage('Mensaje destacado');
+          setTimeout(() => setSuccessMessage(null), 1500);
         } else {
           const index = starredMessages.indexOf(message.id);
           starredMessages.splice(index, 1);
           localStorage.setItem('starredMessages', JSON.stringify(starredMessages));
-          toast.success('Mensaje desmarcado');
+          setSuccessMessage('Mensaje desmarcado');
+          setTimeout(() => setSuccessMessage(null), 1500);
         }
         break;
       case 'delete':
@@ -844,7 +909,8 @@ export const ChatsPage = () => {
           try {
             await chatService.deleteMessage(selectedChatId, message.id);
             await queryClient.invalidateQueries({ queryKey: ['chats', selectedChatId, 'messages'] });
-            toast.success('Mensaje eliminado');
+            setSuccessMessage('Mensaje eliminado');
+            setTimeout(() => setSuccessMessage(null), 1500);
           } catch (err) {
             toast.error('No se pudo eliminar el mensaje');
           }
@@ -855,7 +921,7 @@ export const ChatsPage = () => {
     }
   };
 
-  const activeChatName = activeChat ? getChatName(activeChat.name, activeChat.isGroup) : '';
+  const activeChatName = activeChat ? getChatDisplayName(activeChat) : '';
   const activeChatInitials = activeChat ? getInitialsFromLabel(activeChatName) : '';
   const activeChatGradient = activeChat ? getAvatarGradient(activeChat.id) : '';
   const activeChatLastActivity = activeChat
@@ -967,11 +1033,12 @@ export const ChatsPage = () => {
     setMenuPosition(null);
 
     switch (action) {
-      case 'delete':
-        if (window.confirm('¿Estás seguro de que deseas eliminar este chat? Esta acción no se puede deshacer.')) {
-          deleteChatMutation.mutate(chatId);
-        }
+      case 'delete': {
+        // El diálogo bonito se gestiona más abajo con GlassDialog
+        setChatToDelete(chatId);
+        setShowDeleteDialog(true);
         break;
+      }
       case 'archive':
         setArchivedChats((prev) => {
           const newSet = new Set(prev);
@@ -979,6 +1046,8 @@ export const ChatsPage = () => {
           localStorage.setItem('archivedChats', JSON.stringify(Array.from(newSet)));
           return newSet;
         });
+        setSuccessMessage('Chat archivado');
+        setTimeout(() => setSuccessMessage(null), 1500);
         break;
       case 'unarchive':
         setArchivedChats((prev) => {
@@ -987,6 +1056,8 @@ export const ChatsPage = () => {
           localStorage.setItem('archivedChats', JSON.stringify(Array.from(newSet)));
           return newSet;
         });
+        setSuccessMessage('Chat desarchivado');
+        setTimeout(() => setSuccessMessage(null), 1500);
         break;
       case 'mute':
         setMutedChats((prev) => {
@@ -995,6 +1066,8 @@ export const ChatsPage = () => {
           localStorage.setItem('mutedChats', JSON.stringify(Array.from(newSet)));
           return newSet;
         });
+        setSuccessMessage('Notificaciones silenciadas para este chat');
+        setTimeout(() => setSuccessMessage(null), 1500);
         break;
       case 'unmute':
         setMutedChats((prev) => {
@@ -1003,6 +1076,8 @@ export const ChatsPage = () => {
           localStorage.setItem('mutedChats', JSON.stringify(Array.from(newSet)));
           return newSet;
         });
+        setSuccessMessage('Notificaciones activadas para este chat');
+        setTimeout(() => setSuccessMessage(null), 1500);
         break;
       case 'pin':
         setPinnedChats((prev) => {
@@ -1011,6 +1086,8 @@ export const ChatsPage = () => {
           localStorage.setItem('pinnedChats', JSON.stringify(Array.from(newSet)));
           return newSet;
         });
+        setSuccessMessage('Chat fijado arriba');
+        setTimeout(() => setSuccessMessage(null), 1500);
         break;
       case 'unpin':
         setPinnedChats((prev) => {
@@ -1019,19 +1096,26 @@ export const ChatsPage = () => {
           localStorage.setItem('pinnedChats', JSON.stringify(Array.from(newSet)));
           return newSet;
         });
+        setSuccessMessage('Chat desfijado');
+        setTimeout(() => setSuccessMessage(null), 1500);
         break;
-      case 'unread':
-        // Marcar como no leído
+      case 'markRead': {
+        // Marcar como leído este chat
+        const now = new Date().toISOString();
         setReadChats((prev) => {
           const newSet = new Set(prev);
-          newSet.delete(chatId);
+          newSet.add(chatId);
           return newSet;
         });
-        const updatedTimes = { ...lastReadTimes };
-        delete updatedTimes[chatId];
-        setLastReadTimes(updatedTimes);
-        localStorage.setItem('chatLastReadTimes', JSON.stringify(updatedTimes));
+        setLastReadTimes((prev) => {
+          const updated = { ...prev, [chatId]: now };
+          localStorage.setItem('chatLastReadTimes', JSON.stringify(updated));
+          return updated;
+        });
+        setSuccessMessage('Chat marcado como leído');
+        setTimeout(() => setSuccessMessage(null), 1500);
         break;
+      }
       case 'favorite':
         setFavoriteChats((prev) => {
           const newSet = new Set(prev);
@@ -1039,6 +1123,8 @@ export const ChatsPage = () => {
           localStorage.setItem('favoriteChats', JSON.stringify(Array.from(newSet)));
           return newSet;
         });
+        setSuccessMessage('Chat añadido a favoritos');
+        setTimeout(() => setSuccessMessage(null), 1500);
         break;
       case 'unfavorite':
         setFavoriteChats((prev) => {
@@ -1047,6 +1133,8 @@ export const ChatsPage = () => {
           localStorage.setItem('favoriteChats', JSON.stringify(Array.from(newSet)));
           return newSet;
         });
+        setSuccessMessage('Chat quitado de favoritos');
+        setTimeout(() => setSuccessMessage(null), 1500);
         break;
       case 'block':
         const chat = chats.find((c) => c.id === chatId);
@@ -1078,7 +1166,8 @@ export const ChatsPage = () => {
               
               // Eliminar el chat después de bloquear
               deleteChatMutation.mutate(chatId);
-              toast.success('Usuario bloqueado correctamente');
+              setSuccessMessage('Usuario bloqueado correctamente');
+              setTimeout(() => setSuccessMessage(null), 1500);
             } catch (err) {
               toast.error('No se pudo bloquear al usuario');
             }
@@ -1262,6 +1351,22 @@ export const ChatsPage = () => {
               {/* Formulario inline de creación de chat eliminado; ahora sólo se usa el diálogo modal. */}
             </div>
 
+            {archivedChats.size > 0 && (
+              <div className="px-6 py-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter('archived')}
+                  className={classNames(
+                    'inline-flex items-center gap-2 rounded-xl bg-white/40 dark:bg-slate-700/40 px-3 py-1.5 text-[11px] font-medium text-[var(--color-text)] shadow-sm transition hover:bg-white/70 dark:hover:bg-slate-700/70',
+                    activeFilter === 'archived' && 'ring-2 ring-sena-green/40 bg-white dark:bg-slate-800'
+                  )}
+                >
+                  <Archive className="h-3.5 w-3.5 text-[var(--color-muted)]" />
+                  <span>Archivados ({tabStats.archived})</span>
+                </button>
+              </div>
+            )}
+
             {isSelectionMode && selectedChats.size > 0 && (
               <div className="border-b border-white/20 dark:border-white/10 bg-white/30 dark:bg-slate-800/30 backdrop-blur-sm px-6 py-3">
                 <div className="flex items-center justify-between">
@@ -1331,7 +1436,7 @@ export const ChatsPage = () => {
                   {activeFilter !== 'archived' && normalChats.length > 0 && normalChats.map((chat) => {
                     const isActive = chat.id === selectedChatId;
                     const lastActivity = formatLastActivity(chat.lastMessageAt ?? chat.createdAt);
-                    const chatLabel = getChatName(chat.name, chat.isGroup);
+                    const chatLabel = getChatDisplayName(chat);
                     const initials = getInitialsFromLabel(chatLabel);
                     const gradient = getAvatarGradient(chat.id);
                     const hasUnread = !chat.lastMessageAt;
@@ -1360,7 +1465,7 @@ export const ChatsPage = () => {
                             className={classNames(
                               'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200 cursor-pointer',
                               isSelected
-                                ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/10 text-sena-green shadow-[0_8px_24px_rgba(57,169,0,0.15)] border border-sena-green/20 scale-[1.02]'
+                                ? 'bg-gradient-to-r from-sena-green/20 via-emerald-500/15 to-sena-green/20 text-sena-green shadow-[0_8px_32px_rgba(57,169,0,0.25)] border-2 border-sena-green/40 scale-[1.01] backdrop-blur-sm'
                                 : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
                             )}
                           >
@@ -1382,14 +1487,16 @@ export const ChatsPage = () => {
                               >
                                 {initials}
                               </span>
-                              <span
-                                className={classNames(
-                                  'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-slate-800 transition-all duration-200',
-                                  hasUnread
-                                    ? 'bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_2px_8px_rgba(57,169,0,0.5)]'
-                                    : 'bg-transparent'
-                                )}
-                              />
+                              {!chat.isGroup && (
+                                <span
+                                  className={classNames(
+                                    'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-slate-800 transition-all duration-200',
+                                    hasUnread
+                                      ? 'bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_2px_8px_rgba(57,169,0,0.5)]'
+                                      : 'bg-transparent'
+                                  )}
+                                />
+                              )}
                               {isPinned && (
                                 <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-sena-green text-white shadow-lg">
                                   <Pin className="h-3 w-3" />
@@ -1466,7 +1573,7 @@ export const ChatsPage = () => {
                             className={classNames(
                               'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200',
                               isActive
-                                ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/10 text-sena-green shadow-[0_8px_24px_rgba(57,169,0,0.15)] border border-sena-green/20 scale-[1.02]'
+                                ? 'bg-gradient-to-r from-white/90 via-white/80 to-white/90 dark:from-slate-800/90 dark:via-slate-800/80 dark:to-slate-800/90 text-[var(--color-text)] shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] border border-white/60 dark:border-slate-700/50 ring-1 ring-white/40 dark:ring-slate-600/30 ring-offset-1 ring-offset-white/50 dark:ring-offset-slate-900/50 scale-[1.005] backdrop-blur-sm'
                                 : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
                             )}
                           >
@@ -1480,14 +1587,16 @@ export const ChatsPage = () => {
                               >
                                 {initials}
                               </span>
-                              <span
-                                className={classNames(
-                                  'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-slate-800 transition-all duration-200',
-                                  hasUnread
-                                    ? 'bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_2px_8px_rgba(57,169,0,0.5)]'
-                                    : 'bg-transparent'
-                                )}
-                              />
+                              {!chat.isGroup && (
+                                <span
+                                  className={classNames(
+                                    'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-slate-800 transition-all duration-200',
+                                    hasUnread
+                                      ? 'bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_2px_8px_rgba(57,169,0,0.5)]'
+                                      : 'bg-transparent'
+                                  )}
+                                />
+                              )}
                               {isPinned && (
                                 <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-sena-green text-white shadow-lg">
                                   <Pin className="h-3 w-3" />
@@ -1496,6 +1605,11 @@ export const ChatsPage = () => {
                               {isMuted && (
                                 <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-slate-600 text-white">
                                   <BellOff className="h-2.5 w-2.5" />
+                                </span>
+                              )}
+                              {isFavorite && (
+                                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center">
+                                  <Star className="h-3 w-3 text-amber-400 fill-amber-400 drop-shadow-[0_0_4px_rgba(245,158,11,0.8)]" />
                                 </span>
                               )}
                             </span>
@@ -1641,29 +1755,29 @@ export const ChatsPage = () => {
                               <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
                               <button
                                 type="button"
-                                onClick={() => handleMenuAction('unread', chat.id)}
+                                onClick={() => handleMenuAction('markRead', chat.id)}
                                 className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
                               >
-                                <CircleAlert className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
-                                <span className="text-left font-medium">Marcar como no leído</span>
+                                <CheckSquare2 className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                <span className="text-left font-medium">Marcar como leído</span>
                               </button>
                               <div className="my-1 h-px bg-white/20 dark:bg-white/10 mx-2" />
                               {!favoriteChats.has(chat.id) ? (
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('favorite', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-amber-500 transition-colors hover:bg-white/60 dark:hover:bg-slate-700/60 rounded-xl mx-2"
                                 >
-                                  <Heart className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
+                                  <Star className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                                   <span className="text-left font-medium">Añadir a Favoritos</span>
                                 </button>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('unfavorite', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-rose-500 transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-amber-500 transition-colors hover:bg-white/60 dark:hover:bg-slate-700/60 rounded-xl mx-2"
                                 >
-                                  <Heart className="h-4 w-4 text-rose-500 flex-shrink-0 fill-rose-500" />
+                                  <Star className="h-4 w-4 text-amber-400 flex-shrink-0 fill-amber-400" />
                                   <span className="text-left font-medium">Quitar de Favoritos</span>
                                 </button>
                               )}
@@ -1718,7 +1832,7 @@ export const ChatsPage = () => {
                             {archivedChatsList.slice(0, 3).map((chat) => {
                               const isActive = chat.id === selectedChatId;
                               const lastActivity = formatLastActivity(chat.lastMessageAt ?? chat.createdAt);
-                              const chatLabel = getChatName(chat.name, chat.isGroup);
+                              const chatLabel = getChatDisplayName(chat);
                               const initials = getInitialsFromLabel(chatLabel);
                               const gradient = getAvatarGradient(chat.id);
                               const hasUnread = !chat.lastMessageAt;
@@ -1749,8 +1863,8 @@ export const ChatsPage = () => {
                                     }}
                                     className={classNames(
                                       'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200',
-                                      isActive
-                                        ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/10 text-sena-green shadow-[0_8px_24px_rgba(57,169,0,0.15)] border border-sena-green/20 scale-[1.02]'
+                              isActive
+                                ? 'bg-gradient-to-r from-sena-green/10 via-emerald-500/8 to-sena-green/10 text-[var(--color-text)] shadow-[0_10px_30px_rgba(15,23,42,0.18)] border border-sena-green/35 ring-1 ring-sena-green/45 ring-offset-2 ring-offset-white/80 dark:ring-offset-slate-900/80 scale-[1.01] backdrop-blur-sm'
                                         : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
                                     )}
                                   >
@@ -1847,7 +1961,7 @@ export const ChatsPage = () => {
                                         <button
                                           type="button"
                                           onClick={() => handleMenuAction('unarchive', chat.id)}
-                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                         >
                                           <Archive className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                           <span className="text-left font-medium">Desarchivar chat</span>
@@ -1856,7 +1970,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('mute', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                           >
                                             <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Silenciar notificaciones</span>
@@ -1865,7 +1979,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('unmute', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                           >
                                             <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Activar notificaciones</span>
@@ -1875,7 +1989,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('pin', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                           >
                                             <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Fijar chat</span>
@@ -1884,7 +1998,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('unpin', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                           >
                                             <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Desfijar chat</span>
@@ -1924,7 +2038,7 @@ export const ChatsPage = () => {
                             {archivedChatsList.map((chat) => {
                               const isActive = chat.id === selectedChatId;
                               const lastActivity = formatLastActivity(chat.lastMessageAt ?? chat.createdAt);
-                              const chatLabel = getChatName(chat.name, chat.isGroup);
+                              const chatLabel = getChatDisplayName(chat);
                               const initials = getInitialsFromLabel(chatLabel);
                               const gradient = getAvatarGradient(chat.id);
                               const hasUnread = !chat.lastMessageAt;
@@ -1956,7 +2070,7 @@ export const ChatsPage = () => {
                                     className={classNames(
                                       'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200',
                                       isActive
-                                        ? 'bg-gradient-to-r from-sena-green/15 to-emerald-500/10 text-sena-green shadow-[0_8px_24px_rgba(57,169,0,0.15)] border border-sena-green/20 scale-[1.02]'
+                                        ? 'bg-gradient-to-r from-sena-green/10 via-emerald-500/8 to-sena-green/10 text-[var(--color-text)] shadow-[0_10px_30px_rgba(15,23,42,0.18)] border border-sena-green/35 ring-1 ring-sena-green/45 ring-offset-2 ring-offset-white/80 dark:ring-offset-slate-900/80 scale-[1.01] backdrop-blur-sm'
                                         : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
                                     )}
                                   >
@@ -2053,7 +2167,7 @@ export const ChatsPage = () => {
                                         <button
                                           type="button"
                                           onClick={() => handleMenuAction('unarchive', chat.id)}
-                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                         >
                                           <Archive className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                           <span className="text-left font-medium">Desarchivar chat</span>
@@ -2062,7 +2176,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('mute', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                           >
                                             <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Silenciar notificaciones</span>
@@ -2071,7 +2185,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('unmute', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                           >
                                             <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Activar notificaciones</span>
@@ -2081,7 +2195,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('pin', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                           >
                                             <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Fijar chat</span>
@@ -2090,7 +2204,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('unpin', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                           >
                                             <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Desfijar chat</span>
@@ -2271,10 +2385,14 @@ export const ChatsPage = () => {
                                   )} />
                                 </button>
                               )}
-                              {!isOwn && (
-                                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-muted)] mb-1.5">
-                                  {entry.senderId}
-                                </p>
+                              {!isOwn && activeChat?.isGroup && (
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(`/profile/${entry.senderId}`)}
+                                  className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-text)] hover:text-sena-green transition-colors mb-1.5 cursor-pointer"
+                                >
+                                  {getSenderName(entry.senderId)}
+                                </button>
                               )}
                               {entry.attachmentUrl && (() => {
                                 const attachmentUrl = resolveAssetUrl(entry.attachmentUrl);
@@ -2350,7 +2468,7 @@ export const ChatsPage = () => {
                                   ref={(el) => {
                                     messageMenuRefs.current[entry.id] = el;
                                   }}
-                                  className="fixed w-[200px] rounded-2xl bg-slate-800/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2 z-[999999]"
+                                  className="fixed w-[200px] rounded-2xl bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-white/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2 z-[999999]"
                                   style={{
                                     left: `${messageMenuPosition.x}px`,
                                     top: `${messageMenuPosition.y}px`,
@@ -2362,44 +2480,44 @@ export const ChatsPage = () => {
                                   <button
                                     type="button"
                                     onClick={() => handleMessageAction('reply', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                   >
-                                    <Reply className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                    <Reply className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
                                     <span className="text-left font-medium">Responder</span>
                                   </button>
                                   {entry.content && (
                                     <button
                                       type="button"
                                       onClick={() => handleMessageAction('copy', entry)}
-                                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                     >
-                                      <Copy className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                      <Copy className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
                                       <span className="text-left font-medium">Copiar</span>
                                     </button>
                                   )}
                                   <button
                                     type="button"
                                     onClick={() => handleMessageAction('react', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                   >
-                                    <Smile className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                    <Smile className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
                                     <span className="text-left font-medium">Reaccionar</span>
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleMessageAction('forward', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                   >
-                                    <Forward className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                    <Forward className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
                                     <span className="text-left font-medium">Reenviar</span>
                                   </button>
                                   {entry.attachmentUrl && (
                                     <button
                                       type="button"
                                       onClick={() => handleMessageAction('download', entry)}
-                                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                     >
-                                      <Download className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                      <Download className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
                                       <span className="text-left font-medium">Descargar</span>
                                     </button>
                                   )}
@@ -2407,26 +2525,26 @@ export const ChatsPage = () => {
                                   <button
                                     type="button"
                                     onClick={() => handleMessageAction('pin', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                   >
-                                    <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                    <Pin className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
                                     <span className="text-left font-medium">Fijar</span>
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleMessageAction('star', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:text-white transition-colors hover:bg-slate-700/50 dark:hover:bg-slate-700/70"
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
                                   >
-                                    <Star className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                    <Star className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
                                     <span className="text-left font-medium">Destacar</span>
                                   </button>
-                                  <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
+                                  <div className="my-1 h-px bg-slate-200 dark:bg-slate-600/50 mx-2" />
                                   <button
                                     type="button"
                                     onClick={() => handleMessageAction('delete', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:text-red-300 transition-colors hover:bg-red-900/30 dark:hover:bg-red-900/40"
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors hover:bg-red-50 dark:hover:bg-red-900/30"
                                   >
-                                    <Trash2 className="h-4 w-4 flex-shrink-0" />
+                                    <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
                                     <span className="text-left font-medium">Eliminar</span>
                                   </button>
                                 </div>,
@@ -2570,7 +2688,7 @@ export const ChatsPage = () => {
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={() => setShowNewChat(true)}
+                  onClick={() => setShowNewChatDialog(true)}
                   className="px-6 py-2.5 font-semibold shadow-[0_8px_20px_rgba(57,169,0,0.25)] hover:shadow-[0_12px_28px_rgba(57,169,0,0.35)] transition-all hover:scale-105"
                 >
                   <MessageCirclePlus className="h-4 w-4 mr-2" />
@@ -2726,8 +2844,9 @@ export const ChatsPage = () => {
         onClose={() => {
           setShowNewChatDialog(false);
           setNewChatType(null);
-          setShowNewChat(false);
           reset(initialCreateChatValues);
+          setSelectedFriendIds(new Set());
+          setCreateChatError(null);
         }}
         size="md"
       >
@@ -2742,8 +2861,9 @@ export const ChatsPage = () => {
               onClick={() => {
                 setShowNewChatDialog(false);
                 setNewChatType(null);
-                setShowNewChat(false);
                 reset(initialCreateChatValues);
+                setSelectedFriendIds(new Set());
+                setCreateChatError(null);
               }}
               className="self-start rounded-full glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
             >
@@ -2781,7 +2901,7 @@ export const ChatsPage = () => {
             </button>
           </div>
 
-          {newChatType && showNewChat && (
+          {newChatType && (
             <div className="mt-4 rounded-2xl border border-white/20 bg-white/5 p-4">
               <form onSubmit={handleCreateChat} className="space-y-4">
                 {newChatType === 'group' && (
@@ -2882,7 +3002,7 @@ export const ChatsPage = () => {
                     onClick={() => {
                       reset(initialCreateChatValues);
                       setNewChatType(null);
-                      setShowNewChat(false);
+                      setShowNewChatDialog(false);
                       setSelectedFriendIds(new Set());
                       setCreateChatError(null);
                     }}
@@ -2896,6 +3016,59 @@ export const ChatsPage = () => {
               </form>
             </div>
           )}
+        </div>
+      </GlassDialog>
+
+      {/* Diálogo de confirmación para eliminar chat */}
+      <GlassDialog
+        open={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setChatToDelete(null);
+        }}
+        size="sm"
+        contentClassName="glass-dialog-delete bg-white/90 dark:bg-slate-900/95 border border-red-500/30 shadow-[0_24px_60px_rgba(239,68,68,0.7)]"
+      >
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-[var(--color-text)]">
+              Eliminar conversación
+            </h3>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Esta acción eliminará el historial de mensajes de este chat solo para ti. Las otras personas
+              seguirán viendo sus mensajes.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setChatToDelete(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="!bg-red-500 !text-white !border-red-500/60 !shadow-[0_8px_18px_rgba(239,68,68,0.55)] hover:!bg-red-600 hover:!shadow-[0_10px_24px_rgba(239,68,68,0.65)] focus:!ring-red-400/60"
+              loading={deleteChatMutation.isPending}
+              onClick={() => {
+                if (!chatToDelete) return;
+                deleteChatMutation.mutate(chatToDelete, {
+                  onSuccess: () => {
+                    setShowDeleteDialog(false);
+                    setChatToDelete(null);
+                    setSuccessMessage('Chat eliminado correctamente');
+                    setTimeout(() => setSuccessMessage(null), 1500);
+                  }
+                });
+              }}
+            >
+              Eliminar chat
+            </Button>
+          </div>
         </div>
       </GlassDialog>
 
@@ -2955,7 +3128,7 @@ export const ChatsPage = () => {
 
               return allMessages.map((message) => {
                 const chat = chats.find(c => c.id === message.chatId);
-                const chatName = chat ? getChatName(chat.name, chat.isGroup) : 'Chat eliminado';
+                const chatName = chat ? getChatDisplayName(chat) : 'Chat eliminado';
                 const isOwnMessage = message.senderId === authUser?.id;
 
                 return (
@@ -3000,6 +3173,33 @@ export const ChatsPage = () => {
           </div>
         </div>
       </GlassDialog>
+
+      {/* Mensaje de éxito */}
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div
+            key="success-message"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ 
+              duration: 0.3, 
+              ease: [0.16, 1, 0.3, 1],
+              exit: { duration: 0.25, ease: [0.16, 1, 0.3, 1] }
+            }}
+            className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
+            style={{ willChange: 'transform, opacity' }}
+          >
+            <p className="text-sm font-medium text-[var(--color-text)] whitespace-nowrap relative z-10">{successMessage}</p>
+            <motion.div
+              initial={{ width: '100%' }}
+              animate={{ width: '0%' }}
+              transition={{ duration: 1.5, ease: 'linear' }}
+              className="absolute bottom-0 left-0 h-1 bg-sena-green"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 };

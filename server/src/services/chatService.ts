@@ -63,5 +63,13 @@ export const chatService = {
     }
 
     await chatRepository.deleteMessage(messageId);
+  },
+
+  async deleteChat(chatId: string, userId: string): Promise<void> {
+    const members = await chatRepository.listChatMembers(chatId);
+    if (!members.includes(userId)) {
+      throw new AppError('No tienes acceso a esta conversación', 403);
+    }
+    await chatRepository.deleteChat(chatId);
   }
 };

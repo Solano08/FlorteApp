@@ -124,39 +124,38 @@ export const CreateCommunityDialog = ({
 
   return (
     <GlassDialog open={open} onClose={handleClose} size="md">
-      <div className="glass-frosted-card rounded-3xl p-5 sm:p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Header */}
-          <div className="text-center space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sena-green">
-              <span>Comunidad</span>
-            </div>
-            <h2 className="text-xl font-semibold text-[var(--color-text)]">
-              Crear nueva comunidad
-            </h2>
-            <p className="text-sm text-[var(--color-muted)]">
-              Diseña un espacio seguro y colaborativo para tu equipo
-            </p>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Header con chip y texto descriptivo */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sena-green">
+            <span>Comunidad</span>
           </div>
+          <h2 className="text-xl font-semibold text-[var(--color-text)]">
+            Crear nueva comunidad
+          </h2>
+          <p className="text-xs text-[var(--color-muted)]">
+            Diseña un espacio seguro y colaborativo para tu equipo.
+          </p>
+        </div>
 
-          {/* Área de subida de imagen */}
-          <div className="space-y-3">
-            <label className="block text-xs font-medium text-[var(--color-text)]">
-              Foto de perfil
-            </label>
-            <div
-              className={`group relative rounded-3xl border-2 border-dashed transition-all duration-200 ${
-                isDragging
-                  ? 'border-sena-green/60 bg-sena-green/5 dark:bg-sena-green/10'
-                  : 'border-white/40 dark:border-white/15 bg-white/30 dark:bg-slate-800/30'
-              }`}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-            >
+        {/* Área de subida de imagen, estilo original mejorado */}
+        <div className="space-y-3">
+          <label className="block text-xs font-medium text-[var(--color-text)]">
+            Foto de perfil (opcional)
+          </label>
+          <div
+            className={`group relative rounded-3xl border-2 border-dashed transition-all duration-200 ${
+              isDragging
+                ? 'border-sena-green/60 bg-sena-green/5 dark:bg-sena-green/10'
+                : 'border-white/40 dark:border-white/15 bg-white/30 dark:bg-slate-800/30'
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
             {previewUrl ? (
               <div className="relative p-4">
-                <div className="relative mx-auto h-32 w-32 overflow-hidden rounded-2xl ring-2 ring-white/40 dark:ring-white/10 shadow-lg">
+                <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-2xl ring-2 ring-white/40 dark:ring-white/10 shadow-lg">
                   <img
                     src={previewUrl}
                     alt="Vista previa"
@@ -167,25 +166,25 @@ export const CreateCommunityDialog = ({
                   type="button"
                   onClick={handleRemoveImage}
                   disabled={isLoading}
-                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 dark:bg-slate-800/90 text-red-500 shadow-md transition-all duration-200 hover:scale-110 hover:bg-white dark:hover:bg-slate-800"
+                  className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 dark:bg-slate-900/95 text-red-500 shadow-md transition-all duration-200 hover:scale-110 hover:bg-white dark:hover:bg-slate-900"
                   aria-label="Eliminar imagen"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center p-8 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-sena-green/10 dark:bg-sena-green/20">
-                  <Upload className="h-7 w-7 text-sena-green dark:text-emerald-400" />
+              <div className="flex flex-col items-center justify-center p-7 text-center">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-sena-green/10 dark:bg-sena-green/20">
+                  <Upload className="h-6 w-6 text-sena-green dark:text-emerald-400" />
                 </div>
                 <p className="mb-1 text-sm font-medium text-[var(--color-text)]">
                   Arrastra una imagen aquí
                 </p>
-                <p className="mb-4 text-xs text-[var(--color-muted)]">
-                  o haz clic para seleccionar
+                <p className="mb-3 text-xs text-[var(--color-muted)]">
+                  o haz clic para seleccionar un archivo desde tu dispositivo.
                 </p>
                 <label className="cursor-pointer">
-                  <span className="inline-flex items-center gap-2 rounded-xl bg-sena-green/10 dark:bg-sena-green/20 px-4 py-2 text-sm font-medium text-sena-green dark:text-emerald-400 transition-all duration-200 hover:bg-sena-green/20 dark:hover:bg-sena-green/30">
+                  <span className="inline-flex items-center gap-2 rounded-xl bg-sena-green/10 dark:bg-sena-green/20 px-4 py-2 text-xs font-medium text-sena-green dark:text-emerald-400 transition-all duration-200 hover:bg-sena-green/20 dark:hover:bg-sena-green/30">
                     <ImagePlus className="h-4 w-4" />
                     Elegir archivo
                   </span>
@@ -202,57 +201,56 @@ export const CreateCommunityDialog = ({
           </div>
         </div>
 
-          {/* Campo de nombre */}
-          <div className="space-y-2">
-            <label htmlFor="community-name" className="block text-xs font-medium text-[var(--color-text)]">
-              Nombre de la comunidad
-            </label>
-            <Input
-              id="community-name"
-              placeholder="Ej: Mi Comunidad, Proyecto SENA, Equipo Dev"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value.slice(0, NAME_MAX_LENGTH));
-                setError(null);
-              }}
-              error={error || undefined}
-              className="text-base rounded-2xl"
-              disabled={isLoading}
-            />
-            <div className="flex justify-between text-[11px]">
-              <span className="text-[var(--color-muted)]">
-                {name.length > 0 && `${name.length} de ${NAME_MAX_LENGTH} caracteres`}
+        {/* Campo de nombre */}
+        <div className="space-y-2">
+          <label htmlFor="community-name" className="block text-xs font-medium text-[var(--color-text)]">
+            Nombre de la comunidad
+          </label>
+          <Input
+            id="community-name"
+            placeholder="Ej: Equipo Innovación, Proyecto SENA, Backend Devs"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value.slice(0, NAME_MAX_LENGTH));
+              setError(null);
+            }}
+            error={error || undefined}
+            className="text-sm rounded-2xl"
+            disabled={isLoading}
+          />
+          <div className="flex justify-between text-[10px] text-[var(--color-muted)]">
+            <span>
+              {name.length > 0 && `${name.length} / ${NAME_MAX_LENGTH} caracteres`}
+            </span>
+            {name.length > 0 && (
+              <span>
+                {NAME_MAX_LENGTH - name.length} restantes
               </span>
-              {name.length > 0 && (
-                <span className="text-[var(--color-muted)]">
-                  {NAME_MAX_LENGTH - name.length} restantes
-                </span>
-              )}
-            </div>
+            )}
           </div>
+        </div>
 
-          {/* Botones */}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleClose}
-              disabled={isLoading}
-              className="px-5"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              loading={isLoading}
-              disabled={!name.trim()}
-              className="px-6"
-            >
-              Crear comunidad
-            </Button>
-          </div>
-        </form>
-      </div>
+        {/* Botones */}
+        <div className="flex justify-end gap-2 pt-1">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleClose}
+            disabled={isLoading}
+            className="px-4 text-xs"
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            loading={isLoading}
+            disabled={!name.trim()}
+            className="px-5 text-xs"
+          >
+            Crear comunidad
+          </Button>
+        </div>
+      </form>
     </GlassDialog>
   );
 };

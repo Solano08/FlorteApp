@@ -50,5 +50,13 @@ export const chatController = {
     const { chatId, messageId } = req.params;
     await chatService.deleteMessage(messageId, userId, chatId);
     res.json({ success: true });
+  },
+
+  deleteChat: async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Autenticación requerida', 401);
+    const { chatId } = req.params;
+    await chatService.deleteChat(chatId, userId);
+    res.json({ success: true });
   }
 };
