@@ -15,6 +15,7 @@ import { projectService } from '../../services/projectService';
 import { libraryService } from '../../services/libraryService';
 import { feedService } from '../../services/feedService';
 import { friendService } from '../../services/friendService';
+import { userService } from '../../services/userService';
 import {
   Bookmark,
   ChevronLeft,
@@ -283,45 +284,106 @@ export const HomePage = () => {
     storyFileInputRef.current?.click();
   };
 
-  const handleStoryFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleStoryFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
-    const nextUrl = URL.createObjectURL(file);
-    setStoryMediaUrls((previous) => {
-      const next = [...previous, nextUrl];
-      setCurrentStoryIndex(next.length - 1);
-      return next;
-    });
+    if (!file || !user?.id) return;
+    
+    // Convertir archivo a base64 para guardarlo en localStorage
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      const storyData = {
+        id: `${Date.now()}_${Math.random()}`,
+        userId: user.id,
+        userName: userDisplayName,
+        userAvatarUrl: user.avatarUrl,
+        mediaUrl: base64String,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Guardar en localStorage
+      const storedStories = JSON.parse(localStorage.getItem('florte_stories') || '{}');
+      if (!storedStories[user.id]) {
+        storedStories[user.id] = [];
+      }
+      storedStories[user.id].push(storyData);
+      localStorage.setItem('florte_stories', JSON.stringify(storedStories));
+      
+      // No actualizar storyMediaUrls - las historias ahora se manejan desde localStorage
+      // Invalidar queries para refrescar historias
+      queryClient.invalidateQueries({ queryKey: ['friends'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      
+      // Abrir el visor de historias con la nueva historia
+      const updatedStories = [...(storedStories[user.id] || []), storyData];
+      setSelectedStoryUser({ userId: user.id, stories: updatedStories });
+      setCurrentStoryIndex(updatedStories.length - 1);
+      setIsStoryViewerOpen(true);
+      setIsStoryMenuOpen(false);
+    };
+    reader.readAsDataURL(file);
     event.target.value = '';
-    setIsStoryViewerOpen(true);
-    setIsStoryMenuOpen(false);
   };
 
-  const handleStoryClick = () => {
-    if (!storyMediaUrls.length) {
-      handleOpenStoryPicker();
+  const [selectedStoryUser, setSelectedStoryUser] = useState<{ userId: string; stories: StoryData[] } | null>(null);
+
+  const handleStoryClick = (storyItem?: typeof storiesWithAvatars[0]) => {
+    if (storyItem?.id === 'create') {
+      // Si tiene historias, mostrarlas; si no, abrir el selector de archivos
+      if (storyItem.stories && storyItem.stories.length > 0) {
+        setSelectedStoryUser({ userId: storyItem.userId!, stories: storyItem.stories });
+        setCurrentStoryIndex(0);
+        setIsStoryViewerOpen(true);
+        setIsStoryMenuOpen(false);
+      } else {
+        handleOpenStoryPicker();
+      }
       return;
     }
-    setIsStoryViewerOpen(true);
-    setIsStoryMenuOpen(false);
+    
+    if (storyItem?.userId && storyItem.stories && storyItem.stories.length > 0) {
+      setSelectedStoryUser({ userId: storyItem.userId, stories: storyItem.stories });
+      setCurrentStoryIndex(0);
+      setIsStoryViewerOpen(true);
+      setIsStoryMenuOpen(false);
+    }
   };
 
   const handleDeleteStory = () => {
-    setIsStoryViewerOpen(false);
-    setIsStoryMenuOpen(false);
-    setStoryMediaUrls((previous) => {
-      const toRemove = previous[currentStoryIndex];
-      if (toRemove?.startsWith('blob:')) {
-        URL.revokeObjectURL(toRemove);
-      }
-      const next = previous.filter((_, index) => index !== currentStoryIndex);
-      const nextIndex = Math.max(0, Math.min(currentStoryIndex, next.length - 1));
-      setCurrentStoryIndex(nextIndex);
-      if (!next.length) {
+    if (!user?.id || !selectedStoryUser || !selectedStoryUser.stories[currentStoryIndex]) {
+      setIsStoryViewerOpen(false);
+      setIsStoryMenuOpen(false);
+      setSelectedStoryUser(null);
+      return;
+    }
+    
+    // Eliminar de localStorage
+    const storedStories = JSON.parse(localStorage.getItem('florte_stories') || '{}');
+    const storyToDelete = selectedStoryUser.stories[currentStoryIndex];
+    
+    if (storedStories[user.id]) {
+      storedStories[user.id] = storedStories[user.id].filter(
+        (story: StoryData) => story.id !== storyToDelete.id
+      );
+      localStorage.setItem('florte_stories', JSON.stringify(storedStories));
+      
+      // Actualizar las historias del usuario
+      const updatedStories = storedStories[user.id] || [];
+      const nextIndex = Math.max(0, Math.min(currentStoryIndex, updatedStories.length - 1));
+      
+      if (updatedStories.length > 0) {
+        setSelectedStoryUser({ userId: user.id, stories: updatedStories });
+        setCurrentStoryIndex(nextIndex);
+      } else {
         setIsStoryViewerOpen(false);
+        setIsStoryMenuOpen(false);
+        setSelectedStoryUser(null);
       }
-      return next;
-    });
+      
+      // Invalidar queries para refrescar historias
+      queryClient.invalidateQueries({ queryKey: ['friends'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
   };
 
   const triggerCommentFileInput = (postId: string, kind: AttachmentKind) => {
@@ -1717,24 +1779,113 @@ export const HomePage = () => {
     );
   };
 
-  const storiesWithAvatars = useMemo(() => {
-    if (storyMediaUrls.length) {
-      return [
-        {
-          id: 'uploaded',
-          name: userDisplayName || 'Tu historia',
-          avatar: storyMediaUrls[0]
+  // Cargar historias de todos los usuarios desde localStorage
+  const { data: friends = [] } = useQuery({
+    queryKey: ['friends'],
+    queryFn: friendService.listFriends
+  });
+
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: userService.getAllUsers
+  });
+
+  type StoryData = {
+    id: string;
+    userId: string;
+    userName: string;
+    userAvatarUrl?: string | null;
+    mediaUrl: string;
+    createdAt: string;
+  };
+
+  const allStories = useMemo(() => {
+    try {
+      const storedStories = JSON.parse(localStorage.getItem('florte_stories') || '{}');
+      const storiesList: StoryData[] = [];
+      
+      // Agregar historias de TODOS los usuarios (últimas 24 horas)
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      
+      // Combinar amigos y todos los usuarios para obtener la lista completa
+      const allUserIds = new Set<string>();
+      friends.forEach((friend) => allUserIds.add(friend.id));
+      allUsers.forEach((u) => allUserIds.add(u.id));
+      if (user?.id) allUserIds.add(user.id);
+      
+      // Cargar historias de todos los usuarios
+      Array.from(allUserIds).forEach((userId) => {
+        if (storedStories[userId]) {
+          storedStories[userId]
+            .filter((story: StoryData) => new Date(story.createdAt).getTime() > oneDayAgo)
+            .forEach((story: StoryData) => {
+              storiesList.push(story);
+            });
         }
-      ];
+      });
+      
+      // Ordenar por fecha (más recientes primero)
+      return storiesList.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    } catch (error) {
+      console.error('Error loading stories:', error);
+      return [];
     }
-    return [
-      {
-        id: 'create',
-        name: 'Tu historia',
-        avatar: resolveAssetUrl(user?.avatarUrl) ?? 'https://i.pravatar.cc/100?img=5'
+  }, [user?.id, friends, allUsers]);
+
+  // Agrupar historias por usuario
+  const storiesByUser = useMemo(() => {
+    const grouped = new Map<string, StoryData[]>();
+    allStories.forEach((story) => {
+      if (!grouped.has(story.userId)) {
+        grouped.set(story.userId, []);
       }
-    ];
-  }, [storyMediaUrls, user?.avatarUrl, userDisplayName]);
+      grouped.get(story.userId)!.push(story);
+    });
+    return Array.from(grouped.entries()).map(([userId, stories]) => ({
+      userId,
+      userName: stories[0].userName,
+      userAvatarUrl: stories[0].userAvatarUrl,
+      stories: stories.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+      latestStory: stories[stories.length - 1]
+    }));
+  }, [allStories]);
+
+  // Obtener historias del usuario actual
+  const currentUserStories = useMemo(() => {
+    if (!user?.id) return [];
+    return allStories.filter((story) => story.userId === user.id);
+  }, [allStories, user?.id]);
+
+  const storiesWithAvatars = useMemo(() => {
+    const result: Array<{ id: string; name: string; avatar: string; userId?: string; stories?: StoryData[] }> = [];
+    
+    // Agregar botón para crear historia (con las historias del usuario actual)
+    result.push({
+      id: 'create',
+      name: 'Tu historia',
+      avatar: resolveAssetUrl(user?.avatarUrl) || '',
+      userId: user?.id,
+      stories: currentUserStories.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    });
+    
+    // Agregar historias de OTROS usuarios (excluir el usuario actual)
+    storiesByUser.forEach((userStories) => {
+      // Excluir historias del usuario actual porque ya están en el botón "Crear historia"
+      if (userStories.userId !== user?.id) {
+        result.push({
+          id: userStories.userId,
+          name: userStories.userName,
+          avatar: resolveAssetUrl(userStories.userAvatarUrl) || '',
+          userId: userStories.userId,
+          stories: userStories.stories
+        });
+      }
+    });
+    
+    return result;
+  }, [storiesByUser, user?.avatarUrl, user?.id, currentUserStories]);
 
   const activeModalPost = commentModalPost
     ? feedPosts.find((post) => post.id === commentModalPost.id) ?? commentModalPost
@@ -1845,45 +1996,70 @@ export const HomePage = () => {
               onChange={handleStoryFileChange}
             />
             <div className="flex gap-2.5 overflow-x-auto pb-1 hide-scrollbar -mx-1 px-1" style={{ overflow: 'visible' }}>
-              {storiesWithAvatars.map((story) => (
-                <button
-                  key={story.id}
-                  type="button"
-                  onClick={handleStoryClick}
-                  className="group relative z-[60] flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-300 hover:scale-105 active:scale-95"
-                  style={{ zIndex: 60, position: 'relative' }}
-                >
-                  <div
-                    className={`relative h-12 w-12 rounded-full p-[2.5px] transition-all duration-300 ${
-                      storyMediaUrls.length
-                        ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_6px_24px_rgba(57,169,0,0.35)]'
-                        : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_8px_28px_rgba(57,169,0,0.45)] group-hover:scale-105'
-                      }`}
-                    style={{ zIndex: 61, position: 'relative' }}
+              {storiesWithAvatars.map((story) => {
+                const hasStories = story.stories && story.stories.length > 0;
+                const storyPreview = story.stories && story.stories.length > 0 
+                  ? story.stories[story.stories.length - 1].mediaUrl 
+                  : null;
+                
+                return (
+                  <button
+                    key={story.id}
+                    type="button"
+                    onClick={() => handleStoryClick(story)}
+                    className="group relative z-[60] flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-300 hover:scale-105 active:scale-95"
+                    style={{ zIndex: 60, position: 'relative' }}
                   >
-                    <div className="relative flex h-full w-full items-center justify-center rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-surface)] transition-all duration-300 group-hover:border-sena-green/30" style={{ zIndex: 62 }}>
-                      {storyMediaUrls.length ? (
-                        <img
-                          src={story.avatar}
-                          alt={story.name}
-                          className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-110"
-                        />
-                      ) : (
-                        <Plus className="h-5 w-5 text-sena-green transition-all duration-300 group-hover:scale-125 group-hover:rotate-90 drop-shadow-[0_2px_4px_rgba(57,169,0,0.3)]" />
+                    <div
+                      className={`relative h-12 w-12 rounded-full p-[2.5px] transition-all duration-300 ${
+                        hasStories
+                          ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_6px_24px_rgba(57,169,0,0.35)]'
+                          : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_8px_28px_rgba(57,169,0,0.45)] group-hover:scale-105'
+                      }`}
+                      style={{ zIndex: 61, position: 'relative' }}
+                    >
+                      <div className="relative flex h-full w-full items-center justify-center rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-surface)] transition-all duration-300 group-hover:border-sena-green/30 overflow-hidden" style={{ zIndex: 62 }}>
+                        {story.id === 'create' ? (
+                          storyPreview ? (
+                            <img
+                              src={storyPreview}
+                              alt="Vista previa"
+                              className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-110"
+                            />
+                          ) : (
+                            <Plus className="h-5 w-5 text-sena-green transition-all duration-300 group-hover:scale-125 group-hover:rotate-90 drop-shadow-[0_2px_4px_rgba(57,169,0,0.3)]" />
+                          )
+                        ) : storyPreview ? (
+                          <img
+                            src={storyPreview}
+                            alt={story.name}
+                            className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-110"
+                          />
+                        ) : (
+                          <UserAvatar
+                            firstName={story.name.split(' ')[0] || ''}
+                            lastName={story.name.split(' ').slice(1).join(' ') || ''}
+                            avatarUrl={story.userId === user?.id ? user?.avatarUrl : undefined}
+                            size="sm"
+                            className="h-full w-full"
+                          />
+                        )}
+                      </div>
+                      {story.id === 'create' && !hasStories && (
+                        <>
+                          <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-sena-green/30 via-sena-light/30 to-emerald-500/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md" style={{ zIndex: 59, position: 'absolute' }} />
+                          <div className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-tr from-sena-green/15 via-sena-light/15 to-emerald-500/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl animate-pulse" style={{ zIndex: 58, position: 'absolute' }} />
+                        </>
                       )}
                     </div>
-                    {!storyMediaUrls.length && (
-                      <>
-                        <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-sena-green/30 via-sena-light/30 to-emerald-500/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md" style={{ zIndex: 59, position: 'absolute' }} />
-                        <div className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-tr from-sena-green/15 via-sena-light/15 to-emerald-500/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl animate-pulse" style={{ zIndex: 58, position: 'absolute' }} />
-                      </>
-                    )}
-                  </div>
-                  <span className="text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate transition-colors duration-300 group-hover:text-sena-green">
-                    {storyMediaUrls.length ? 'Tus historias' : 'Crear historia'}
-                  </span>
-                </button>
-              ))}
+                    <span className="text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate transition-colors duration-300 group-hover:text-sena-green">
+                      {story.id === 'create' 
+                        ? (hasStories ? 'Tus historias' : 'Crear historia')
+                        : story.name}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </Card>
 
@@ -2155,32 +2331,55 @@ export const HomePage = () => {
                   {chats.length === 0 && (
                     <p className="text-sm text-[var(--color-muted)]">An no tienes conversaciones activas.</p>
                   )}
-                  {chats.map((chat) => (
-                    <button
-                      key={chat.id}
-                      type="button"
-                      onClick={() => handleOpenChat(chat.id)}
-                      className="group relative flex w-full items-center gap-3 rounded-xl border border-transparent bg-transparent px-3 py-2.5 text-left transition-all duration-300 ease-out hover:border-white/30 hover:bg-gradient-to-r hover:from-white/10 hover:via-white/5 hover:to-transparent hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.05)] dark:hover:border-white/20 dark:hover:from-white/8 dark:hover:via-white/4"
-                    >
-                      <div className="relative flex-shrink-0">
-                        <img
-                          src={`https://avatars.dicebear.com/api/initials/${encodeURIComponent(chat.name ?? 'Chat')}.svg`}
-                          alt={chat.name ?? 'Chat'}
-                          className="h-9 w-9 rounded-full object-cover transition-transform duration-300 group-hover:scale-110 group-hover:ring-2 group-hover:ring-white/20"
-                        />
-                        <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-[var(--color-text)] transition-colors duration-300">{chat.name ?? 'Chat sin ttulo'}</p>
-                        <p className="text-xs text-[var(--color-muted)] truncate transition-colors duration-300 group-hover:text-[var(--color-text)]/80">
-                          {chat.lastMessage 
-                            ? (chat.lastMessage.length > 40 ? chat.lastMessage.substring(0, 40) + '...' : chat.lastMessage)
-                            : 'Sin mensajes'}
-                        </p>
-                      </div>
-                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
-                    </button>
-                  ))}
+                  {chats.map((chat) => {
+                    // Encontrar el otro usuario del chat (si no es grupo)
+                    const chatOtherUser = chat.isGroup ? null : (() => {
+                      const otherUserId = chat.createdBy === user?.id ? null : chat.createdBy;
+                      if (!otherUserId) return null;
+                      return friends.find((f) => f.id === otherUserId) || null;
+                    })();
+
+                    return (
+                      <button
+                        key={chat.id}
+                        type="button"
+                        onClick={() => handleOpenChat(chat.id)}
+                        className="group relative flex w-full items-center gap-3 rounded-xl border border-transparent bg-transparent px-3 py-2.5 text-left transition-all duration-300 ease-out hover:border-white/30 hover:bg-gradient-to-r hover:from-white/10 hover:via-white/5 hover:to-transparent hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.05)] dark:hover:border-white/20 dark:hover:from-white/8 dark:hover:via-white/4"
+                      >
+                        <div className="relative flex-shrink-0">
+                          {chat.isGroup ? (
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 shadow-[0_8px_16px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:ring-2 group-hover:ring-white/20">
+                              <UsersIcon className="h-5 w-5 text-white" />
+                            </div>
+                          ) : chatOtherUser ? (
+                            <div className="transition-transform duration-300 group-hover:scale-110">
+                              <UserAvatar
+                                firstName={chatOtherUser.firstName}
+                                lastName={chatOtherUser.lastName}
+                                avatarUrl={chatOtherUser.avatarUrl}
+                                size="sm"
+                                className="transition-transform duration-300 group-hover:ring-2 group-hover:ring-white/20"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gray-400 to-gray-500 transition-transform duration-300 group-hover:scale-110 group-hover:ring-2 group-hover:ring-white/20">
+                              <UsersIcon className="h-5 w-5 text-white" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-[var(--color-text)] transition-colors duration-300">{chat.name ?? (chatOtherUser ? `${chatOtherUser.firstName} ${chatOtherUser.lastName}`.trim() : 'Chat sin título')}</p>
+                          <p className="text-xs text-[var(--color-muted)] truncate transition-colors duration-300 group-hover:text-[var(--color-text)]/80">
+                            {chat.lastMessage 
+                              ? (chat.lastMessage.length > 40 ? chat.lastMessage.substring(0, 40) + '...' : chat.lastMessage)
+                              : 'Sin mensajes'}
+                          </p>
+                        </div>
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
+                      </button>
+                    );
+                  })}
                 </div>
               </Card>
             </motion.div>
@@ -2195,33 +2394,40 @@ export const HomePage = () => {
           })}
         </AnimatePresence>
 
-        {isStoryViewerOpen && storyMediaUrls.length > 0 && (
+        {isStoryViewerOpen && selectedStoryUser && selectedStoryUser.stories && selectedStoryUser.stories.length > 0 && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
             onClick={() => {
               setIsStoryViewerOpen(false);
               setIsStoryMenuOpen(false);
+              setSelectedStoryUser(null);
             }}
           >
             <div className="relative flex items-center gap-4" onClick={(event) => event.stopPropagation()}>
-              {storyMediaUrls.length > 1 && (
-                <button
-                  type="button"
-                  className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
-                  onClick={() =>
-                    setCurrentStoryIndex((index) => (index - 1 + storyMediaUrls.length) % storyMediaUrls.length)
-                  }
-                  aria-label="Anterior"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-              )}
-              <div className="relative">
-                <img
-                  src={storyMediaUrls[currentStoryIndex]}
-                  alt="Historia subida"
-                  className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
-                />
+              {(() => {
+                const currentStories = selectedStoryUser?.stories || [];
+                const canGoBack = currentStories.length > 1;
+                
+                return (
+                  <>
+                    {canGoBack && (
+                      <button
+                        type="button"
+                        className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
+                        onClick={() =>
+                          setCurrentStoryIndex((index) => (index - 1 + currentStories.length) % currentStories.length)
+                        }
+                        aria-label="Anterior"
+                      >
+                        <ChevronLeft className="h-6 w-6" />
+                      </button>
+                    )}
+                    <div className="relative">
+                      <img
+                        src={(currentStories[currentStoryIndex] as StoryData).mediaUrl}
+                        alt="Historia"
+                        className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+                      />
                 <button
                   type="button"
                   className="absolute left-4 bottom-4 inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/80"
@@ -2229,58 +2435,75 @@ export const HomePage = () => {
                 >
                   <Image className="h-4 w-4" /> Agregar
                 </button>
-                <button
-                  type="button"
-                  className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur transition hover:bg-black/70"
-                  onClick={() => setIsStoryMenuOpen((prev) => !prev)}
-                >
-                  <MoreHorizontal className="h-5 w-5" />
-                </button>
-                {isStoryMenuOpen && (
-                  <div className="absolute right-3 top-14 z-10 w-44 rounded-2xl glass-frosted px-3 py-2 text-sm text-white">
+                      {(!selectedStoryUser || selectedStoryUser.userId === user?.id) && (
+                        <>
+                          <button
+                            type="button"
+                            className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur transition hover:bg-black/70"
+                            onClick={() => setIsStoryMenuOpen((prev) => !prev)}
+                          >
+                            <MoreHorizontal className="h-5 w-5" />
+                          </button>
+                          {isStoryMenuOpen && (
+                            <div className="absolute right-3 top-14 z-10 w-44 rounded-2xl glass-frosted px-3 py-2 text-sm text-white">
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-white/10"
+                                onClick={handleDeleteStory}
+                              >
+                                <Trash2 className="h-4 w-4 text-rose-400" /> Eliminar historia
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {(() => {
+                        const currentStories = selectedStoryUser?.stories || [];
+                        return currentStories.length > 1 ? (
+                          <div className="absolute left-1/2 top-4 flex -translate-x-1/2 gap-2">
+                            {currentStories.map((_, index) => (
+                              <span
+                                key={`story-dot-${index}`}
+                                className={classNames(
+                                  'h-1.5 w-8 rounded-full transition',
+                                  index === currentStoryIndex ? 'bg-white' : 'bg-white/40'
+                                )}
+                              />
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                    {(() => {
+                      const currentStories = selectedStoryUser?.stories || storyMediaUrls.map((url, index) => ({ id: `local-${index}` }));
+                      const canGoNext = currentStories.length > 1;
+                      return canGoNext ? (
+                        <button
+                          type="button"
+                          className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
+                          onClick={() =>
+                            setCurrentStoryIndex((index) => (index + 1) % currentStories.length)
+                          }
+                          aria-label="Siguiente"
+                        >
+                          <ChevronRight className="h-6 w-6" />
+                        </button>
+                      ) : null;
+                    })()}
                     <button
                       type="button"
-                      className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-white/10"
-                      onClick={handleDeleteStory}
+                      className="absolute -top-12 right-0 text-sm text-white/70 underline-offset-4 hover:text-white"
+                      onClick={() => {
+                        setIsStoryViewerOpen(false);
+                        setIsStoryMenuOpen(false);
+                        setSelectedStoryUser(null);
+                      }}
                     >
-                      <Trash2 className="h-4 w-4 text-rose-400" /> Eliminar historia
+                      Cerrar
                     </button>
-                  </div>
-                )}
-                {storyMediaUrls.length > 1 && (
-                  <div className="absolute left-1/2 top-4 flex -translate-x-1/2 gap-2">
-                    {storyMediaUrls.map((_, index) => (
-                      <span
-                        key={`story-dot-${index}`}
-                        className={classNames(
-                          'h-1.5 w-8 rounded-full transition',
-                          index === currentStoryIndex ? 'bg-white' : 'bg-white/40'
-                        )}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-              {storyMediaUrls.length > 1 && (
-                <button
-                  type="button"
-                  className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
-                  onClick={() => setCurrentStoryIndex((index) => (index + 1) % storyMediaUrls.length)}
-                  aria-label="Siguiente"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </button>
-              )}
-              <button
-                type="button"
-                className="absolute -top-12 right-0 text-sm text-white/70 underline-offset-4 hover:text-white"
-                onClick={() => {
-                  setIsStoryViewerOpen(false);
-                  setIsStoryMenuOpen(false);
-                }}
-              >
-                Cerrar
-              </button>
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}

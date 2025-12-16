@@ -147,7 +147,7 @@ export const ChatsPage = () => {
   const [readChats, setReadChats] = useState<Set<string>>(new Set());
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [emojiPickerPosition, setEmojiPickerPosition] = useState<'top' | 'bottom'>('top');
-  const [emojiPickerCoords, setEmojiPickerCoords] = useState<{ top?: number; bottom?: number; right: number; maxHeight?: number } | null>(null);
+  const [emojiPickerCoords, setEmojiPickerCoords] = useState<{ top?: number; bottom?: number; left: number; maxHeight?: number } | null>(null);
   const [attachment, setAttachment] = useState<{ file: File; dataUrl: string; fileName: string; mimeType: string } | null>(null);
   const [openMessageMenuId, setOpenMessageMenuId] = useState<string | null>(null);
   const [messageMenuPosition, setMessageMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -702,13 +702,13 @@ export const ChatsPage = () => {
         setEmojiPickerPosition('bottom');
         setEmojiPickerCoords({
           top: buttonRect.bottom + 8,
-          right: window.innerWidth - buttonRect.right
+          left: buttonRect.left
         });
       } else {
         setEmojiPickerPosition('top');
         setEmojiPickerCoords({
           bottom: window.innerHeight - buttonRect.top + 8,
-          right: window.innerWidth - buttonRect.right,
+          left: buttonRect.left,
           maxHeight: spaceAbove - 16
         });
       }
@@ -2640,6 +2640,43 @@ export const ChatsPage = () => {
                         <Paperclip className="h-5 w-5" />
                       </button>
                     </div>
+                    <div className="relative">
+                      <button
+                        ref={emojiButtonRef}
+                        type="button"
+                        onClick={() => setShowEmojiPicker((prev) => !prev)}
+                        className={classNames(
+                          "flex h-12 w-12 items-center justify-center rounded-2xl glass-liquid transition-all duration-200 hover:scale-110 hover:shadow-lg",
+                          showEmojiPicker
+                            ? "text-sena-green border-sena-green/50"
+                            : "text-[var(--color-muted)] hover:text-sena-green"
+                        )}
+                        aria-label="Insertar emoji"
+                      >
+                        <Smile className="h-5 w-5" />
+                      </button>
+                      {showEmojiPicker && emojiPickerCoords && (
+                        <div
+                          ref={emojiPickerRef}
+                          className="fixed z-[100]"
+                          style={{
+                            ...(emojiPickerPosition === 'top'
+                              ? { bottom: `${emojiPickerCoords.bottom}px` }
+                              : { top: `${emojiPickerCoords.top}px` }
+                            ),
+                            left: `${emojiPickerCoords.left}px`,
+                            maxWidth: 'calc(100vw - 2rem)',
+                            ...(emojiPickerCoords.maxHeight && { maxHeight: `${emojiPickerCoords.maxHeight}px` })
+                          }}
+                        >
+                          <EmojiPicker
+                            onEmojiSelect={handleEmojiSelect}
+                            onClose={() => setShowEmojiPicker(false)}
+                            theme={theme === 'dark' ? 'dark' : 'light'}
+                          />
+                        </div>
+                      )}
+                    </div>
                     <div className="flex-1 rounded-2xl glass-liquid px-5 py-3 transition-all duration-200 focus-within:border-sena-green/50 focus-within:ring-2 focus-within:ring-sena-green/20 focus-within:shadow-[0_0_0_4px_rgba(57,169,0,0.1)]">
                       <textarea
                         rows={2}
@@ -2666,43 +2703,6 @@ export const ChatsPage = () => {
                     >
                       <Send className="h-5 w-5" />
                     </Button>
-                    <div className="relative">
-                      <button
-                        ref={emojiButtonRef}
-                        type="button"
-                        onClick={() => setShowEmojiPicker((prev) => !prev)}
-                        className={classNames(
-                          "flex h-12 w-12 items-center justify-center rounded-2xl glass-liquid transition-all duration-200 hover:scale-110 hover:shadow-lg",
-                          showEmojiPicker
-                            ? "text-sena-green border-sena-green/50"
-                            : "text-[var(--color-muted)] hover:text-sena-green"
-                        )}
-                        aria-label="Insertar emoji"
-                      >
-                        <Smile className="h-5 w-5" />
-                      </button>
-                      {showEmojiPicker && emojiPickerCoords && (
-                        <div
-                          ref={emojiPickerRef}
-                          className="fixed z-[100]"
-                          style={{
-                            ...(emojiPickerPosition === 'top'
-                              ? { bottom: `${emojiPickerCoords.bottom}px` }
-                              : { top: `${emojiPickerCoords.top}px` }
-                            ),
-                            right: `${Math.min(emojiPickerCoords.right, 16)}px`,
-                            maxWidth: 'calc(100vw - 2rem)',
-                            ...(emojiPickerCoords.maxHeight && { maxHeight: `${emojiPickerCoords.maxHeight}px` })
-                          }}
-                        >
-                          <EmojiPicker
-                            onEmojiSelect={handleEmojiSelect}
-                            onClose={() => setShowEmojiPicker(false)}
-                            theme={theme === 'dark' ? 'dark' : 'light'}
-                          />
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </form>
               </>
