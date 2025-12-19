@@ -288,10 +288,10 @@ export const ProjectsPage = () => {
       fluid
       contentClassName="h-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 !pt-0"
     >
-      <div className="mx-auto grid w-full max-w-[1920px] items-start gap-3 pt-2 sm:gap-4 md:grid-cols-[1fr_240px] md:gap-4 lg:grid-cols-[240px_1fr_240px] lg:gap-5 xl:grid-cols-[260px_1fr_260px] xl:gap-6 2xl:max-w-[2560px]" style={{ minHeight: 'calc(100vh - 56px)', boxShadow: 'none', WebkitBoxShadow: 'none' }}>
+      <div className="mx-auto grid w-full max-w-[1920px] items-start gap-3 pt-2 sm:gap-4 md:grid-cols-[1fr_320px] md:gap-4 lg:grid-cols-[280px_1fr_300px] lg:gap-5 xl:grid-cols-[320px_1fr_360px] xl:gap-6 2xl:max-w-[2560px]" style={{ minHeight: 'calc(100vh - 56px)', boxShadow: 'none', WebkitBoxShadow: 'none' }}>
         {/* Sidebar izquierdo: Actividad rápida y Tus proyectos */}
-        <aside className="hidden w-full mt-4 flex-col lg:flex" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden', zIndex: 100 }}>
-          <div className="flex flex-col space-y-6 py-4 px-2">
+        <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)' }}>
+          <div className="flex flex-col space-y-6 py-4">
             {/* Actividad Rápida */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 px-2">
@@ -559,8 +559,8 @@ export const ProjectsPage = () => {
         </section>
 
         {/* Sidebar derecho: Laboratorio */}
-        <aside className="hidden w-full mt-4 flex-col lg:flex" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden', zIndex: 50 }}>
-          <div className="flex flex-col space-y-4 py-3">
+        <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden' }}>
+          <div className="flex flex-col space-y-6 py-4 px-4">
             {/* Laboratorio */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 px-2">

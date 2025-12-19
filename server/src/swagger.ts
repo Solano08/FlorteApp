@@ -175,6 +175,63 @@ const swaggerDocument = {
           createdAt: { type: 'string', format: 'date-time' },
         },
       },
+      FriendRequest: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          senderId: { type: 'string', format: 'uuid' },
+          receiverId: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['pending', 'accepted', 'rejected'] },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          sender: { $ref: '#/components/schemas/User' },
+          receiver: { $ref: '#/components/schemas/User' },
+        },
+      },
+      Notification: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          message: { type: 'string' },
+          link: { type: 'string', nullable: true },
+          isRead: { type: 'boolean' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      Channel: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          communityId: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          description: { type: 'string', nullable: true },
+          type: { type: 'string', enum: ['text', 'voice'] },
+          position: { type: 'number' },
+          createdBy: { type: 'string', format: 'uuid' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      ChannelMessage: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          channelId: { type: 'string', format: 'uuid' },
+          senderId: { type: 'string', format: 'uuid' },
+          content: { type: 'string' },
+          attachmentUrl: { type: 'string', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          sender: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              firstName: { type: 'string' },
+              lastName: { type: 'string' },
+              avatarUrl: { type: 'string', nullable: true },
+            },
+          },
+        },
+      },
     },
   },
   security: [
@@ -1333,6 +1390,285 @@ const swaggerDocument = {
       },
     },
 
+    // ========== FRIENDS ==========
+    '/api/friends': {
+      get: {
+        summary: 'Listar amigos del usuario autenticado',
+        tags: ['Friends'],
+        security: [{ JWTAuth: [] }],
+        responses: {
+          200: {
+            description: 'Lista de IDs de amigos',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    friends: {
+                      type: 'array',
+                      items: { type: 'string', format: 'uuid' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+        },
+      },
+    },
+
+    '/api/friends/requests': {
+      get: {
+        summary: 'Listar solicitudes de amistad',
+        tags: ['Friends'],
+        security: [{ JWTAuth: [] }],
+        responses: {
+          200: {
+            description: 'Lista de solicitudes de amistad',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    requests: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/FriendRequest' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+        },
+      },
+      post: {
+        summary: 'Enviar solicitud de amistad',
+        tags: ['Friends'],
+        security: [{ JWTAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['receiverId'],
+                properties: {
+                  receiverId: { type: 'string', format: 'uuid' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Solicitud de amistad enviada',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    request: { $ref: '#/components/schemas/FriendRequest' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Datos inválidos' },
+          401: { description: 'No autenticado' },
+        },
+      },
+    },
+
+    '/api/friends/requests/{requestId}/accept': {
+      post: {
+        summary: 'Aceptar solicitud de amistad',
+        tags: ['Friends'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'requestId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Solicitud aceptada correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          404: { description: 'Solicitud no encontrada' },
+        },
+      },
+    },
+
+    '/api/friends/requests/{requestId}/reject': {
+      post: {
+        summary: 'Rechazar solicitud de amistad',
+        tags: ['Friends'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'requestId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Solicitud rechazada correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          404: { description: 'Solicitud no encontrada' },
+        },
+      },
+    },
+
+    '/api/friends/requests/{requestId}/cancel': {
+      post: {
+        summary: 'Cancelar solicitud de amistad enviada',
+        tags: ['Friends'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'requestId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Solicitud cancelada correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          404: { description: 'Solicitud no encontrada' },
+        },
+      },
+    },
+
+    // ========== NOTIFICATIONS ==========
+    '/api/notifications': {
+      get: {
+        summary: 'Listar notificaciones del usuario autenticado',
+        tags: ['Notifications'],
+        security: [{ JWTAuth: [] }],
+        responses: {
+          200: {
+            description: 'Lista de notificaciones',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    notifications: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/Notification' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+        },
+      },
+    },
+
+    '/api/notifications/{id}/read': {
+      post: {
+        summary: 'Marcar notificación como leída',
+        tags: ['Notifications'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Notificación marcada como leída',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          404: { description: 'Notificación no encontrada' },
+        },
+      },
+    },
+
+    '/api/notifications/read-all': {
+      post: {
+        summary: 'Marcar todas las notificaciones como leídas',
+        tags: ['Notifications'],
+        security: [{ JWTAuth: [] }],
+        responses: {
+          200: {
+            description: 'Todas las notificaciones marcadas como leídas',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+        },
+      },
+    },
+
     // ========== CHATS ==========
     '/api/chats': {
       get: {
@@ -1439,39 +1775,6 @@ const swaggerDocument = {
       },
     },
 
-    '/api/chats/{chatId}/join': {
-      post: {
-        summary: 'Unirse a un chat',
-        tags: ['Chats'],
-        security: [{ JWTAuth: [] }],
-        parameters: [
-          {
-            name: 'chatId',
-            in: 'path',
-            required: true,
-            schema: { type: 'string', format: 'uuid' },
-          },
-        ],
-        responses: {
-          200: {
-            description: 'Unido al chat correctamente',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    chat: { $ref: '#/components/schemas/Chat' },
-                  },
-                },
-              },
-            },
-          },
-          401: { description: 'No autenticado' },
-          404: { description: 'Chat no encontrado' },
-        },
-      },
-    },
 
     '/api/chats/{chatId}/messages': {
       get: {
@@ -1552,6 +1855,46 @@ const swaggerDocument = {
           400: { description: 'Datos inválidos' },
           401: { description: 'No autenticado' },
           404: { description: 'Chat no encontrado' },
+        },
+      },
+    },
+
+    '/api/chats/{chatId}/messages/{messageId}': {
+      delete: {
+        summary: 'Eliminar un mensaje de un chat',
+        tags: ['Chats'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'chatId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'messageId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Mensaje eliminado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          403: { description: 'No tienes permisos para eliminar este mensaje' },
+          404: { description: 'Mensaje no encontrado' },
         },
       },
     },
@@ -1646,6 +1989,512 @@ const swaggerDocument = {
             },
           },
           401: { description: 'No autenticado' },
+        },
+      },
+    },
+
+    '/api/groups/{id}': {
+      get: {
+        summary: 'Obtener un grupo por ID',
+        tags: ['Groups'],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Grupo encontrado',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    group: { $ref: '#/components/schemas/Group' },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Grupo no encontrado' },
+        },
+      },
+      delete: {
+        summary: 'Eliminar un grupo',
+        tags: ['Groups'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Grupo eliminado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          403: { description: 'No tienes permisos para eliminar este grupo' },
+          404: { description: 'Grupo no encontrado' },
+        },
+      },
+    },
+
+    '/api/groups/{id}/join': {
+      post: {
+        summary: 'Unirse a un grupo',
+        tags: ['Groups'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Unido al grupo correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    group: { $ref: '#/components/schemas/Group' },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          404: { description: 'Grupo no encontrado' },
+        },
+      },
+    },
+
+    '/api/groups/{id}/leave': {
+      post: {
+        summary: 'Abandonar un grupo',
+        tags: ['Groups'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Abandonado el grupo correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          404: { description: 'Grupo no encontrado' },
+        },
+      },
+    },
+
+    '/api/groups/{id}/icon': {
+      post: {
+        summary: 'Subir icono de grupo',
+        tags: ['Groups'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  icon: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Archivo de imagen para el icono del grupo',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Icono actualizado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    group: { $ref: '#/components/schemas/Group' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Archivo inválido' },
+          401: { description: 'No autenticado' },
+          404: { description: 'Grupo no encontrado' },
+        },
+      },
+    },
+
+    '/api/groups/{id}/cover': {
+      post: {
+        summary: 'Subir imagen de portada de grupo',
+        tags: ['Groups'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  cover: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Archivo de imagen para la portada del grupo',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Portada actualizada correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    group: { $ref: '#/components/schemas/Group' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Archivo inválido' },
+          401: { description: 'No autenticado' },
+          404: { description: 'Grupo no encontrado' },
+        },
+      },
+    },
+
+    '/api/groups/{communityId}/channels': {
+      get: {
+        summary: 'Listar canales de un grupo',
+        tags: ['Groups'],
+        parameters: [
+          {
+            name: 'communityId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Lista de canales',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    channels: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/Channel' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Grupo no encontrado' },
+        },
+      },
+      post: {
+        summary: 'Crear canal en un grupo',
+        tags: ['Groups'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'communityId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: {
+                  name: { type: 'string', minLength: 1, maxLength: 100 },
+                  description: { type: 'string', maxLength: 500 },
+                  type: { type: 'string', enum: ['text', 'voice'], default: 'text' },
+                  position: { type: 'number', minimum: 0 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Canal creado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    channel: { $ref: '#/components/schemas/Channel' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Datos inválidos' },
+          401: { description: 'No autenticado' },
+          404: { description: 'Grupo no encontrado' },
+        },
+      },
+    },
+
+    '/api/groups/channels/{id}': {
+      get: {
+        summary: 'Obtener un canal por ID',
+        tags: ['Groups'],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Canal encontrado',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    channel: { $ref: '#/components/schemas/Channel' },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Canal no encontrado' },
+        },
+      },
+      delete: {
+        summary: 'Eliminar un canal',
+        tags: ['Groups'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Canal eliminado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          403: { description: 'No tienes permisos para eliminar este canal' },
+          404: { description: 'Canal no encontrado' },
+        },
+      },
+    },
+
+    '/api/groups/channels/{channelId}/messages': {
+      get: {
+        summary: 'Listar mensajes de un canal',
+        tags: ['Groups'],
+        parameters: [
+          {
+            name: 'channelId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 100 },
+          },
+          {
+            name: 'offset',
+            in: 'query',
+            schema: { type: 'integer', minimum: 0, default: 0 },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Lista de mensajes del canal',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    messages: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/ChannelMessage' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Canal no encontrado' },
+        },
+      },
+      post: {
+        summary: 'Enviar mensaje en un canal',
+        tags: ['Groups'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'channelId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  content: { type: 'string', minLength: 1 },
+                  attachmentUrl: { type: 'string', format: 'uri' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Mensaje enviado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { $ref: '#/components/schemas/ChannelMessage' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Datos inválidos' },
+          401: { description: 'No autenticado' },
+          404: { description: 'Canal no encontrado' },
+        },
+      },
+    },
+
+    '/api/groups/channels/messages/{id}': {
+      delete: {
+        summary: 'Eliminar un mensaje de un canal',
+        tags: ['Groups'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Mensaje eliminado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          403: { description: 'No tienes permisos para eliminar este mensaje' },
+          404: { description: 'Mensaje no encontrado' },
         },
       },
     },
@@ -1799,6 +2648,37 @@ const swaggerDocument = {
           400: { description: 'Datos inválidos' },
           401: { description: 'No autenticado' },
           403: { description: 'No tienes permisos para actualizar este proyecto' },
+          404: { description: 'Proyecto no encontrado' },
+        },
+      },
+      delete: {
+        summary: 'Eliminar proyecto',
+        tags: ['Projects'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'projectId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Proyecto eliminado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          403: { description: 'No tienes permisos para eliminar este proyecto' },
           404: { description: 'Proyecto no encontrado' },
         },
       },
@@ -2175,6 +3055,69 @@ const swaggerDocument = {
           },
           401: { description: 'No autenticado' },
           403: { description: 'No tienes permisos para realizar esta acción' },
+          404: { description: 'Usuario no encontrado' },
+        },
+      },
+    },
+
+    '/api/users/{userId}/block': {
+      post: {
+        summary: 'Bloquear un usuario',
+        tags: ['Users'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'userId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Usuario bloqueado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
+          404: { description: 'Usuario no encontrado' },
+        },
+      },
+      delete: {
+        summary: 'Desbloquear un usuario',
+        tags: ['Users'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'userId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Usuario desbloqueado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'No autenticado' },
           404: { description: 'Usuario no encontrado' },
         },
       },

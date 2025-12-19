@@ -1898,7 +1898,7 @@ export const HomePage = () => {
     >
 
       <div className="mx-auto grid w-full max-w-[1920px] items-start gap-3 pt-2 sm:gap-4 md:grid-cols-[1fr_320px] md:gap-4 lg:grid-cols-[280px_1fr_300px] lg:gap-5 xl:grid-cols-[320px_1fr_360px] xl:gap-6 2xl:max-w-[2560px]" style={{ minHeight: 'calc(100vh - 56px)', boxShadow: 'none', WebkitBoxShadow: 'none' }}>
-        <aside className="hidden w-full mt-4 flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)' }}>
+        <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)' }}>
           <div className="flex flex-col space-y-6 py-4">
             {/* Actividad Rápida */}
             <div className="space-y-3">
@@ -2211,8 +2211,8 @@ export const HomePage = () => {
           {feedPosts.map((post) => renderPostCard(post, 'list'))}
         </section>
 
-        <aside className="hidden w-full mt-4 flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden' }}>
-          <div className="flex flex-col space-y-4 py-3">
+        <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden' }}>
+          <div className="flex flex-col space-y-6 py-4 px-4">
             {/* Avances Destacados */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 px-2">
