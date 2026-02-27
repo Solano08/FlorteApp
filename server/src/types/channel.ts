@@ -36,7 +36,7 @@ export interface ChannelMessage {
 export interface CreateChannelMessageInput {
   channelId: string;
   senderId: string;
-  content: string;
+  content?: string;
   attachmentUrl?: string;
 }
 

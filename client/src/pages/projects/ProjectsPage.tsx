@@ -83,9 +83,9 @@ const statusDisplay: Record<
   },
   completed: {
     icon: CheckCircle,
-    accent: 'text-sena-green',
+    accent: 'text-brand',
     helper: 'Comparte resultados y aprendizajes.',
-    badge: 'bg-sena-green/15 text-sena-green'
+    badge: 'bg-brand/15 text-brand'
   }
 };
 
@@ -295,7 +295,7 @@ export const ProjectsPage = () => {
             {/* Actividad Rápida */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 px-2">
-                <Sparkles className="h-4 w-4 text-sena-green" />
+                <Sparkles className="h-4 w-4 text-brand" />
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rápida</h3>
               </div>
               <div className="space-y-1.5">
@@ -303,7 +303,7 @@ export const ProjectsPage = () => {
                   onClick={() => navigate('/explore')}
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                     <ArrowUpRight className="h-5 w-5" />
                   </div>
                   <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Explorar proyectos</span>
@@ -312,7 +312,7 @@ export const ProjectsPage = () => {
                   onClick={() => navigate('/projects')}
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                     <FolderKanban className="h-5 w-5" />
                   </div>
                   <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Revisar mis proyectos</span>
@@ -323,7 +323,7 @@ export const ProjectsPage = () => {
             {/* Tus proyectos */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 px-2">
-                <FolderKanban className="h-4 w-4 text-sena-green" />
+                <FolderKanban className="h-4 w-4 text-brand" />
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Tus proyectos</h3>
               </div>
               <div className="space-y-1.5">
@@ -340,7 +340,7 @@ export const ProjectsPage = () => {
                       onClick={() => navigate(`/projects/${project.id}`)}
                       className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -364,14 +364,14 @@ export const ProjectsPage = () => {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Buscar proyectos, grupos o hashtags..."
-                className="flex-1 rounded-2xl border-white/50 dark:border-white/15 focus:border-sena-green/40 focus:ring-2 focus:ring-sena-green/20"
+                className="flex-1 rounded-2xl border-white/50 dark:border-white/15 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
               />
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => setShowFiltersMenu(!showFiltersMenu)}
                 className={`px-4 py-2 text-xs shadow-[0_4px_12px_rgba(57,169,0,0.2)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.3)] transition-all ${
-                  categoryFilter !== 'all' ? 'bg-sena-green/20 ring-2 ring-sena-green/40' : ''
+                  categoryFilter !== 'all' ? 'bg-brand/20 ring-2 ring-brand/40' : ''
                 }`}
                 leftIcon={<Filter className="h-4 w-4" />}
               >
@@ -394,12 +394,12 @@ export const ProjectsPage = () => {
                         onClick={() => setCategoryFilter(category.id)}
                         className={`flex flex-col items-center gap-2 rounded-xl p-3 text-center transition-all duration-200 hover:scale-105 ${
                           isSelected
-                            ? 'bg-sena-green/20 ring-2 ring-sena-green/40 shadow-lg'
+                            ? 'bg-brand/20 ring-2 ring-brand/40 shadow-lg'
                             : 'bg-white/50 dark:bg-slate-800/50 hover:bg-white/70 dark:hover:bg-slate-700/70'
                         }`}
                       >
-                        <Icon className={`h-5 w-5 ${isSelected ? 'text-sena-green' : 'text-[var(--color-muted)]'}`} />
-                        <span className={`text-xs font-medium ${isSelected ? 'font-semibold text-sena-green' : 'text-[var(--color-text)]'}`}>
+                        <Icon className={`h-5 w-5 ${isSelected ? 'text-brand' : 'text-[var(--color-muted)]'}`} />
+                        <span className={`text-xs font-medium ${isSelected ? 'font-semibold text-brand' : 'text-[var(--color-text)]'}`}>
                           {category.label}
                         </span>
                       </button>
@@ -496,18 +496,18 @@ export const ProjectsPage = () => {
                     )}
 
                     <div className="flex items-start gap-3 pr-8">
-                      <div className="flex-shrink-0 rounded-xl bg-gradient-to-br from-sena-green/20 to-emerald-500/20 p-3 text-sena-green transition-transform group-hover:scale-110">
+                      <div className="flex-shrink-0 rounded-xl bg-gradient-to-br from-brand/20 to-emerald-500/20 p-3 text-brand transition-transform group-hover:scale-110">
                         <FolderKanban className="h-6 w-6" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-lg font-semibold text-[var(--color-text)] group-hover:text-sena-green transition-colors">
+                        <h3 className="truncate text-lg font-semibold text-[var(--color-text)] group-hover:text-brand transition-colors">
                           {project.title}
                         </h3>
                         <p className="mt-1.5 text-xs text-[var(--color-muted)]">
                           Actualizado el {new Date(project.updatedAt).toLocaleDateString('es-CO')}
                         </p>
                         <div className="mt-2">
-                          <span className="inline-flex rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green ring-1 ring-sena-green/20">
+                          <span className="inline-flex rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand ring-1 ring-brand/20">
                             {statusLabels[project.status]}
                           </span>
                         </div>
@@ -524,7 +524,7 @@ export const ProjectsPage = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-2 text-sm font-medium text-sena-green hover:text-emerald-600 transition-colors"
+                        className="inline-flex items-center gap-2 text-sm font-medium text-brand hover:text-emerald-600 transition-colors"
                       >
                         <GitBranch className="h-4 w-4" />
                         Ver repositorio
@@ -564,7 +564,7 @@ export const ProjectsPage = () => {
             {/* Laboratorio */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 px-2">
-                <Rocket className="h-4 w-4 text-sena-green" />
+                <Rocket className="h-4 w-4 text-brand" />
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Laboratorio</h3>
               </div>
               <p className="px-2 text-xs text-[var(--color-muted)]">
@@ -592,9 +592,9 @@ export const ProjectsPage = () => {
                       activeShadow: 'shadow-[0_8px_24px_rgba(59,130,246,0.25)] dark:shadow-[0_8px_24px_rgba(59,130,246,0.2)]'
                     },
                     completed: {
-                      gradient: 'from-sena-green/20 via-emerald-100/60 to-green-50/80 dark:from-sena-green/30 dark:via-emerald-900/20 dark:to-green-950/30',
-                      border: 'border-sena-green/40 dark:border-emerald-700/40',
-                      borderHover: 'hover:border-sena-green/50 dark:hover:border-emerald-600/50',
+                      gradient: 'from-brand/20 via-emerald-100/60 to-green-50/80 dark:from-brand/30 dark:via-emerald-900/20 dark:to-green-950/30',
+                      border: 'border-brand/40 dark:border-emerald-700/40',
+                      borderHover: 'hover:border-brand/50 dark:hover:border-emerald-600/50',
                       shadow: 'shadow-[0_4px_16px_rgba(57,169,0,0.2)] dark:shadow-[0_4px_16px_rgba(57,169,0,0.15)]',
                       shadowHover: 'hover:shadow-[0_6px_20px_rgba(57,169,0,0.3)] dark:hover:shadow-[0_6px_20px_rgba(57,169,0,0.2)]',
                       activeShadow: 'shadow-[0_8px_24px_rgba(57,169,0,0.25)] dark:shadow-[0_8px_24px_rgba(57,169,0,0.2)]'
@@ -611,7 +611,7 @@ export const ProjectsPage = () => {
                             ? `${config.border} ${config.activeShadow} scale-[1.05] ring-2 ring-offset-2 ring-offset-transparent ${
                                 status === 'draft' ? 'ring-amber-400/30 dark:ring-amber-600/30' :
                                 status === 'in_progress' ? 'ring-blue-400/30 dark:ring-blue-600/30' :
-                                'ring-sena-green/30 dark:ring-emerald-600/30'
+                                'ring-brand/30 dark:ring-emerald-600/30'
                               }`
                             : `${config.border} ${config.shadow} ${config.borderHover} ${config.shadowHover} hover:scale-[1.03]`
                         }`}
@@ -624,13 +624,13 @@ export const ProjectsPage = () => {
                         <p className={`mt-2 text-xl font-bold transition-colors ${
                           status === 'draft' ? 'text-amber-700 dark:text-amber-400' :
                           status === 'in_progress' ? 'text-blue-700 dark:text-blue-400' :
-                          'text-sena-green dark:text-emerald-400'
+                          'text-brand dark:text-emerald-400'
                         }`}>{stats[status]}</p>
                         {/* Nombre del estado en la parte inferior - solo visible en hover */}
                         <p className={`mt-1 text-[9px] font-semibold uppercase tracking-wide transition-all duration-200 opacity-0 group-hover:opacity-100 ${
                           status === 'draft' ? 'text-amber-700/80 dark:text-amber-400/80' :
                           status === 'in_progress' ? 'text-blue-700/80 dark:text-blue-400/80' :
-                          'text-sena-green/80 dark:text-emerald-400/80'
+                          'text-brand/80 dark:text-emerald-400/80'
                         }`}>
                           {statusLabels[status]}
                         </p>
@@ -655,7 +655,7 @@ export const ProjectsPage = () => {
       >
         <div className="space-y-6">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sena-green">
+            <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
               <Plus className="h-3 w-3" />
               <span>Nuevo Proyecto</span>
             </div>
@@ -717,11 +717,11 @@ export const ProjectsPage = () => {
               />
               <div className="flex justify-between text-[10px] text-[var(--color-muted)]">
                 <span>
-                  {watch('description')?.length || 0} / {DESCRIPTION_MAX_LENGTH} caracteres
+                  {watch('description')?.length ?? 0} / {DESCRIPTION_MAX_LENGTH} caracteres
                 </span>
-                {watch('description') && watch('description').length > 0 && (
+                {(watch('description')?.length ?? 0) > 0 && (
                   <span>
-                    {DESCRIPTION_MAX_LENGTH - (watch('description')?.length || 0)} restantes
+                    {DESCRIPTION_MAX_LENGTH - (watch('description')?.length ?? 0)} restantes
                   </span>
                 )}
               </div>
@@ -746,7 +746,7 @@ export const ProjectsPage = () => {
               </label>
               <select
                 id="project-status"
-                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] transition-colors focus:border-sena-green focus:outline-none focus:ring-2 focus:ring-sena-green/20"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                 {...register('status')}
               >
                 <option value="draft">Planificación</option>
@@ -790,7 +790,7 @@ export const ProjectsPage = () => {
       >
         <div className="space-y-6">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sena-green">
+            <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
               <Edit className="h-3 w-3" />
               <span>Editar Proyecto</span>
             </div>
@@ -857,11 +857,11 @@ export const ProjectsPage = () => {
               />
               <div className="flex justify-between text-[10px] text-[var(--color-muted)]">
                 <span>
-                  {watch('description')?.length || 0} / {DESCRIPTION_MAX_LENGTH} caracteres
+                  {watch('description')?.length ?? 0} / {DESCRIPTION_MAX_LENGTH} caracteres
                 </span>
-                {watch('description') && watch('description').length > 0 && (
+                {(watch('description')?.length ?? 0) > 0 && (
                   <span>
-                    {DESCRIPTION_MAX_LENGTH - (watch('description')?.length || 0)} restantes
+                    {DESCRIPTION_MAX_LENGTH - (watch('description')?.length ?? 0)} restantes
                   </span>
                 )}
               </div>
@@ -886,7 +886,7 @@ export const ProjectsPage = () => {
               </label>
               <select
                 id="edit-project-status"
-                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] transition-colors focus:border-sena-green focus:outline-none focus:ring-2 focus:ring-sena-green/20"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                 {...register('status')}
               >
                 <option value="draft">Planificación</option>

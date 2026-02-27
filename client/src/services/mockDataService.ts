@@ -864,7 +864,7 @@ export const mockDataService = {
   getCurrentUserId(): string {
     // Intentar obtener el usuario del storage
     try {
-      const user = storage.getUser();
+      const user = storage.getUser<{ id: string }>();
       if (user?.id) {
         // Si el usuario tiene un ID que coincide con un usuario mock, usarlo
         if (mockUsers.some((u) => u.id === user.id)) {

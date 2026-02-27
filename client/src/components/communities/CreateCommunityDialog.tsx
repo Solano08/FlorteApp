@@ -127,7 +127,7 @@ export const CreateCommunityDialog = ({
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header con chip y texto descriptivo */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sena-green">
+          <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
             <span>Comunidad</span>
           </div>
           <h2 className="text-xl font-semibold text-[var(--color-text)]">
@@ -146,7 +146,7 @@ export const CreateCommunityDialog = ({
           <div
             className={`group relative rounded-3xl border-2 border-dashed transition-all duration-200 ${
               isDragging
-                ? 'border-sena-green/60 bg-sena-green/5 dark:bg-sena-green/10'
+                ? 'border-brand/60 bg-brand/5 dark:bg-brand/10'
                 : 'border-white/40 dark:border-white/15 bg-white/30 dark:bg-slate-800/30'
             }`}
             onDrop={handleDrop}
@@ -174,8 +174,8 @@ export const CreateCommunityDialog = ({
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center p-7 text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-sena-green/10 dark:bg-sena-green/20">
-                  <Upload className="h-6 w-6 text-sena-green dark:text-emerald-400" />
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10 dark:bg-brand/20">
+                  <Upload className="h-6 w-6 text-brand dark:text-emerald-400" />
                 </div>
                 <p className="mb-1 text-sm font-medium text-[var(--color-text)]">
                   Arrastra una imagen aquí
@@ -184,7 +184,7 @@ export const CreateCommunityDialog = ({
                   o haz clic para seleccionar un archivo desde tu dispositivo.
                 </p>
                 <label className="cursor-pointer">
-                  <span className="inline-flex items-center gap-2 rounded-xl bg-sena-green/10 dark:bg-sena-green/20 px-4 py-2 text-xs font-medium text-sena-green dark:text-emerald-400 transition-all duration-200 hover:bg-sena-green/20 dark:hover:bg-sena-green/30">
+                  <span className="inline-flex items-center gap-2 rounded-xl bg-brand/10 dark:bg-brand/20 px-4 py-2 text-xs font-medium text-brand dark:text-emerald-400 transition-all duration-200 hover:bg-brand/20 dark:hover:bg-brand/30">
                     <ImagePlus className="h-4 w-4" />
                     Elegir archivo
                   </span>

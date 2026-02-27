@@ -15,17 +15,18 @@ import { projectService } from '../../services/projectService';
 import { libraryService } from '../../services/libraryService';
 import { feedService } from '../../services/feedService';
 import { friendService } from '../../services/friendService';
+import { storyService } from '../../services/storyService';
 import { userService } from '../../services/userService';
 import {
   Bookmark,
   ChevronLeft,
   ChevronRight,
+  Eye,
   FileText,
   Flag,
   FolderKanban,
   Heart,
   Image,
-  Laugh,
   MessageCircle,
   MoreHorizontal,
   Paperclip,
@@ -33,13 +34,11 @@ import {
   Share2,
   Smile,
   Sparkles,
-  ThumbsUp,
   Trash2,
   Video,
   X,
   Users,
-  Users as UsersIcon,
-  BookOpen
+  Users as UsersIcon
 } from 'lucide-react';
 import { Chat } from '../../types/chat';
 import { useAuth } from '../../hooks/useAuth';
@@ -75,10 +74,11 @@ interface ComposerAttachment {
 }
 
 const reactionOptions = [
-  { type: 'like' as ReactionType, label: 'Me gusta', icon: ThumbsUp, color: 'text-blue-400' },
-  { type: 'love' as ReactionType, label: 'Me encanta', icon: Heart, color: 'text-rose-500' },
-  { type: 'insightful' as ReactionType, label: 'Me asombra', icon: Sparkles, color: 'text-amber-500' },
-  { type: 'celebrate' as ReactionType, label: 'Me divierte', icon: Laugh, color: 'text-emerald-500' }
+  { type: 'like' as ReactionType, label: 'Me gusta', emoji: '👍', color: 'text-blue-400' },
+  { type: 'love' as ReactionType, label: 'Me encanta', emoji: '❤️', color: 'text-rose-500' },
+  { type: 'insightful' as ReactionType, label: 'Me asombra', emoji: '✨', color: 'text-amber-500' },
+  { type: 'celebrate' as ReactionType, label: 'Me divierte', emoji: '🎉', color: 'text-emerald-500' },
+  { type: 'support' as ReactionType, label: 'Apoyar', emoji: '💪', color: 'text-indigo-500' }
 ];
 
 const reportReasons = [
@@ -89,14 +89,6 @@ const reportReasons = [
   'Otro'
 ];
 
-
-const shareAudienceOptions = [
-  { id: 'feed', label: 'Tu biografia' },
-  { id: 'chat', label: 'Mensaje directo' },
-  { id: 'group', label: 'Grupo' }
-] as const;
-
-type ShareScope = (typeof shareAudienceOptions)[number]['id'];
 
 const announcementSlides = [
   {
@@ -216,10 +208,16 @@ export const HomePage = () => {
   const toast = useToast();
   const { messagesOpen, setMessagesOpen, setNotificationsOpen } = useMenuState();
   const [openChatIds, setOpenChatIds] = useState<string[]>([]);
-  const [storyMediaUrls, setStoryMediaUrls] = useState<string[]>([]);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [isStoryViewerOpen, setIsStoryViewerOpen] = useState(false);
   const [isStoryMenuOpen, setIsStoryMenuOpen] = useState(false);
+  const [isStoryViewersOpen, setIsStoryViewersOpen] = useState(false);
+  const [storyViewersData, setStoryViewersData] = useState<Record<string, Array<{ id: string; firstName: string; lastName: string; avatarUrl: string | null }>>>({});
+  const [viewedStoryUserIds, setViewedStoryUserIds] = useState<Set<string>>(new Set());
+  const storyCarouselIntervalRef = useRef<number | null>(null);
+  const storyViewsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const storyImageContainerRef = useRef<HTMLDivElement | null>(null);
+  const storyPanelOriginRef = useRef<{ x: number; y: number }>({ x: 50, y: 100 });
   const [composerContent, setComposerContent] = useState('');
   const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([]);
   const [composerSuccessMessage, setComposerSuccessMessage] = useState<string | null>(null);
@@ -229,7 +227,7 @@ export const HomePage = () => {
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [shareTarget, setShareTarget] = useState<FeedPostAggregate | null>(null);
   const [shareMessage, setShareMessage] = useState('');
-  const [shareScope, setShareScope] = useState<ShareScope>('feed');
+  const [shareToFriendId, setShareToFriendId] = useState<string | null>(null);
   const [postMenuOpenId, setPostMenuOpenId] = useState<string | null>(null);
   const [commentMenuOpenId, setCommentMenuOpenId] = useState<string | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
@@ -253,7 +251,6 @@ export const HomePage = () => {
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const storyFileInputRef = useRef<HTMLInputElement | null>(null);
-  const storyUrlsRef = useRef<string[]>([]);
   const postMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const commentMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const commentFileInputsRef = useRef<Record<string, Partial<Record<AttachmentKind, HTMLInputElement | null>>>>({});
@@ -281,45 +278,32 @@ export const HomePage = () => {
   };
 
   const handleOpenStoryPicker = () => {
+    setIsStoryViewersOpen(false);
     storyFileInputRef.current?.click();
   };
+
+  const createStoryMutation = useMutation({
+    mutationFn: (mediaUrl: string) => storyService.createStory(mediaUrl),
+    onSuccess: (newStory) => {
+      queryClient.invalidateQueries({ queryKey: ['stories'] });
+      setSelectedStoryUser({ userId: user!.id, stories: [newStory] });
+      setCurrentStoryIndex(0);
+      setIsStoryViewerOpen(true);
+      setIsStoryMenuOpen(false);
+      toast.success('Historia publicada');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'No se pudo subir la historia');
+    }
+  });
 
   const handleStoryFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !user?.id) return;
-    
-    // Convertir archivo a base64 para guardarlo en localStorage
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      const storyData = {
-        id: `${Date.now()}_${Math.random()}`,
-        userId: user.id,
-        userName: userDisplayName,
-        userAvatarUrl: user.avatarUrl,
-        mediaUrl: base64String,
-        createdAt: new Date().toISOString()
-      };
-      
-      // Guardar en localStorage
-      const storedStories = JSON.parse(localStorage.getItem('florte_stories') || '{}');
-      if (!storedStories[user.id]) {
-        storedStories[user.id] = [];
-      }
-      storedStories[user.id].push(storyData);
-      localStorage.setItem('florte_stories', JSON.stringify(storedStories));
-      
-      // No actualizar storyMediaUrls - las historias ahora se manejan desde localStorage
-      // Invalidar queries para refrescar historias
-      queryClient.invalidateQueries({ queryKey: ['friends'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      
-      // Abrir el visor de historias con la nueva historia
-      const updatedStories = [...(storedStories[user.id] || []), storyData];
-      setSelectedStoryUser({ userId: user.id, stories: updatedStories });
-      setCurrentStoryIndex(updatedStories.length - 1);
-      setIsStoryViewerOpen(true);
-      setIsStoryMenuOpen(false);
+      createStoryMutation.mutate(base64String);
     };
     reader.readAsDataURL(file);
     event.target.value = '';
@@ -349,6 +333,13 @@ export const HomePage = () => {
     }
   };
 
+  const deleteStoryMutation = useMutation({
+    mutationFn: (storyId: string) => storyService.deleteStory(storyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stories'] });
+    }
+  });
+
   const handleDeleteStory = () => {
     if (!user?.id || !selectedStoryUser || !selectedStoryUser.stories[currentStoryIndex]) {
       setIsStoryViewerOpen(false);
@@ -356,35 +347,57 @@ export const HomePage = () => {
       setSelectedStoryUser(null);
       return;
     }
-    
-    // Eliminar de localStorage
-    const storedStories = JSON.parse(localStorage.getItem('florte_stories') || '{}');
     const storyToDelete = selectedStoryUser.stories[currentStoryIndex];
-    
-    if (storedStories[user.id]) {
-      storedStories[user.id] = storedStories[user.id].filter(
-        (story: StoryData) => story.id !== storyToDelete.id
-      );
-      localStorage.setItem('florte_stories', JSON.stringify(storedStories));
-      
-      // Actualizar las historias del usuario
-      const updatedStories = storedStories[user.id] || [];
-      const nextIndex = Math.max(0, Math.min(currentStoryIndex, updatedStories.length - 1));
-      
-      if (updatedStories.length > 0) {
-        setSelectedStoryUser({ userId: user.id, stories: updatedStories });
-        setCurrentStoryIndex(nextIndex);
-      } else {
-        setIsStoryViewerOpen(false);
-        setIsStoryMenuOpen(false);
-        setSelectedStoryUser(null);
-      }
-      
-      // Invalidar queries para refrescar historias
-      queryClient.invalidateQueries({ queryKey: ['friends'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+    deleteStoryMutation.mutate(storyToDelete.id);
+    const updatedStories = selectedStoryUser.stories.filter((s) => s.id !== storyToDelete.id);
+    const nextIndex = Math.max(0, Math.min(currentStoryIndex, updatedStories.length - 1));
+    if (updatedStories.length > 0) {
+      setSelectedStoryUser({ userId: user.id, stories: updatedStories });
+      setCurrentStoryIndex(nextIndex);
+    } else {
+      setIsStoryViewerOpen(false);
+      setIsStoryMenuOpen(false);
+      setSelectedStoryUser(null);
     }
   };
+
+  const goToNextStory = () => {
+    if (!selectedStoryUser?.stories?.length) return;
+    setIsStoryViewersOpen(false);
+    const next = (currentStoryIndex + 1) % selectedStoryUser.stories.length;
+    setCurrentStoryIndex(next);
+  };
+
+  const goToPrevStory = () => {
+    if (!selectedStoryUser?.stories?.length) return;
+    setIsStoryViewersOpen(false);
+    setCurrentStoryIndex((i) => (i - 1 + selectedStoryUser.stories.length) % selectedStoryUser.stories.length);
+  };
+
+  const STORY_DURATION_MS = 5000;
+
+  useEffect(() => {
+    if (!isStoryViewerOpen || !selectedStoryUser?.stories?.length) return;
+    const story = selectedStoryUser.stories[currentStoryIndex];
+    if (!story) return;
+    if (selectedStoryUser.userId !== user?.id) {
+      storyService.recordView(story.id).catch(() => {});
+    }
+    if (selectedStoryUser.userId === user?.id) {
+      storyService.getStoryViewers(story.id).then((viewers) => {
+        setStoryViewersData((prev) => ({ ...prev, [story.id]: viewers }));
+      }).catch(() => {});
+    }
+    if (selectedStoryUser.stories.length > 1) {
+      storyCarouselIntervalRef.current = window.setInterval(goToNextStory, STORY_DURATION_MS);
+    }
+    return () => {
+      if (storyCarouselIntervalRef.current) {
+        clearInterval(storyCarouselIntervalRef.current);
+        storyCarouselIntervalRef.current = null;
+      }
+    };
+  }, [isStoryViewerOpen, selectedStoryUser?.userId, selectedStoryUser?.stories, currentStoryIndex]);
 
   const triggerCommentFileInput = (postId: string, kind: AttachmentKind) => {
     commentFileInputsRef.current[postId]?.[kind]?.click();
@@ -455,14 +468,10 @@ export const HomePage = () => {
     reactionPickerTimeout.current = window.setTimeout(() => setReactionPickerPost(null), 200);
   };
 
-  const handleReactionSelect = (postId: string, reactionType: ReactionType) => {
+  const handleReactionSelect = (postId: string, reactionType: ReactionType, currentReaction: ReactionType | null) => {
     reactionMutation.mutate({ postId, reactionType });
     setReactionPickerPost(null);
   };
-
-  useEffect(() => {
-    storyUrlsRef.current = storyMediaUrls;
-  }, [storyMediaUrls]);
 
   // Prevenir salto visual al cargar la página
   useEffect(() => {
@@ -472,15 +481,6 @@ export const HomePage = () => {
     }
   }, []);
 
-  useEffect(() => {
-    return () => {
-      storyUrlsRef.current.forEach((url) => {
-        if (url?.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      });
-    };
-  }, []);
 
   useEffect(() => {
     if (!composerSuccessMessage) return;
@@ -828,12 +828,45 @@ export const HomePage = () => {
       }));
       setShareTarget(null);
       setShareMessage('');
-      setShareScope('feed');
+      setShareToFriendId(null);
       setComposerSuccessMessage('La publicacion se compartio con tu comunidad.');
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
     },
-    onError: (error) => {
+    onError: () => {
       toast.error('No fue posible compartir la publicación');
+    }
+  });
+
+  const shareToChatMutation = useMutation({
+    mutationFn: async ({
+      friendId,
+      message,
+      postId
+    }: {
+      friendId: string;
+      message: string;
+      postId: string;
+    }) => {
+      const chat = await chatService.createChat({
+        isGroup: false,
+        memberIds: [friendId]
+      });
+      await chatService.sendMessage(chat.id, {
+        content: message.trim() || '',
+        sharedPostId: postId
+      });
+      return chat;
+    },
+    onSuccess: () => {
+      setShareTarget(null);
+      setShareMessage('');
+      setShareToFriendId(null);
+      toast.success('Publicación compartida en el chat');
+      void queryClient.invalidateQueries({ queryKey: ['chats'] });
+      void queryClient.invalidateQueries({ queryKey: ['home', 'chat'] });
+    },
+    onError: () => {
+      toast.error('No fue posible enviar al chat');
     }
   });
 
@@ -967,10 +1000,15 @@ export const HomePage = () => {
   };
 
   const handleShareSubmit = () => {
-    if (!shareTarget || shareMutation.isPending) return;
-    shareMutation.mutate({
-      postId: shareTarget.id,
-      message: shareMessage.trim() ? shareMessage.trim() : undefined
+    if (!shareTarget || shareToChatMutation.isPending) return;
+    if (!shareToFriendId) {
+      toast.error('Selecciona un amigo para compartir');
+      return;
+    }
+    shareToChatMutation.mutate({
+      friendId: shareToFriendId,
+      message: shareMessage.trim(),
+      postId: shareTarget.id
     });
   };
 
@@ -1090,7 +1128,7 @@ export const HomePage = () => {
   };
 
   const isPublishing = createPostMutation.isPending;
-  const isSharing = shareMutation.isPending;
+  const isSharing = shareMutation.isPending || shareToChatMutation.isPending;
 
   const handleComposerToolClick = (action: ComposerToolAction) => {
     if (action === 'image') {
@@ -1113,13 +1151,14 @@ export const HomePage = () => {
   const handleOpenShare = (post: FeedPostAggregate) => {
     setShareTarget(post);
     setShareMessage('');
-    setShareScope('feed');
+    setShareToFriendId(null);
   };
 
   const handleCloseShareModal = () => {
-    if (shareMutation.isPending) return;
+    if (shareMutation.isPending || shareToChatMutation.isPending) return;
     setShareTarget(null);
     setShareMessage('');
+    setShareToFriendId(null);
   };
 
   const formatTimeAgo = (timestamp: string) => {
@@ -1166,8 +1205,8 @@ export const HomePage = () => {
           : [];
     const canManagePost = user?.role === 'admin' || user?.id === post.authorId;
     const viewerReactionType = post.viewerReaction === 'support' ? 'celebrate' : post.viewerReaction;
-    const selectedReaction = reactionOptions.find((option) => option.type === viewerReactionType);
-    const ReactionIconComponent = selectedReaction?.icon ?? Heart;
+    const selectedReaction = reactionOptions.find((option) => option.type === (post.viewerReaction ?? viewerReactionType));
+    const reactionEmoji = selectedReaction?.emoji ?? '❤️';
     const reactionButtonLabel = selectedReaction?.label ?? 'Reaccionar';
     const wasEdited = post.updatedAt && post.updatedAt !== post.createdAt;
     const commentAttachment = commentAttachments[post.id] ?? null;
@@ -1195,7 +1234,6 @@ export const HomePage = () => {
               fullName={post.author.fullName}
               avatarUrl={post.author.avatarUrl}
               size="md"
-              className="glass-liquid p-[1px] hover:border-sena-green/50"
             />
           </button>
           <div className="min-w-0 flex-1">
@@ -1304,10 +1342,10 @@ export const HomePage = () => {
                   <div className="flex items-center gap-1.5">
                     {post.reactionBreakdown.slice(0, 3).map((reaction) => {
                       const reactionOption = reactionOptions.find(opt => opt.type === reaction.type);
-                      const ReactionIcon = reactionOption?.icon ?? Heart;
+                      const emoji = reactionOption?.emoji ?? '❤️';
                       return (
                         <div key={reaction.type} className="flex items-center gap-1" title={reactionOption?.label}>
-                          <ReactionIcon className={classNames('h-4 w-4', reactionOption?.color ?? 'text-rose-500')} />
+                          <span className="text-base leading-none" aria-hidden>{emoji}</span>
                         </div>
                       );
                     })}
@@ -1317,9 +1355,7 @@ export const HomePage = () => {
                   </div>
                 ) : (
                   <>
-                    <Heart
-                      className={classNames('h-4 w-4', viewerHasReaction ? 'text-sena-green' : 'text-rose-500')}
-                    />
+                    <span className="text-base leading-none" aria-hidden>❤️</span>
                     <span>
                       {post.reactionCount} {reactionLabel}
                     </span>
@@ -1356,29 +1392,35 @@ export const HomePage = () => {
           <div className="relative sm:flex-1" onMouseLeave={handleReactionPickerLeave}>
             <Button
               variant="ghost"
-              className="post-action-btn w-full justify-center gap-2 text-xs sm:text-sm min-h-[38px] min-w-[110px]"
+              className={classNames(
+                'post-action-btn w-full justify-center gap-2 text-xs sm:text-sm min-h-[38px] min-w-[110px] transition-colors',
+                viewerHasReaction && 'text-sena-green hover:text-sena-green hover:bg-sena-green/10'
+              )}
               onMouseEnter={() => handleReactionHover(post.id)}
               onClick={() => {
                 if (viewerHasReaction) {
-                  // Si ya tiene reacción, quitar (toggle)
                   reactionMutation.mutate({ postId: post.id, reactionType: post.viewerReaction! });
                 }
-                // Si no tiene reacción, el hover mostrará el selector
               }}
               disabled={isReacting}
               loading={isReacting}
             >
-              <ReactionIconComponent
-                className={classNames(
-                  'h-4 w-4',
-                  viewerHasReaction 
-                    ? (selectedReaction?.color ?? 'text-sena-green')
-                    : 'text-[var(--color-text)]'
-                )}
-              />
+              {viewerHasReaction ? (
+                <span
+                  className={classNames(
+                    'text-base leading-none transition-colors',
+                    selectedReaction?.color ?? 'text-sena-green'
+                  )}
+                  aria-hidden
+                >
+                  {reactionEmoji}
+                </span>
+              ) : (
+                <Heart className="h-4 w-4 text-[var(--color-text)]" aria-hidden />
+              )}
               <span
                 className={classNames(
-                  viewerHasReaction 
+                  viewerHasReaction
                     ? (selectedReaction?.color ?? 'text-sena-green')
                     : 'text-[var(--color-text)]'
                 )}
@@ -1392,18 +1434,15 @@ export const HomePage = () => {
                 onMouseEnter={() => handleReactionHover(post.id)}
               >
                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap hide-scrollbar">
-                  {reactionOptions.map(({ type, label, icon: Icon, color }) => (
+                  {reactionOptions.filter(ro => ro.type !== 'support').map(({ type, label, emoji }) => (
                     <button
                       key={type}
                       type="button"
-                      className={classNames(
-                        "flex items-center justify-center rounded-full border border-white/50 bg-white h-8 w-8 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sena-green/60 hover:scale-105 dark:bg-slate-900/90",
-                        post.viewerReaction === type && 'ring-1.5 ring-sena-green/50 border-sena-green/60'
-                      )}
-                      onClick={() => handleReactionSelect(post.id, type)}
+                      className="flex items-center justify-center rounded-full border border-white/50 bg-white h-8 w-8 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 dark:bg-slate-900/90"
+                      onClick={() => handleReactionSelect(post.id, type, post.viewerReaction)}
                       title={label}
                     >
-                      <Icon className={classNames('h-4 w-4', color)} />
+                      <span className="text-lg leading-none" aria-hidden>{emoji}</span>
                     </button>
                   ))}
                 </div>
@@ -1482,7 +1521,6 @@ export const HomePage = () => {
                           fullName={comment.author.fullName}
                           avatarUrl={comment.author.avatarUrl}
                           size="sm"
-                          className="glass-liquid p-[1px] hover:border-sena-green/50"
                         />
                       </button>
                       <div className="relative flex-1 rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
@@ -1492,7 +1530,7 @@ export const HomePage = () => {
                               rows={3}
                               value={editingCommentContent}
                               onChange={(event) => setEditingCommentContent(event.target.value)}
-                              className="w-full resize-none rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                              className="w-full resize-none rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none focus:ring-0 focus:border-white/25"
                             />
                             <div className="flex justify-end gap-2">
                               <Button
@@ -1691,7 +1729,7 @@ export const HomePage = () => {
                   value={commentInputValue}
                   onChange={(event) => handleCommentInputChange(post.id, event.target.value)}
                   placeholder="Escribe un comentario..."
-                  className="flex-1 resize-none rounded-2xl glass-liquid px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                  className="flex-1 resize-none rounded-2xl glass-liquid px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:ring-0 focus:border-white/25"
                   disabled={isCommenting}
                 />
                 <Button
@@ -1725,8 +1763,8 @@ export const HomePage = () => {
                             }
                           }}
                           className={classNames(
-                            "inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-sena-green transition-all duration-200 hover:shadow-[0_0_18px_rgba(57,169,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50",
-                            isEmojiAction && isEmojiOpen && "ring-2 ring-sena-green/50 ring-offset-2 ring-offset-[var(--color-background)]"
+                            "inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-[#308CFF] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] disabled:cursor-not-allowed disabled:opacity-50",
+                            isEmojiAction && isEmojiOpen && "ring-2 ring-[#308CFF]/50 ring-offset-2 ring-offset-[var(--color-background)]"
                           )}
                           aria-label={`${label} comentario`}
                           onClick={(e) => {
@@ -1779,17 +1817,6 @@ export const HomePage = () => {
     );
   };
 
-  // Cargar historias de todos los usuarios desde localStorage
-  const { data: friends = [] } = useQuery({
-    queryKey: ['friends'],
-    queryFn: friendService.listFriends
-  });
-
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: userService.getAllUsers
-  });
-
   type StoryData = {
     id: string;
     userId: string;
@@ -1799,40 +1826,16 @@ export const HomePage = () => {
     createdAt: string;
   };
 
-  const allStories = useMemo(() => {
-    try {
-      const storedStories = JSON.parse(localStorage.getItem('florte_stories') || '{}');
-      const storiesList: StoryData[] = [];
-      
-      // Agregar historias de TODOS los usuarios (últimas 24 horas)
-      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-      
-      // Combinar amigos y todos los usuarios para obtener la lista completa
-      const allUserIds = new Set<string>();
-      friends.forEach((friend) => allUserIds.add(friend.id));
-      allUsers.forEach((u) => allUserIds.add(u.id));
-      if (user?.id) allUserIds.add(user.id);
-      
-      // Cargar historias de todos los usuarios
-      Array.from(allUserIds).forEach((userId) => {
-        if (storedStories[userId]) {
-          storedStories[userId]
-            .filter((story: StoryData) => new Date(story.createdAt).getTime() > oneDayAgo)
-            .forEach((story: StoryData) => {
-              storiesList.push(story);
-            });
-        }
-      });
-      
-      // Ordenar por fecha (más recientes primero)
-      return storiesList.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    } catch (error) {
-      console.error('Error loading stories:', error);
-      return [];
-    }
-  }, [user?.id, friends, allUsers]);
+  const { data: friends = [] } = useQuery({
+    queryKey: ['friends'],
+    queryFn: friendService.listFriends
+  });
+
+  const { data: allStories = [] } = useQuery({
+    queryKey: ['stories'],
+    queryFn: storyService.listStories,
+    enabled: !!user?.id
+  });
 
   // Agrupar historias por usuario
   const storiesByUser = useMemo(() => {
@@ -1900,47 +1903,9 @@ export const HomePage = () => {
       <div className="mx-auto grid w-full max-w-[1920px] items-start gap-3 pt-2 sm:gap-4 md:grid-cols-[1fr_320px] md:gap-4 lg:grid-cols-[280px_1fr_300px] lg:gap-5 xl:grid-cols-[320px_1fr_360px] xl:gap-6 2xl:max-w-[2560px]" style={{ minHeight: 'calc(100vh - 56px)', boxShadow: 'none', WebkitBoxShadow: 'none' }}>
         <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)' }}>
           <div className="flex flex-col space-y-6 py-4">
-            {/* Actividad Rápida */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 px-2">
-                <Sparkles className="h-4 w-4 text-sena-green" />
-                <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rápida</h3>
-              </div>
-              <div className="space-y-1.5">
-                <button
-                  onClick={() => navigate('/projects')}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
-                    <FolderKanban className="h-5 w-5" />
-                  </div>
-                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Revisar mis proyectos</span>
-                </button>
-                <button
-                  onClick={() => navigate('/communities')}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(37,99,235,0.18)] active:scale-[0.98]"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sky-500 transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(37,99,235,0.35)]">
-                    <Users className="h-5 w-5" />
-                  </div>
-                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Explorar comunidades</span>
-                </button>
-                <button
-                  onClick={() => navigate('/library')}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(8,47,73,0.18)] active:scale-[0.98]"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sky-800 transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(8,47,73,0.35)]">
-                    <BookOpen className="h-5 w-5" />
-                  </div>
-                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Ir a biblioteca</span>
-                </button>
-              </div>
-            </div>
-
             {/* Top Projects */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2 px-2">
-                <Sparkles className="h-4 w-4 text-sena-green" />
+              <div className="px-2">
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Top projects</h3>
               </div>
               <div className="space-y-1.5">
@@ -1955,7 +1920,37 @@ export const HomePage = () => {
                       onClick={() => navigate(`/projects/${project.id}`)}
                       className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-[#308CFF] transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(48,140,255,0.3)]">
+                        <FolderKanban className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[var(--color-text)] truncate">{project.title}</p>
+                        <p className="text-xs text-[var(--color-muted)] capitalize">{project.status}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Avances Destacados */}
+            <div className="space-y-3">
+              <div className="px-2">
+                <h3 className="text-sm font-semibold text-[var(--color-text)]">Avances destacados</h3>
+              </div>
+              <div className="space-y-1.5">
+                {learningHighlights.length === 0 ? (
+                  <p className="px-2 text-xs text-[var(--color-muted)]">
+                    Registra tus proyectos para seguir tu progreso.
+                  </p>
+                ) : (
+                  learningHighlights.map((project) => (
+                    <button
+                      key={project.id}
+                      onClick={() => navigate(`/projects/${project.id}`)}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-[#308CFF] transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(48,140,255,0.3)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1982,7 +1977,7 @@ export const HomePage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="px-2 py-0.5 text-[10px] text-[var(--color-muted)] hover:text-sena-green"
+                className="!bg-transparent !text-slate-500 px-2 py-0.5 text-[10px] hover:!text-[#308CFF] hover:shadow-[0_0_12px_rgba(48,140,255,0.25)] transition !border-transparent"
                 onClick={handleOpenStoryPicker}
               >
                 Subir
@@ -2001,33 +1996,49 @@ export const HomePage = () => {
                 const storyPreview = story.stories && story.stories.length > 0 
                   ? story.stories[story.stories.length - 1].mediaUrl 
                   : null;
+                const isViewed = story.userId && story.id !== 'create' && viewedStoryUserIds.has(story.userId);
                 
                 return (
                   <button
                     key={story.id}
                     type="button"
                     onClick={() => handleStoryClick(story)}
-                    className="group relative z-[60] flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-300 hover:scale-105 active:scale-95"
+                    className="group relative z-[60] flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                     style={{ zIndex: 60, position: 'relative' }}
                   >
                     <div
-                      className={`relative h-12 w-12 rounded-full p-[2.5px] transition-all duration-300 ${
-                        hasStories
-                          ? 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_6px_24px_rgba(57,169,0,0.35)]'
-                          : 'bg-gradient-to-tr from-sena-green via-sena-light to-emerald-500 group-hover:shadow-[0_8px_28px_rgba(57,169,0,0.45)] group-hover:scale-105'
-                      }`}
+                      className={classNames(
+                        'relative h-12 w-12 rounded-full transition-all duration-300',
+                        isViewed
+                          ? 'border border-black/70 p-0'
+                          : classNames(
+                              'p-[2.5px]',
+                              story.id === 'create' && !hasStories
+                                ? 'bg-gradient-to-tr from-[#308CFF]/45 via-[#308CFF]/30 to-blue-500/45 shadow-[0_2px_6px_rgba(48,140,255,0.02)] group-hover:shadow-none group-hover:scale-[1.02]'
+                                : hasStories && story.id !== 'create'
+                                  ? 'bg-gradient-to-tr from-[#308CFF]/45 via-[#308CFF]/30 to-blue-500/45 group-hover:shadow-none'
+                                  : 'bg-gradient-to-tr from-[#308CFF]/45 via-[#308CFF]/30 to-blue-500/45 group-hover:shadow-none group-hover:scale-[1.02]'
+                            )
+                      )}
                       style={{ zIndex: 61, position: 'relative' }}
                     >
-                      <div className="relative flex h-full w-full items-center justify-center rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-surface)] transition-all duration-300 group-hover:border-sena-green/30 overflow-hidden" style={{ zIndex: 62 }}>
+                      <div className={classNames(
+                        'relative flex h-full w-full items-center justify-center rounded-full transition-all duration-300 overflow-hidden',
+                        story.id === 'create' && !hasStories
+                          ? 'border-2 border-[var(--color-surface)] bg-white dark:bg-slate-900 group-hover:border-[#308CFF]/20'
+                          : isViewed
+                            ? 'border-0 bg-[var(--color-surface)]'
+                            : 'border-2 border-[var(--color-surface)] bg-[var(--color-surface)] group-hover:border-[#308CFF]/20'
+                      )} style={{ zIndex: 62 }}>
                         {story.id === 'create' ? (
                           storyPreview ? (
                             <img
                               src={storyPreview}
                               alt="Vista previa"
-                              className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                           ) : (
-                            <Plus className="h-5 w-5 text-sena-green transition-all duration-300 group-hover:scale-125 group-hover:rotate-90 drop-shadow-[0_2px_4px_rgba(57,169,0,0.3)]" />
+                            <Plus className="h-5 w-5 text-[#308CFF] transition-all duration-300 group-hover:scale-110 group-hover:rotate-45 drop-shadow-[0_1px_2px_rgba(48,140,255,0.06)]" />
                           )
                         ) : storyPreview ? (
                           <img
@@ -2045,14 +2056,8 @@ export const HomePage = () => {
                           />
                         )}
                       </div>
-                      {story.id === 'create' && !hasStories && (
-                        <>
-                          <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-sena-green/30 via-sena-light/30 to-emerald-500/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md" style={{ zIndex: 59, position: 'absolute' }} />
-                          <div className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-tr from-sena-green/15 via-sena-light/15 to-emerald-500/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl animate-pulse" style={{ zIndex: 58, position: 'absolute' }} />
-                        </>
-                      )}
                     </div>
-                    <span className="text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate transition-colors duration-300 group-hover:text-sena-green">
+                    <span className="text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate transition-colors duration-300 group-hover:text-[#308CFF]/80">
                       {story.id === 'create' 
                         ? (hasStories ? 'Tus historias' : 'Crear historia')
                         : story.name}
@@ -2066,14 +2071,12 @@ export const HomePage = () => {
           <Card className="relative z-30 overflow-visible glass-liquid p-4 sm:p-5 lg:p-6 mt-0" style={{ boxShadow: 'none' }}>
             <div className="flex items-start gap-2 sm:gap-3">
               {user && (
-                <div className="flex-shrink-0 shadow-[0_10px_18px_rgba(18,55,29,0.14)]">
-                  <UserAvatar
-                    firstName={user.firstName}
-                    lastName={user.lastName}
-                    avatarUrl={user.avatarUrl}
-                    size="md"
-                  />
-                </div>
+                <UserAvatar
+                  firstName={user.firstName}
+                  lastName={user.lastName}
+                  avatarUrl={user.avatarUrl}
+                  size="md"
+                />
               )}
               <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
                 <TextArea
@@ -2083,6 +2086,7 @@ export const HomePage = () => {
                   onChange={(event) => setComposerContent(event.target.value)}
                   disabled={isPublishing}
                   ref={composerInputRef}
+                  className="focus:!border-white/25 focus:!ring-0"
                 />
 
                 <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
@@ -2094,7 +2098,7 @@ export const HomePage = () => {
                         <div key={action} className={classNames('relative overflow-visible', isEmojiAction && 'z-30')}>
                           <button
                             type="button"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-sena-green transition hover:shadow-[0_0_18px_rgba(57,169,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-[#308CFF] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
                             aria-label={label}
                             onClick={() => handleComposerToolClick(action)}
                             disabled={isPublishing}
@@ -2112,8 +2116,9 @@ export const HomePage = () => {
                   </div>
                   <Button
                     size="sm"
+                    variant="secondary"
                     leftIcon={<Sparkles className="h-4 w-4" />}
-                    className="px-3 py-2 text-xs"
+                    className="!bg-white !text-slate-700 !border-slate-200 hover:!bg-[#308CFF] hover:!text-white hover:!border-[#308CFF] hover:shadow-[0_0_20px_rgba(48,140,255,0.45)] disabled:hover:!bg-white disabled:hover:!text-slate-700 disabled:hover:!border-slate-200 disabled:hover:shadow-none px-3 py-2 text-xs"
                     loading={isPublishing}
                     disabled={isPublishing || !composerContent.trim()}
                     onClick={handleComposerSubmit}
@@ -2213,41 +2218,9 @@ export const HomePage = () => {
 
         <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden' }}>
           <div className="flex flex-col space-y-6 py-4 px-4">
-            {/* Avances Destacados */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 px-2">
-                <Sparkles className="h-4 w-4 text-sena-green" />
-                <h3 className="text-sm font-semibold text-[var(--color-text)]">Avances destacados</h3>
-              </div>
-              <div className="space-y-1.5">
-                {learningHighlights.length === 0 ? (
-                  <p className="px-2 text-xs text-[var(--color-muted)]">
-                    Registra tus proyectos para seguir tu progreso.
-                  </p>
-                ) : (
-                  learningHighlights.map((project) => (
-                    <button
-                      key={project.id}
-                      onClick={() => navigate(`/projects/${project.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
-                        <FolderKanban className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[var(--color-text)] truncate">{project.title}</p>
-                        <p className="text-xs text-[var(--color-muted)] capitalize">{project.status}</p>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-
             {/* Anuncios */}
             <div className="space-y-2">
-              <div className="flex items-center gap-2 px-2">
-                <Sparkles className="h-4 w-4 text-sena-green" />
+              <div className="px-2">
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Anuncios</h3>
               </div>
               <div className="relative h-40 overflow-hidden rounded-xl sm:h-44 lg:h-48">
@@ -2398,43 +2371,124 @@ export const HomePage = () => {
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
             onClick={() => {
+              if (selectedStoryUser.userId && selectedStoryUser.userId !== user?.id) {
+                setViewedStoryUserIds((prev) => new Set(prev).add(selectedStoryUser.userId));
+              }
               setIsStoryViewerOpen(false);
               setIsStoryMenuOpen(false);
+              setIsStoryViewersOpen(false);
               setSelectedStoryUser(null);
             }}
           >
             <div className="relative flex items-center gap-4" onClick={(event) => event.stopPropagation()}>
               {(() => {
                 const currentStories = selectedStoryUser?.stories || [];
-                const canGoBack = currentStories.length > 1;
-                
                 return (
                   <>
-                    {canGoBack && (
+                    {currentStories.length > 0 && (
                       <button
                         type="button"
                         className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
-                        onClick={() =>
-                          setCurrentStoryIndex((index) => (index - 1 + currentStories.length) % currentStories.length)
-                        }
+                        onClick={(e) => { e.stopPropagation(); goToPrevStory(); }}
                         aria-label="Anterior"
                       >
                         <ChevronLeft className="h-6 w-6" />
                       </button>
                     )}
-                    <div className="relative">
+                    <div ref={storyImageContainerRef} className="relative inline-block max-h-[80vh] max-w-[90vw] overflow-hidden rounded-3xl">
                       <img
                         src={(currentStories[currentStoryIndex] as StoryData).mediaUrl}
                         alt="Historia"
-                        className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+                        className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.35)] block"
                       />
-                <button
-                  type="button"
-                  className="absolute left-4 bottom-4 inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/80"
-                  onClick={handleOpenStoryPicker}
-                >
-                  <Image className="h-4 w-4" /> Agregar
-                </button>
+                      {selectedStoryUser?.userId === user?.id && (
+                        <>
+                          {(() => {
+                            const currentStory = selectedStoryUser?.stories?.[currentStoryIndex];
+                            const viewers = currentStory ? (storyViewersData[currentStory.id] ?? []) : [];
+                            const viewerCount = viewers.length;
+                            return (
+                              <>
+                                <div className="absolute left-4 bottom-4 z-20">
+                                  <button
+                                    ref={storyViewsButtonRef}
+                                    type="button"
+                                    className="inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/80"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const btn = storyViewsButtonRef.current;
+                                      const container = storyImageContainerRef.current;
+                                      if (btn && container) {
+                                        const btnRect = btn.getBoundingClientRect();
+                                        const containerRect = container.getBoundingClientRect();
+                                        const centerX = btnRect.left + btnRect.width / 2 - containerRect.left;
+                                        const centerY = btnRect.top + btnRect.height / 2 - containerRect.top;
+                                        const originX = (centerX / containerRect.width) * 100;
+                                        const originY = (centerY / containerRect.height) * 100;
+                                        storyPanelOriginRef.current = { x: originX, y: originY };
+                                      }
+                                      setIsStoryViewersOpen((v) => !v);
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                    {viewerCount} {viewerCount === 1 ? 'vista' : 'vistas'}
+                                  </button>
+                                </div>
+                                <AnimatePresence>
+                                  {isStoryViewersOpen && (
+                                    <motion.div
+                                      initial={{ '--diffuse-radius': 0 } as unknown as Record<string, number>}
+                                      animate={{ '--diffuse-radius': 100 } as unknown as Record<string, number>}
+                                      exit={{ '--diffuse-radius': 0 } as unknown as Record<string, number>}
+                                      transition={{ type: 'spring', damping: 26, stiffness: 180, mass: 0.9 }}
+                                      className="absolute inset-0 z-30 flex flex-col rounded-3xl bg-black/85 backdrop-blur-md overflow-hidden"
+                                      style={{
+                                        maskImage: `radial-gradient(circle at ${storyPanelOriginRef.current.x}% ${storyPanelOriginRef.current.y}%, black 0%, black calc(var(--diffuse-radius, 0) * 0.45%), rgba(0,0,0,0.6) calc(var(--diffuse-radius, 0) * 0.7%), rgba(0,0,0,0.2) calc(var(--diffuse-radius, 0) * 0.9%), transparent calc(var(--diffuse-radius, 0) * 1.1%))`,
+                                        WebkitMaskImage: `radial-gradient(circle at ${storyPanelOriginRef.current.x}% ${storyPanelOriginRef.current.y}%, black 0%, black calc(var(--diffuse-radius, 0) * 0.45%), rgba(0,0,0,0.6) calc(var(--diffuse-radius, 0) * 0.7%), rgba(0,0,0,0.2) calc(var(--diffuse-radius, 0) * 0.9%), transparent calc(var(--diffuse-radius, 0) * 1.1%))`,
+                                        maskSize: '200% 200%'
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <div className="flex-1 overflow-y-auto p-4">
+                                        <p className="text-sm font-semibold text-white/90 mb-4">
+                                          {viewerCount === 0 ? 'Aún no hay vistas' : `${viewerCount} ${viewerCount === 1 ? 'persona vio' : 'personas vieron'} esta historia`}
+                                        </p>
+                                        {viewers.length > 0 ? (
+                                          <div className="space-y-3">
+                                            {viewers.map((v) => (
+                                              <div
+                                                key={v.id}
+                                                className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/10 transition"
+                                              >
+                                                <UserAvatar
+                                                  firstName={v.firstName}
+                                                  lastName={v.lastName}
+                                                  avatarUrl={resolveAssetUrl(v.avatarUrl) ?? v.avatarUrl}
+                                                  size="sm"
+                                                />
+                                                <span className="text-sm font-medium text-white truncate">
+                                                  {[v.firstName, v.lastName].filter(Boolean).join(' ') || 'Usuario'}
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="mt-auto p-3 text-sm font-semibold text-white/90 hover:bg-white/10 rounded-b-3xl transition"
+                                        onClick={() => setIsStoryViewersOpen(false)}
+                                      >
+                                        Cerrar
+                                      </button>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </>
+                            );
+                          })()}
+                        </>
+                      )}
                       {(!selectedStoryUser || selectedStoryUser.userId === user?.id) && (
                         <>
                           <button
@@ -2448,10 +2502,10 @@ export const HomePage = () => {
                             <div className="absolute right-3 top-14 z-10 w-44 rounded-2xl glass-frosted px-3 py-2 text-sm text-white">
                               <button
                                 type="button"
-                                className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-white/10"
+                                className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-red-500 transition hover:bg-white/10"
                                 onClick={handleDeleteStory}
                               >
-                                <Trash2 className="h-4 w-4 text-rose-400" /> Eliminar historia
+                                <Trash2 className="h-4 w-4 text-red-500" /> Eliminar historia
                               </button>
                             </div>
                           )}
@@ -2474,28 +2528,23 @@ export const HomePage = () => {
                         ) : null;
                       })()}
                     </div>
-                    {(() => {
-                      const currentStories = selectedStoryUser?.stories || storyMediaUrls.map((url, index) => ({ id: `local-${index}` }));
-                      const canGoNext = currentStories.length > 1;
-                      return canGoNext ? (
+                    {currentStories.length > 0 && (
                         <button
                           type="button"
                           className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
-                          onClick={() =>
-                            setCurrentStoryIndex((index) => (index + 1) % currentStories.length)
-                          }
+                          onClick={(e) => { e.stopPropagation(); goToNextStory(); }}
                           aria-label="Siguiente"
                         >
                           <ChevronRight className="h-6 w-6" />
                         </button>
-                      ) : null;
-                    })()}
+                      )}
                     <button
                       type="button"
                       className="absolute -top-12 right-0 text-sm text-white/70 underline-offset-4 hover:text-white"
                       onClick={() => {
                         setIsStoryViewerOpen(false);
                         setIsStoryMenuOpen(false);
+                        setIsStoryViewersOpen(false);
                         setSelectedStoryUser(null);
                       }}
                     >
@@ -2520,7 +2569,7 @@ export const HomePage = () => {
               <div>
                 <h3 className="text-lg font-semibold text-[var(--color-text)]">Compartir publicacion</h3>
                 <p className="text-sm text-[var(--color-muted)]">
-                  Comparte como en Facebook: elige donde quieres que la vean y añade tu mensaje personal.
+                  Elige un amigo y añade un mensaje para compartir la publicación en el chat.
                 </p>
               </div>
               <Button
@@ -2534,23 +2583,14 @@ export const HomePage = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {shareAudienceOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setShareScope(option.id)}
-                    className={classNames(
-                      'rounded-full px-3 py-1 text-xs font-semibold transition',
-                      shareScope === option.id
-                        ? 'bg-sena-green text-white shadow-[0_10px_20px_rgba(57,169,0,0.25)]'
-                        : 'glass-liquid text-[var(--color-text)]'
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+              <TextArea
+                rows={3}
+                placeholder="Di algo a tu comunidad..."
+                value={shareMessage}
+                onChange={(event) => setShareMessage(event.target.value)}
+                disabled={isSharing}
+                className="focus:!border-white/25 focus:!ring-0"
+              />
 
               <div className="rounded-2xl glass-liquid px-4 py-4 text-sm text-[var(--color-text)]">
                 <div className="flex items-start gap-3">
@@ -2574,25 +2614,48 @@ export const HomePage = () => {
                 )}
               </div>
 
-              <TextArea
-                rows={4}
-                placeholder={
-                  shareScope === 'feed'
-                    ? 'Di algo a tu comunidad...'
-                    : shareScope === 'chat'
-                      ? 'Escribe un mensaje para tus amigos...'
-                      : 'Comparte un mensaje con tu grupo...'
-                }
-                value={shareMessage}
-                onChange={(event) => setShareMessage(event.target.value)}
-                disabled={isSharing}
-              />
+              <div>
+                <p className="mb-2 text-xs font-semibold text-[var(--color-muted)]">Compartir con</p>
+                <div className="flex flex-wrap gap-4">
+                  {friends.length === 0 ? (
+                    <p className="text-sm text-[var(--color-muted)]">No tienes amigos agregados</p>
+                  ) : (
+                    friends.map((friend) => {
+                      const isSelected = shareToFriendId === friend.id;
+                      return (
+                        <button
+                          key={friend.id}
+                          type="button"
+                          onClick={() => setShareToFriendId((id) => (id === friend.id ? null : friend.id))}
+                          className={classNames(
+                            'flex flex-col items-center gap-1.5 rounded-xl p-2 transition-all duration-200',
+                            isSelected
+                              ? 'ring-2 ring-sena-green bg-sena-green/10'
+                              : 'hover:bg-white/10 dark:hover:bg-white/5'
+                          )}
+                        >
+                          <UserAvatar
+                            firstName={friend.firstName}
+                            lastName={friend.lastName}
+                            avatarUrl={friend.avatarUrl}
+                            size="md"
+                            className="h-12 w-12 flex-shrink-0"
+                          />
+                          <span className="max-w-[72px] truncate text-center text-xs font-medium text-[var(--color-text)]">
+                            {[friend.firstName, friend.lastName].filter(Boolean).join(' ') || 'Usuario'}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
 
               <div className="flex justify-end gap-2">
                 <Button variant="secondary" onClick={handleCloseShareModal} disabled={isSharing}>
                   Cancelar
                 </Button>
-                <Button onClick={handleShareSubmit} loading={isSharing} disabled={isSharing}>
+                <Button onClick={handleShareSubmit} loading={isSharing} disabled={isSharing || !shareToFriendId}>
                   Compartir
                 </Button>
               </div>
@@ -2666,6 +2729,7 @@ export const HomePage = () => {
                 value={reportDetails}
                 onChange={(event) => setReportDetails(event.target.value)}
                 disabled={reportMutation.isPending}
+                className="focus:!border-white/25 focus:!ring-0"
               />
               {reportError && <p className="text-xs font-semibold text-rose-500">{reportError}</p>}
 
@@ -2860,6 +2924,56 @@ export const HomePage = () => {
   );
 };
 
+function SharedPostPreview({ postId }: { postId: string }) {
+  const { data: post, isLoading } = useQuery({
+    queryKey: ['feed', 'post', postId],
+    queryFn: () => feedService.getPost(postId),
+    enabled: Boolean(postId)
+  });
+  if (isLoading || !post) {
+    return (
+      <div className="my-1.5 rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-xs text-[var(--color-muted)]">
+        Cargando publicación...
+      </div>
+    );
+  }
+  const created = new Date(post.createdAt).toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  return (
+    <div className="my-1.5 overflow-hidden rounded-xl border border-white/20 bg-white/5">
+      <div className="flex items-start gap-2 p-2">
+        <UserAvatar
+          fullName={post.author.fullName}
+          avatarUrl={post.author.avatarUrl}
+          size="sm"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-[var(--color-text)]">{post.author.fullName}</p>
+          <p className="text-[10px] text-[var(--color-muted)]">{created}</p>
+        </div>
+      </div>
+      {post.content && (
+        <p className="border-t border-white/10 px-2 py-1.5 text-xs leading-relaxed text-[var(--color-text)] line-clamp-3">
+          {post.content}
+        </p>
+      )}
+      {post.mediaUrl && (
+        <div className="border-t border-white/10">
+          <img
+            src={resolveAssetUrl(post.mediaUrl) ?? post.mediaUrl}
+            alt="Vista previa"
+            className="max-h-32 w-full object-cover"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -3028,9 +3142,10 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
                     </p>
                   </div>
                 )}
-                <p>{msg.content}</p>
+                {msg.content ? <p className="whitespace-pre-wrap">{msg.content}</p> : null}
+                {msg.sharedPostId ? <SharedPostPreview postId={msg.sharedPostId} /> : null}
                 {!chat.isGroup && (
-                  <p className="text-xs text-[var(--color-muted)]">
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
                     {formattedTime}
                   </p>
                 )}

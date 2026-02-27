@@ -17,6 +17,7 @@ import { useToast } from '../../hooks/useToast';
 import { GlassDialog } from '../../components/ui/GlassDialog';
 import { CreateCommunityDialog } from '../../components/communities/CreateCommunityDialog';
 import { ExploreCommunitiesView } from '../../components/communities/ExploreCommunitiesView';
+import { resolveAssetUrl } from '../../utils/media';
 import type { Group } from '../../types/group';
 
 export const CommunitiesPage = () => {
@@ -83,8 +84,7 @@ export const CommunitiesPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channels', communityId] }).catch(() => {});
     },
-    onError: (error) => {
-      console.error('Error al crear canal:', error);
+    onError: () => {
       toast.error('No se pudo crear el canal. Por favor, intenta nuevamente.');
     }
   });
@@ -140,8 +140,7 @@ export const CommunitiesPage = () => {
       queryClient.invalidateQueries({ queryKey: ['channelMessages', channelId] }).catch(() => {});
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     },
-    onError: (error) => {
-      console.error('Error al enviar mensaje:', error);
+    onError: () => {
       toast.error('No se pudo enviar el mensaje. Por favor, intenta nuevamente.');
     }
   });
@@ -489,7 +488,7 @@ export const CommunitiesPage = () => {
                   <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-sena-green/10 text-xs font-semibold text-sena-green overflow-hidden">
                     {friend.avatarUrl ? (
                       <img
-                        src={friend.avatarUrl}
+                        src={resolveAssetUrl(friend.avatarUrl) ?? ''}
                         alt={friend.fullName}
                         className="h-full w-full object-cover"
                       />
@@ -509,8 +508,7 @@ export const CommunitiesPage = () => {
                         await navigator.clipboard.writeText(inviteLink);
                         setSuccessMessage(`Enlace copiado para invitar a ${friend.fullName || friend.firstName}`);
                         setTimeout(() => setSuccessMessage(null), 1500);
-                      } catch (error) {
-                        console.error('Error al copiar link:', error);
+                      } catch {
                         toast.error('No se pudo copiar el link. Por favor, intenta nuevamente.');
                       }
                     }}
@@ -539,8 +537,7 @@ export const CommunitiesPage = () => {
                     await navigator.clipboard.writeText(inviteLink);
                     setSuccessMessage('Link copiado al portapapeles');
                     setTimeout(() => setSuccessMessage(null), 1500);
-                  } catch (error) {
-                    console.error('Error al copiar link:', error);
+                  } catch {
                     toast.error('No se pudo copiar el link. Por favor, intenta nuevamente.');
                   }
                 }}

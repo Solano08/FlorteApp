@@ -1,4 +1,4 @@
-﻿import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../ui/Button';
@@ -135,16 +135,16 @@ export const DashboardLayout = ({
                     className={classNames(
                       'flex items-center gap-1 rounded-2xl px-2 py-1 text-[10px] font-semibold transition-all sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[11px]',
                       isActive
-                        ? 'bg-white text-sena-green shadow-[0_4px_12px_rgba(57,169,0,0.3)] dark:bg-[var(--color-accent-soft)] dark:text-sena-dark dark:shadow-[0_4px_12px_rgba(57,169,0,0.2)]'
-                        : 'text-[var(--color-muted)] hover:bg-white/60 hover:text-sena-green dark:text-[var(--color-text)] dark:hover:bg-white/15'
+                        ? 'bg-white text-[#308CFF] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:bg-[var(--color-accent-soft)] dark:text-[#308CFF] dark:shadow-[0_4px_12px_rgba(0,0,0,0.25)]'
+                        : 'text-[var(--color-muted)] hover:bg-white/60 hover:text-[#308CFF] dark:text-[var(--color-text)] dark:hover:bg-white/15'
                     )}
                   >
                     <span
                       className={classNames(
-                        'flex h-6 w-6 items-center justify-center rounded-2xl shadow-[0_4px_8px_rgba(18,55,29,0.2)] sm:h-7 sm:w-7',
+                        'flex h-6 w-6 items-center justify-center rounded-2xl shadow-[0_4px_8px_rgba(0,0,0,0.12)] sm:h-7 sm:w-7',
                         isActive
-                          ? 'bg-white/40 text-sena-green dark:bg-sena-green/20 dark:text-sena-green'
-                          : 'bg-white/40 text-sena-green dark:bg-[var(--color-accent-soft)] dark:text-sena-dark'
+                          ? 'bg-white/40 text-[#308CFF] dark:bg-[#308CFF]/20 dark:text-[#308CFF]'
+                          : 'bg-white/40 text-[#308CFF] dark:bg-[var(--color-accent-soft)] dark:text-[#308CFF]'
                       )}
                     >
                       <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />

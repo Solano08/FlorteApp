@@ -22,9 +22,8 @@ export const UserList = ({ onEdit, refreshToken }: UserListProps) => {
       setError(null);
       const data = await userService.getAllUsers();
       setUsers(data);
-    } catch (err) {
+    } catch {
       setError('Error al cargar usuarios');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -38,9 +37,8 @@ export const UserList = ({ onEdit, refreshToken }: UserListProps) => {
         await userService.restoreUser(id);
       }
       await loadUsers();
-    } catch (err) {
+    } catch {
       setError(isActive ? 'Error al suspender usuario' : 'Error al restaurar usuario');
-      console.error(err);
     }
   };
 

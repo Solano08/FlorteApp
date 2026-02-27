@@ -12,7 +12,7 @@ const inferUploadsBase = (): string => {
   if (explicit) {
     return explicit;
   }
-  const apiBase = import.meta.env.VITE_API_URL ?? '';
+  const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
   if (apiBase) {
     return sanitizeBase(apiBase.replace(/\/api\/?$/, ''));
   }

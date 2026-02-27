@@ -35,7 +35,7 @@ export const chatService = {
     if (!members.includes(input.senderId)) {
       throw new AppError('No tienes acceso a esta conversación', 403);
     }
-    if (!input.content && !input.attachmentUrl) {
+    if (!input.content?.trim() && !input.attachmentUrl && !input.sharedPostId) {
       throw new AppError('El mensaje no puede estar vacío', 400);
     }
     return await chatRepository.createMessage(input);

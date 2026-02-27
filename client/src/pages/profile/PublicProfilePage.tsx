@@ -125,15 +125,13 @@ export const PublicProfilePage = () => {
             />
             <div className="-mt-14 px-6 pb-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                <div className="[&>div>div]:border-4 [&>div>div]:border-white [&>div>div]:rounded-full">
-                  <UserAvatar
-                    firstName={profile.firstName}
-                    lastName={profile.lastName}
-                    avatarUrl={profile.avatarUrl}
-                    size="xl"
-                    className="shadow-[0_10px_20px_rgba(18,55,29,0.25)]"
-                  />
-                </div>
+                <UserAvatar
+                  firstName={profile.firstName}
+                  lastName={profile.lastName}
+                  avatarUrl={profile.avatarUrl}
+                  size="xl"
+                  className="shadow-[0_10px_20px_rgba(18,55,29,0.25)]"
+                />
                 <div className="space-y-1">
                   <h1 className="text-2xl font-semibold text-[var(--color-text)]">
                     {profile.firstName} {profile.lastName}

@@ -15,8 +15,9 @@ const mapMessage = (row: RowDataPacket): Message => ({
   id: row.id,
   chatId: row.chat_id,
   senderId: row.sender_id,
-  content: row.content,
+  content: row.content ?? '',
   attachmentUrl: row.attachment_url,
+  sharedPostId: row.shared_post_id ?? null,
   createdAt: row.created_at
 });
 
@@ -91,7 +92,10 @@ export const chatRepository = {
     const [rows] = await getPool().query<RowDataPacket[]>(
       `SELECT c.*, 
               MAX(m.created_at) AS last_message_at,
-              (SELECT content FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) AS last_message
+              (SELECT CASE 
+                WHEN shared_post_id IS NOT NULL AND (content IS NULL OR TRIM(content) = '') THEN 'Publicación compartida'
+                ELSE content
+              END FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) AS last_message
        FROM chats c
        INNER JOIN chat_members cm ON cm.chat_id = c.id
        LEFT JOIN messages m ON m.chat_id = c.id
@@ -120,14 +124,15 @@ export const chatRepository = {
   async createMessage(input: CreateMessageInput): Promise<Message> {
     const id = crypto.randomUUID();
     const [result] = await getPool().execute<ResultSetHeader>(
-      `INSERT INTO messages (id, chat_id, sender_id, content, attachment_url)
-       VALUES (:id, :chatId, :senderId, :content, :attachmentUrl)`,
+      `INSERT INTO messages (id, chat_id, sender_id, content, attachment_url, shared_post_id)
+       VALUES (:id, :chatId, :senderId, :content, :attachmentUrl, :sharedPostId)`,
       {
         id,
         chatId: input.chatId,
         senderId: input.senderId,
         content: input.content,
-        attachmentUrl: input.attachmentUrl ?? null
+        attachmentUrl: input.attachmentUrl ?? null,
+        sharedPostId: input.sharedPostId ?? null
       }
     );
 

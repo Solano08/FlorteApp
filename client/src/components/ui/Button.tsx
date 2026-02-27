@@ -1,8 +1,8 @@
 import { ButtonHTMLAttributes, forwardRef, ReactNode } from 'react';
 import classNames from 'classnames';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost';
-type ButtonSize = 'sm' | 'md' | 'lg';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive';
+type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -38,10 +38,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       secondary:
         'bg-white/10 text-[var(--color-text)] backdrop-blur-md border border-white/20 hover:border-white/40 hover:bg-white/20 hover:text-sena-green shadow-sm focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10',
       ghost:
-        'bg-white/5 text-[var(--color-text)] border border-white/10 hover:bg-white/15 hover:border-white/25 hover:text-[var(--color-text)] focus:ring-transparent backdrop-blur-sm transition-all hover:scale-[1.02] active:scale-95 dark:bg-white/5 dark:hover:bg-white/10'
+        'bg-white/5 text-[var(--color-text)] border border-white/10 hover:bg-white/15 hover:border-white/25 hover:text-[var(--color-text)] focus:ring-transparent backdrop-blur-sm transition-all hover:scale-[1.02] active:scale-95 dark:bg-white/5 dark:hover:bg-white/10',
+      destructive:
+        'bg-red-500/90 text-white backdrop-blur-sm hover:bg-red-600 focus:ring-red-500/35 active:scale-95 border border-white/10'
     };
 
     const sizes: Record<ButtonSize, string> = {
+      xs: 'px-2 py-1 text-[11px]',
       sm: 'px-3 py-1.5 text-xs',
       md: 'px-4 py-2 text-sm',
       lg: 'px-5 py-2.5 text-base'

@@ -1,4 +1,4 @@
-﻿import { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { activityService } from '../services/activityService';
 import { feedService } from '../services/feedService';
 import { profileService } from '../services/profileService';

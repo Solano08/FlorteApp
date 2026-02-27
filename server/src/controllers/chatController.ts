@@ -39,7 +39,8 @@ export const chatController = {
       chatId,
       senderId: userId,
       content: data.content ?? '',
-      attachmentUrl: data.attachmentUrl
+      attachmentUrl: data.attachmentUrl ?? undefined,
+      sharedPostId: data.sharedPostId ?? undefined
     });
     res.status(201).json({ success: true, message });
   },

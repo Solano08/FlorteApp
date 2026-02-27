@@ -104,7 +104,7 @@ export const LibraryPage = () => {
       <div className="space-y-6">
         <Card>
           <div className="flex items-center gap-3">
-            <BookOpen className="h-6 w-6 text-sena-green" />
+            <BookOpen className="h-6 w-6 text-brand" />
             <div>
               <h2 className="text-xl font-semibold text-[var(--color-text)]">
                 Recursos Educativos y Plataformas Oficiales
@@ -133,7 +133,7 @@ export const LibraryPage = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   {resource.type === 'external' && (
                     <div className="absolute bottom-2 right-2 rounded-full bg-white/90 p-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                      <ExternalLink className="h-4 w-4 text-sena-green" />
+                      <ExternalLink className="h-4 w-4 text-brand" />
                     </div>
                   )}
                 </div>
@@ -144,7 +144,7 @@ export const LibraryPage = () => {
                     </h3>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold text-sena-green">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
                       {resource.type === 'external' ? (
                         <Globe className="h-3 w-3" />
                       ) : (
@@ -186,7 +186,7 @@ export const LibraryPage = () => {
               <div className="space-y-6">
                 {selectedResource.content.sections.map((section, index) => (
                   <div key={index} className="space-y-3">
-                    <h3 className="text-lg font-semibold text-sena-green">
+                    <h3 className="text-lg font-semibold text-brand">
                       {section.title}
                     </h3>
                     <p className="text-sm leading-relaxed text-[var(--color-text)]">
@@ -199,7 +199,7 @@ export const LibraryPage = () => {
               <div className="flex justify-end pt-4">
                 <button
                   onClick={handleCloseModal}
-                  className="rounded-lg bg-sena-green px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-sena-green/90"
+                  className="rounded-lg bg-brand px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
                 >
                   Cerrar
                 </button>

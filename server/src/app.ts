@@ -20,12 +20,24 @@ app.use(
   })
 );
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 
-app.use('/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
+const uploadsStaticPath = path.resolve(__dirname, '..', 'uploads');
+app.use(
+  '/uploads',
+  express.static(uploadsStaticPath, {
+    setHeaders: (res) => {
+      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
+  })
+);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

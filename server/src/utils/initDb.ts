@@ -84,6 +84,20 @@ export const initDb = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+        // Add shared_post_id to messages (for shared publication in chat)
+        try {
+            await pool.execute(`
+      ALTER TABLE messages ADD COLUMN shared_post_id CHAR(36) NULL,
+        ADD CONSTRAINT fk_messages_shared_post
+        FOREIGN KEY (shared_post_id) REFERENCES feed_posts(id) ON DELETE SET NULL
+    `);
+        } catch (err: unknown) {
+            const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
+            if (msg !== 'ER_DUP_FIELDNAME' && msg !== 'ER_FK_DUP_NAME') {
+                throw err;
+            }
+        }
+
         // Feed Post Attachments table
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS feed_post_attachments (
@@ -146,6 +160,29 @@ export const initDb = async (): Promise<void> => {
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (post_id) REFERENCES feed_posts(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Stories table (historias tipo Instagram, visibles por amigos durante 24h)
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS stories (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        user_id CHAR(36) NOT NULL,
+        media_url VARCHAR(500) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Story views (quién ha visto cada historia)
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS story_views (
+        story_id CHAR(36) NOT NULL,
+        viewer_id CHAR(36) NOT NULL,
+        viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (story_id, viewer_id),
+        FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE,
+        FOREIGN KEY (viewer_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 

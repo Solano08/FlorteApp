@@ -53,9 +53,8 @@ export const UserEdit = ({ userId, onSave, onCancel }: UserEditProps) => {
         isActive: user.isActive,
         password: ''
       });
-    } catch (err) {
+    } catch {
       setError('Error al cargar usuario');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -89,9 +88,8 @@ export const UserEdit = ({ userId, onSave, onCancel }: UserEditProps) => {
       }
       await userService.updateUser(userId, payload);
       onSave();
-    } catch (err) {
+    } catch {
       setError('Error al actualizar usuario');
-      console.error(err);
     } finally {
       setSaving(false);
     }

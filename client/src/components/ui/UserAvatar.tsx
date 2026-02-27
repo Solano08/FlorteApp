@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import { resolveAssetUrl } from '../../utils/media';
 
+/** Avatar de usuario: solo círculo, sin marco/cuadro (no usar glass-liquid ni bordes de caja). */
 interface UserAvatarProps {
   firstName?: string;
   lastName?: string;

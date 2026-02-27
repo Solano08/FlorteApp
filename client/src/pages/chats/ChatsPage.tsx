@@ -165,7 +165,7 @@ export const ChatsPage = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const messageButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const { theme } = useTheme();
+  const { mode: theme } = useTheme();
   const [lastReadTimes, setLastReadTimes] = useState<Record<string, string>>(() => {
     // Cargar desde localStorage si existe
     const stored = localStorage.getItem('chatLastReadTimes');
@@ -391,7 +391,7 @@ export const ChatsPage = () => {
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (payload: { chatId: string; content: string; attachmentUrl?: string }) => {
+    mutationFn: async (payload: { chatId: string; content?: string; attachmentUrl?: string }) => {
       return await chatService.sendMessage(payload.chatId, {
         content: payload.content || undefined,
         attachmentUrl: payload.attachmentUrl
@@ -625,7 +625,7 @@ export const ChatsPage = () => {
 
     sendMessageMutation.mutate(
       {
-        chatId: selectedChatId,
+        chatId: selectedChatId as string,
         content: message.trim() || undefined,
         attachmentUrl
       },
@@ -879,7 +879,7 @@ export const ChatsPage = () => {
           id: message.id,
           content: message.content,
           senderId: message.senderId,
-          attachmentUrl: message.attachmentUrl
+          attachmentUrl: message.attachmentUrl ?? undefined
         });
         setOpenMessageMenuId(null);
         setMessageMenuPosition(null);
@@ -897,7 +897,7 @@ export const ChatsPage = () => {
         setForwardingMessage({
           id: message.id,
           content: message.content,
-          attachmentUrl: message.attachmentUrl
+          attachmentUrl: message.attachmentUrl ?? undefined
         });
         setSelectedForwardChats(new Set());
         setIsForwardDialogOpen(true);
@@ -953,7 +953,7 @@ export const ChatsPage = () => {
         }
         break;
       case 'delete':
-        if (window.confirm('¿Estás seguro de que deseas eliminar este mensaje? Esta acción no se puede deshacer.')) {
+        if (selectedChatId && window.confirm('¿Estás seguro de que deseas eliminar este mensaje? Esta acción no se puede deshacer.')) {
           try {
             await chatService.deleteMessage(selectedChatId, message.id);
             await queryClient.invalidateQueries({ queryKey: ['chats', selectedChatId, 'messages'] });
@@ -1292,7 +1292,7 @@ export const ChatsPage = () => {
                         setIsMoreMenuOpen((prev) => !prev);
                       }
                     }}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl glass-liquid text-[var(--color-muted)] transition-all hover:text-sena-green hover:scale-105 hover:shadow-lg"
+                    className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all bg-white/10 text-slate-700 backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
                     aria-label="Mas opciones"
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -1367,15 +1367,14 @@ export const ChatsPage = () => {
                     )
                   )}
                 </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="px-4 text-xs font-semibold shadow-[0_8px_20px_rgba(57,169,0,0.25)] hover:shadow-[0_12px_28px_rgba(57,169,0,0.35)] transition-all hover:scale-105"
+                <button
+                  type="button"
                   onClick={() => setShowNewChatDialog(true)}
+                  aria-label="Nuevo chat"
+                  className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
                 >
-                  <MessageCirclePlus className="h-4 w-4" />
-                  Nuevo chat
-                </Button>
+                  <MessageCirclePlus className="h-4 w-4 text-sena-green" />
+                </button>
               </div>
             </header>
 
@@ -2357,36 +2356,36 @@ export const ChatsPage = () => {
                         }
                       }}
                       className={classNames(
-                        "flex h-11 w-11 items-center justify-center rounded-xl glass-liquid transition-all duration-200 hover:border-sena-green/60 hover:scale-110 hover:shadow-lg",
+                        "inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all backdrop-blur-md border shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20",
                         selectedChatId && favoriteChats.has(selectedChatId)
-                          ? "text-yellow-500 border-yellow-500/30 bg-yellow-500/10"
-                          : "text-[var(--color-text)] hover:text-sena-green"
+                          ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 hover:border-yellow-500/40 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20"
+                          : "bg-white/10 text-[var(--color-muted)] border-white/20 hover:bg-white/20 hover:border-white/40 hover:text-sena-green dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
                       )}
                       aria-label="Marcar como favorito"
                     >
-                      <Star className={classNames("h-4 w-4", selectedChatId && favoriteChats.has(selectedChatId) && "fill-yellow-500")} />
+                      <Star className={classNames("h-4 w-4 text-sena-green", selectedChatId && favoriteChats.has(selectedChatId) && "!text-yellow-500 !fill-yellow-500")} />
                     </button>
                     <button
                       type="button"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl glass-liquid text-[var(--color-text)] transition-all duration-200 hover:border-sena-green/60 hover:text-sena-green hover:scale-110 hover:shadow-lg"
+                      className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
                       aria-label="Llamada de voz"
                     >
-                      <Phone className="h-4 w-4" />
+                      <Phone className="h-4 w-4 text-sena-green" />
                     </button>
                     <button
                       type="button"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl glass-liquid text-[var(--color-text)] transition-all duration-200 hover:border-sena-green/60 hover:text-sena-green hover:scale-110 hover:shadow-lg"
+                      className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
                       aria-label="Videollamada"
                     >
-                      <Video className="h-4 w-4" />
+                      <Video className="h-4 w-4 text-sena-green" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsInfoModalOpen(true)}
-                      className="flex h-11 w-11 items-center justify-center rounded-xl glass-liquid text-[var(--color-text)] transition-all duration-200 hover:border-sena-green/60 hover:text-sena-green hover:scale-110 hover:shadow-lg"
+                      className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
                       aria-label="Detalles del chat"
                     >
-                      <Info className="h-4 w-4" />
+                      <Info className="h-4 w-4 text-sena-green" />
                     </button>
                   </div>
                 </header>

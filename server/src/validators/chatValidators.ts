@@ -19,8 +19,9 @@ export const createChatSchema = z.object({
 
 export const sendMessageSchema = z.object({
   content: z.string().max(2000).optional(),
-  attachmentUrl: remoteOrDataUrlSchema.optional().nullable()
+  attachmentUrl: remoteOrDataUrlSchema.optional().nullable(),
+  sharedPostId: z.string().uuid().optional().nullable()
 }).refine(
-  (value) => Boolean(value.content?.trim()) || Boolean(value.attachmentUrl),
-  { message: 'El mensaje debe tener contenido o un archivo adjunto' }
+  (value) => Boolean(value.content?.trim()) || Boolean(value.attachmentUrl) || Boolean(value.sharedPostId),
+  { message: 'El mensaje debe tener contenido, un archivo adjunto o una publicación compartida' }
 );

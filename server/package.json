@@ -4,7 +4,7 @@
   "description": "Backend server for FlorteApp social learning platform",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "npx kill-port 4000 2>nul & ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.{ts,tsx}\""
@@ -37,6 +37,7 @@
     "@types/morgan": "^1.9.7",
     "@types/multer": "^1.4.12",
     "@types/node": "^20.12.12",
+    "@types/swagger-ui-express": "^4.1.8",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.57.0",
@@ -44,6 +45,7 @@
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-n": "^16.6.0",
     "eslint-plugin-promise": "^6.5.1",
+    "kill-port": "^2.0.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.5"
   }

@@ -3,6 +3,7 @@ import { AuthUser } from './auth';
 export interface Profile extends AuthUser {
   createdAt: string;
   updatedAt: string;
+  fullName?: string;
 }
 
 export interface UpdateProfilePayload {

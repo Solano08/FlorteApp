@@ -97,7 +97,7 @@ export const channelRepository = {
         id,
         channelId: input.channelId,
         senderId: input.senderId,
-        content: input.content,
+        content: input.content ?? '',
         attachmentUrl: input.attachmentUrl ?? null
       }
     );

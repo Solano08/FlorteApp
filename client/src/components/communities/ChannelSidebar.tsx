@@ -102,8 +102,8 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
       setNewTextChannelName('');
       setSelectedCategoryId(null);
       setIsCreatingTextChannel(false);
-    } catch (error) {
-      console.error('Error al crear canal:', error);
+    } catch {
+      // Error manejado por toast en CommunitiesPage
     }
   };
 

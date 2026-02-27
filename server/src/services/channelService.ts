@@ -42,7 +42,7 @@ export const channelService = {
   },
 
   async createMessage(input: CreateChannelMessageInput): Promise<ChannelMessage> {
-    if (!input.content.trim() && !input.attachmentUrl) {
+    if (!input.content?.trim() && !input.attachmentUrl) {
       throw new AppError('El mensaje debe tener contenido o un archivo adjunto', 400);
     }
 

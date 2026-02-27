@@ -17,6 +17,7 @@ import { Profile } from '../../types/profile';
 import { FeedPostAggregate, FeedReport, ReportStatus } from '../../types/feed';
 import { Shield, ShieldCheck, ShieldHalf, X } from 'lucide-react';
 import { floatingModalContentClass } from '../../utils/modalStyles';
+import { resolveAssetUrl } from '../../utils/media';
 import { useToast } from '../../hooks/useToast';
 
 const roleFilterOptions: Array<{ value: UserRole | 'all'; label: string }> = [
@@ -390,7 +391,7 @@ export const AdminModerationPage = () => {
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-3">
                         <img
-                          src={user.avatarUrl ?? 'https://avatars.dicebear.com/api/initials/FlorteApp.svg'}
+                          src={resolveAssetUrl(user.avatarUrl) ?? 'https://avatars.dicebear.com/api/initials/FlorteApp.svg'}
                           alt={user.firstName}
                           className="h-8 w-8 rounded-full object-cover"
                         />

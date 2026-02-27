@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosRequestHeaders, InternalAxiosRequestConfig } from 'axios';
 import { storage } from '../utils/storage';
+import { normalizeAuthUserMedia } from '../utils/media';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
 
@@ -21,7 +22,7 @@ const refreshTokens = async (): Promise<string | null> => {
           storage.setSession(tokens.accessToken, tokens.refreshToken);
         }
         if (user) {
-          storage.setUser(user);
+          storage.setUser(normalizeAuthUserMedia(user));
         }
         return tokens?.accessToken ?? null;
       } catch (error) {
