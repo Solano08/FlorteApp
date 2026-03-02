@@ -28,10 +28,30 @@ if (missing.length > 0) {
   console.warn(`[env] Missing environment variables: ${missing.join(', ')}`);
 }
 
+// CORS exige solo protocolo+host+puerto, sin rutas. Normalizamos para evitar /login, /register, etc.
+const toOrigin = (url: string): string => {
+  const trimmed = url.trim();
+  try {
+    const parsed = new URL(trimmed);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return trimmed;
+  }
+};
+
+// CLIENT_URL puede ser una URL o varias separadas por coma (ej: https://app.vercel.app,https://app-xxx.vercel.app)
+const parseClientUrls = (): string | string[] => {
+  const raw = process.env.CLIENT_URL ?? 'http://localhost:5173';
+  if (raw.includes(',')) {
+    return raw.split(',').map(toOrigin).filter(Boolean);
+  }
+  return toOrigin(raw);
+};
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '4000', 10),
-  clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
+  clientUrl: parseClientUrls(),
   jwtAccessSecret: process.env.JWT_ACCESS_SECRET ?? 'change-me-access',
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET ?? 'change-me-refresh',
   jwtAccessExpiry: process.env.JWT_ACCESS_EXPIRY ?? '15m',
