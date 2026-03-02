@@ -2,12 +2,20 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Railway usa MYSQLHOST, MYSQLUSER, etc.; el servidor espera DB_*
-const getDbHost = () => process.env.DB_HOST ?? process.env.MYSQLHOST ?? 'localhost';
-const getDbPort = () => parseInt(process.env.DB_PORT ?? process.env.MYSQLPORT ?? '3306', 10);
-const getDbUser = () => process.env.DB_USER ?? process.env.MYSQLUSER ?? 'root';
-const getDbPassword = () => process.env.DB_PASSWORD ?? process.env.MYSQLPASSWORD ?? '';
-const getDbName = () => process.env.DB_NAME ?? process.env.MYSQLDATABASE ?? 'florte_app';
+// Railway usa MYSQLHOST, MYSQLUSER, etc.; también RAILWAY_PRIVATE_DOMAIN cuando se conecta MySQL
+const getDbHost = () =>
+  process.env.DB_HOST ??
+  process.env.MYSQLHOST ??
+  process.env.MYSQL_HOST ??
+  process.env.RAILWAY_PRIVATE_DOMAIN ??
+  'localhost';
+const getDbPort = () =>
+  parseInt(process.env.DB_PORT ?? process.env.MYSQLPORT ?? process.env.MYSQL_PORT ?? '3306', 10);
+const getDbUser = () => process.env.DB_USER ?? process.env.MYSQLUSER ?? process.env.MYSQL_USER ?? 'root';
+const getDbPassword = () =>
+  process.env.DB_PASSWORD ?? process.env.MYSQLPASSWORD ?? process.env.MYSQL_PASSWORD ?? '';
+const getDbName = () =>
+  process.env.DB_NAME ?? process.env.MYSQLDATABASE ?? process.env.MYSQL_DATABASE ?? 'florte_app';
 
 const requiredEnv = [
   'JWT_ACCESS_SECRET',
