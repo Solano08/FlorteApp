@@ -214,6 +214,26 @@ Sustituye `tu-url-railway.app` por la URL real de Railway del Paso A6.
 - Verifica que el deploy esté en estado **Active**.
 - Prueba primero: `https://tu-url.railway.app/health`.
 
+## Login / Registro no funciona (frontend carga pero auth falla)
+
+**Causa más común:** El frontend no apunta al backend correcto.
+
+1. **VITE_API_URL en Vercel**
+   - Las variables `VITE_*` se incluyen en el build. Si no estaban al desplegar, el frontend usa `http://localhost:4000/api`.
+   - En Vercel: **Settings** → **Environment Variables** → añade `VITE_API_URL` = `https://tu-url-railway.app/api`.
+   - **Importante:** Después de añadir o cambiar variables, haz **Redeploy** (Deployments → ⋮ → Redeploy).
+
+2. **CLIENT_URL en Railway**
+   - Debe coincidir con la URL de Vercel (ej: `https://florteapp.vercel.app`).
+   - Sin barra final.
+   - Si usas preview deployments, puedes poner varias URLs separadas por coma: `https://app.vercel.app,https://app-xxx.vercel.app`.
+
+3. **Comprobar en el navegador**
+   - Abre DevTools (F12) → pestaña **Network**.
+   - Intenta iniciar sesión.
+   - Revisa la petición a `/auth/login`: ¿va a la URL de Railway o a localhost?
+   - Si va a localhost, falta o está mal `VITE_API_URL` en Vercel y hay que redesplegar.
+
 ## CORS en el frontend
 
 - Verifica que `CLIENT_URL` en Railway sea exactamente la URL de Vercel (con `https://`).
