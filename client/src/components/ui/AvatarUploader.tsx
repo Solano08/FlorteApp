@@ -1,6 +1,9 @@
 import { forwardRef, KeyboardEvent, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import classNames from 'classnames';
 import { Camera } from 'lucide-react';
+import { GlassDialog } from './GlassDialog';
+import { ImageCropper } from './ImageCropper';
+import { resolveAssetUrl } from '../../utils/media';
 
 interface AvatarUploaderProps {
   imageUrl?: string | null;
@@ -13,28 +16,50 @@ export interface AvatarUploaderHandle {
   openPicker: () => void;
 }
 
+const AVATAR_SIZE = 400;
+
 export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderProps>(
   ({ imageUrl, onSelect, loading, showTriggerButton = true }, ref) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
+    const [cropperFile, setCropperFile] = useState<File | null>(null);
+    const [cropperSrc, setCropperSrc] = useState<string | null>(null);
 
     const handleSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
-      setPreview((previous) => {
-        if (previous) URL.revokeObjectURL(previous);
-        return URL.createObjectURL(file);
-      });
-      onSelect(file);
+      event.target.value = '';
+      const url = URL.createObjectURL(file);
+      setCropperSrc(url);
+      setCropperFile(file);
     };
+
+    const handleCropperConfirm = useCallback(
+      (file: File) => {
+        setPreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(file);
+        });
+        onSelect(file);
+        closeCropper();
+      },
+      [onSelect]
+    );
+
+    const closeCropper = useCallback(() => {
+      setCropperFile(null);
+      if (cropperSrc) {
+        URL.revokeObjectURL(cropperSrc);
+        setCropperSrc(null);
+      }
+    }, [cropperSrc]);
 
     useEffect(() => {
       return () => {
-        if (preview) {
-          URL.revokeObjectURL(preview);
-        }
+        if (preview) URL.revokeObjectURL(preview);
+        if (cropperSrc) URL.revokeObjectURL(cropperSrc);
       };
-    }, [preview]);
+    }, [preview, cropperSrc]);
 
     const handleOpenPicker = useCallback(() => {
       if (loading) return;
@@ -80,9 +105,9 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
           )}
         >
           <img
-            src={preview ?? imageUrl ?? 'https://avatars.dicebear.com/api/initials/FlorteApp.svg'}
+            src={preview ?? resolveAssetUrl(imageUrl) ?? 'https://avatars.dicebear.com/api/initials/FlorteApp.svg'}
             alt="Avatar"
-            className="h-full w-full object-contain"
+            className="h-full w-full object-cover"
           />
         </div>
         {showTriggerButton && (
@@ -101,6 +126,27 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
           onChange={handleSelect}
           className="hidden"
         />
+        <GlassDialog
+          open={Boolean(cropperSrc)}
+          onClose={closeCropper}
+          size="lg"
+          contentClassName="max-w-xl"
+        >
+          <h3 className="text-lg font-semibold text-[var(--color-text)]">Recortar foto de perfil</h3>
+          {cropperSrc && (
+            <ImageCropper
+              imageSrc={cropperSrc}
+              aspectRatio={1}
+              outputWidth={AVATAR_SIZE}
+              outputHeight={AVATAR_SIZE}
+              outputFileName="avatar.jpg"
+              onConfirm={handleCropperConfirm}
+              onCancel={closeCropper}
+              confirmLabel="Aplicar"
+              cancelLabel="Cancelar"
+            />
+          )}
+        </GlassDialog>
       </div>
     );
   }

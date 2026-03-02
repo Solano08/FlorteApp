@@ -6,7 +6,8 @@ module.exports = {
   },
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    project: ['./tsconfig.json']
+    project: true,
+    tsconfigRootDir: __dirname
   },
   plugins: ['@typescript-eslint'],
   extends: ['standard-with-typescript', 'plugin:react-hooks/recommended'],

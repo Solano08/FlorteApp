@@ -44,6 +44,12 @@ export interface FeedPostAggregate extends FeedPost {
   viewerReaction: ReactionType | null;
   isSaved: boolean;
   latestComments: FeedComment[];
+  reactionBreakdown?: ReactionBreakdown[];
+}
+
+export interface ReactionBreakdown {
+  type: ReactionType;
+  count: number;
 }
 
 export interface PostMetrics {
@@ -52,6 +58,7 @@ export interface PostMetrics {
   shareCount: number;
   viewerReaction: ReactionType | null;
   isSaved: boolean;
+  reactionBreakdown?: ReactionBreakdown[];
 }
 
 export interface CreatePostInput {

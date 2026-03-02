@@ -39,8 +39,25 @@ export const chatController = {
       chatId,
       senderId: userId,
       content: data.content ?? '',
-      attachmentUrl: data.attachmentUrl
+      attachmentUrl: data.attachmentUrl ?? undefined,
+      sharedPostId: data.sharedPostId ?? undefined
     });
     res.status(201).json({ success: true, message });
+  },
+
+  deleteMessage: async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Autenticación requerida', 401);
+    const { chatId, messageId } = req.params;
+    await chatService.deleteMessage(messageId, userId, chatId);
+    res.json({ success: true });
+  },
+
+  deleteChat: async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Autenticación requerida', 401);
+    const { chatId } = req.params;
+    await chatService.deleteChat(chatId, userId);
+    res.json({ success: true });
   }
 };

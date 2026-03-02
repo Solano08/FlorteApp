@@ -15,12 +15,27 @@ const mapMessage = (row: RowDataPacket): Message => ({
   id: row.id,
   chatId: row.chat_id,
   senderId: row.sender_id,
-  content: row.content,
+  content: row.content ?? '',
   attachmentUrl: row.attachment_url,
+  sharedPostId: row.shared_post_id ?? null,
   createdAt: row.created_at
 });
 
 export const chatRepository = {
+  async findDirectChatBetween(userA: string, userB: string): Promise<Chat | null> {
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      `SELECT c.*
+       FROM chats c
+       INNER JOIN chat_members m1 ON m1.chat_id = c.id AND m1.user_id = :userA
+       INNER JOIN chat_members m2 ON m2.chat_id = c.id AND m2.user_id = :userB
+       WHERE c.is_group = 0
+       LIMIT 1`,
+      { userA, userB }
+    );
+    if (rows.length === 0) return null;
+    return mapChat(rows[0]);
+  },
+
   async createChat(input: CreateChatInput): Promise<Chat> {
     const connection = await getConnection();
     const chatId = crypto.randomUUID();
@@ -73,9 +88,14 @@ export const chatRepository = {
     return mapChat(rows[0]);
   },
 
-  async findUserChats(userId: string): Promise<Array<Chat & { lastMessageAt?: Date }>> {
+  async findUserChats(userId: string): Promise<Array<Chat & { lastMessageAt?: Date; lastMessage?: string }>> {
     const [rows] = await getPool().query<RowDataPacket[]>(
-      `SELECT c.*, MAX(m.created_at) AS last_message_at
+      `SELECT c.*, 
+              MAX(m.created_at) AS last_message_at,
+              (SELECT CASE 
+                WHEN shared_post_id IS NOT NULL AND (content IS NULL OR TRIM(content) = '') THEN 'Publicación compartida'
+                ELSE content
+              END FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) AS last_message
        FROM chats c
        INNER JOIN chat_members cm ON cm.chat_id = c.id
        LEFT JOIN messages m ON m.chat_id = c.id
@@ -86,7 +106,8 @@ export const chatRepository = {
     );
     return rows.map((row) => ({
       ...mapChat(row),
-      lastMessageAt: row.last_message_at
+      lastMessageAt: row.last_message_at,
+      lastMessage: row.last_message || null
     }));
   },
 
@@ -103,14 +124,15 @@ export const chatRepository = {
   async createMessage(input: CreateMessageInput): Promise<Message> {
     const id = crypto.randomUUID();
     const [result] = await getPool().execute<ResultSetHeader>(
-      `INSERT INTO messages (id, chat_id, sender_id, content, attachment_url)
-       VALUES (:id, :chatId, :senderId, :content, :attachmentUrl)`,
+      `INSERT INTO messages (id, chat_id, sender_id, content, attachment_url, shared_post_id)
+       VALUES (:id, :chatId, :senderId, :content, :attachmentUrl, :sharedPostId)`,
       {
         id,
         chatId: input.chatId,
         senderId: input.senderId,
         content: input.content,
-        attachmentUrl: input.attachmentUrl ?? null
+        attachmentUrl: input.attachmentUrl ?? null,
+        sharedPostId: input.sharedPostId ?? null
       }
     );
 
@@ -137,5 +159,28 @@ export const chatRepository = {
       { chatId, limit }
     );
     return rows.map(mapMessage).reverse();
+  },
+
+  async findMessageById(messageId: string): Promise<Message | null> {
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      'SELECT * FROM messages WHERE id = :messageId LIMIT 1',
+      { messageId }
+    );
+    if (rows.length === 0) return null;
+    return mapMessage(rows[0]);
+  },
+
+  async deleteMessage(messageId: string): Promise<void> {
+    await getPool().execute<ResultSetHeader>(
+      'DELETE FROM messages WHERE id = :messageId',
+      { messageId }
+    );
+  },
+
+  async deleteChat(chatId: string): Promise<void> {
+    await getPool().execute<ResultSetHeader>(
+      'DELETE FROM chats WHERE id = :chatId',
+      { chatId }
+    );
   }
 };

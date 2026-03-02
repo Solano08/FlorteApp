@@ -268,5 +268,28 @@ export const userService = {
     }
     const restored = await userRepository.updateUser({ userId, isActive: true });
     return toPublicProfile(restored);
+  },
+
+  async blockUser(blockerId: string, blockedId: string): Promise<void> {
+    if (blockerId === blockedId) {
+      throw new AppError('No puedes bloquearte a ti mismo', 400);
+    }
+    const blockedUser = await userRepository.findById(blockedId);
+    if (!blockedUser) {
+      throw new AppError('Usuario no encontrado', 404);
+    }
+    await userRepository.blockUser(blockerId, blockedId);
+  },
+
+  async unblockUser(blockerId: string, blockedId: string): Promise<void> {
+    const isBlocked = await userRepository.isBlocked(blockerId, blockedId);
+    if (!isBlocked) {
+      throw new AppError('Este usuario no está bloqueado', 404);
+    }
+    await userRepository.unblockUser(blockerId, blockedId);
+  },
+
+  async isBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+    return await userRepository.isBlocked(blockerId, blockedId);
   }
 };

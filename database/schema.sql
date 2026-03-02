@@ -42,6 +42,43 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS user_blocks (
+    blocker_id CHAR(36) NOT NULL,
+    blocked_id CHAR(36) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (blocker_id, blocked_id),
+    FOREIGN KEY (blocker_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (blocked_id) REFERENCES users (id) ON DELETE CASCADE,
+    INDEX idx_blocker (blocker_id),
+    INDEX idx_blocked (blocked_id)
+) ENGINE=InnoDB;
+
+-- Friend requests and friendships
+CREATE TABLE IF NOT EXISTS friend_requests (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    sender_id CHAR(36) NOT NULL,
+    receiver_id CHAR(36) NOT NULL,
+    status ENUM('pending','accepted','rejected') NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_friend_request (sender_id, receiver_id),
+    FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE,
+    INDEX idx_friend_requests_sender (sender_id),
+    INDEX idx_friend_requests_receiver (receiver_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS friends (
+    user_id CHAR(36) NOT NULL,
+    friend_id CHAR(36) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, friend_id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users (id) ON DELETE CASCADE,
+    INDEX idx_friends_user (user_id),
+    INDEX idx_friends_friend (friend_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS chats (
     id CHAR(36) NOT NULL PRIMARY KEY,
     name VARCHAR(160),
@@ -76,6 +113,7 @@ CREATE TABLE IF NOT EXISTS study_groups (
     name VARCHAR(160) NOT NULL,
     description TEXT,
     cover_image VARCHAR(255),
+    icon_url VARCHAR(255),
     created_by CHAR(36) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE CASCADE
@@ -89,6 +127,32 @@ CREATE TABLE IF NOT EXISTS group_members (
     PRIMARY KEY (group_id, user_id),
     FOREIGN KEY (group_id) REFERENCES study_groups (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS channels (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    community_id CHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    type ENUM('text', 'voice') NOT NULL DEFAULT 'text',
+    position INT NOT NULL DEFAULT 0,
+    created_by CHAR(36) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (community_id) REFERENCES study_groups (id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE CASCADE,
+    INDEX idx_community_position (community_id, position)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS channel_messages (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    channel_id CHAR(36) NOT NULL,
+    sender_id CHAR(36) NOT NULL,
+    content TEXT NOT NULL,
+    attachment_url VARCHAR(255),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (channel_id) REFERENCES channels (id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+    INDEX idx_channel_created (channel_id, created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS projects (

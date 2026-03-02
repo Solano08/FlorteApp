@@ -27,5 +27,17 @@ export const projectService = {
       throw new AppError('No tienes permisos para actualizar este proyecto', 403);
     }
     return await projectRepository.updateProject(input);
+  },
+
+
+  async deleteProject(actorId: string, projectId: string): Promise<void> {
+    const project = await projectRepository.findById(projectId);
+    if (!project) {
+      throw new AppError('Proyecto no encontrado', 404);
+    }
+    if (project.ownerId !== actorId) {
+      throw new AppError('No tienes permisos para eliminar este proyecto', 403);
+    }
+    await projectRepository.deleteProject(projectId);
   }
 };

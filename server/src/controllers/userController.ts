@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { userService } from '../services/userService';
+import { AppError } from '../utils/appError';
 import { createUserSchema, updateUserSchema, userIdParamSchema } from '../validators/userValidators';
 
 export const userController = {
@@ -40,5 +41,21 @@ export const userController = {
     const { userId } = userIdParamSchema.parse(req.params);
     const user = await userService.restoreUser(req.user?.userId, userId);
     res.json({ success: true, user });
+  },
+
+  block: async (req: Request, res: Response) => {
+    const blockerId = req.user?.userId;
+    if (!blockerId) throw new AppError('Autenticación requerida', 401);
+    const { userId } = userIdParamSchema.parse(req.params);
+    await userService.blockUser(blockerId, userId);
+    res.json({ success: true });
+  },
+
+  unblock: async (req: Request, res: Response) => {
+    const blockerId = req.user?.userId;
+    if (!blockerId) throw new AppError('Autenticación requerida', 401);
+    const { userId } = userIdParamSchema.parse(req.params);
+    await userService.unblockUser(blockerId, userId);
+    res.json({ success: true });
   }
 };

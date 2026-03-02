@@ -27,20 +27,26 @@ export const EmojiPicker = forwardRef<HTMLDivElement, EmojiPickerProps>(
     return (
       <div
         ref={ref}
-        className={`w-[min(360px,92vw)] max-h-[420px] overflow-hidden rounded-2xl p-2 glass-liquid ${className ?? ''}`}
+        className={`relative w-[min(320px,90vw)] h-[320px] overflow-hidden rounded-[24px] bg-transparent ${className ?? ''}`}
+        style={{ 
+          maxHeight: 'calc(100vh - 2rem)',
+          height: 'min(320px, calc(100vh - 2rem))'
+        }}
       >
-        <Picker
-          data={data}
-          theme={theme}
-          previewPosition="none"
-          navPosition="bottom"
-          perLine={8}
-          emojiSize={20}
-          emojiButtonSize={32}
-          skinTonePosition="search"
-          searchPosition="top"
-          onEmojiSelect={handleEmojiSelect}
-        />
+        <div className="relative z-10 h-full">
+          <Picker
+            data={data}
+            theme={theme}
+            previewPosition="none"
+            navPosition="bottom"
+            perLine={8}
+            emojiSize={20}
+            emojiButtonSize={32}
+            skinTonePosition="search"
+            searchPosition="top"
+            onEmojiSelect={handleEmojiSelect}
+          />
+        </div>
       </div>
     );
   }

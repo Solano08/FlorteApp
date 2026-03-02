@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
+import { LayoutGroup } from 'framer-motion';
 
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
@@ -22,7 +22,11 @@ import { Button } from '../../components/ui/Button';
 
 import { AvatarUploader, AvatarUploaderHandle } from '../../components/ui/AvatarUploader';
 
+import { UserAvatar } from '../../components/ui/UserAvatar';
+
 import { GlassDialog } from '../../components/ui/GlassDialog';
+
+import { ImageCropper } from '../../components/ui/ImageCropper';
 
 import { profileService } from '../../services/profileService';
 import { activityService } from '../../services/activityService';
@@ -79,8 +83,6 @@ import { Profile } from '../../types/profile';
 import { ActivityOverview } from '../../types/activity';
 
 import { floatingModalContentClass } from '../../utils/modalStyles';
-import { resolveAssetUrl } from '../../utils/media';
-import { FileText } from 'lucide-react';
 
 
 
@@ -131,20 +133,6 @@ type ProfileValues = z.infer<typeof profileSchema>;
 
 
 const defaultSkills: string[] = ['UI/UX', 'React', 'Innovacion', 'Trabajo colaborativo', 'Aprendiz SENA'];
-
-const detectMediaType = (url: string, mimeType?: string | null): 'image' | 'video' | 'pdf' | 'other' => {
-  if (mimeType) {
-    if (mimeType.startsWith('image/')) return 'image';
-    if (mimeType.startsWith('video/')) return 'video';
-    if (mimeType === 'application/pdf') return 'pdf';
-  }
-  const lowerUrl = url.toLowerCase();
-  const extension = lowerUrl.includes('.') ? lowerUrl.substring(lowerUrl.lastIndexOf('.') + 1).split('?')[0] : '';
-  if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension)) return 'image';
-  if (['mp4', 'webm', 'ogg', 'mov', 'm4v'].includes(extension)) return 'video';
-  if (extension === 'pdf') return 'pdf';
-  return 'other';
-};
 
 
 
@@ -245,10 +233,17 @@ export const ProfilePage = () => {
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [editingBio, setEditingBio] = useState(false);
+  const [inlineFirstName, setInlineFirstName] = useState('');
+  const [inlineLastName, setInlineLastName] = useState('');
+  const [inlineBio, setInlineBio] = useState('');
 
   const [activeLinkEditors, setActiveLinkEditors] = useState<Record<string, boolean>>({});
 
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+
+  const [coverCropperSrc, setCoverCropperSrc] = useState<string | null>(null);
 
   const coverFileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -364,8 +359,8 @@ export const ProfilePage = () => {
           </div>
           <p className="mt-2 text-[12px] text-[var(--color-muted)] line-clamp-2">{snippet}</p>
           {showMedia && post.mediaUrl && (
-            <div className="mt-3 overflow-hidden rounded-xl glass-liquid">
-              <img src={resolveAssetUrl(post.mediaUrl) ?? post.mediaUrl} alt="Vista previa de la publicacion" className="h-32 w-full object-cover" />
+            <div className="mt-3 overflow-hidden rounded-xl border border-white/30">
+              <img src={post.mediaUrl} alt="Vista previa de la publicacion" className="h-32 w-full object-cover" />
             </div>
           )}
         </div>
@@ -587,8 +582,6 @@ export const ProfilePage = () => {
         xUrl: updated.xUrl ?? ''
 
       });
-
-      closeEditor();
 
     }
 
@@ -888,7 +881,7 @@ export const ProfilePage = () => {
   };
 
   const getAvatarUrl = (fullName: string, avatarUrl?: string | null) =>
-    resolveAssetUrl(avatarUrl) ?? `https://avatars.dicebear.com/api/initials/${encodeURIComponent(fullName || 'Usuario')}.svg`;
+    avatarUrl ?? `https://avatars.dicebear.com/api/initials/${encodeURIComponent(fullName || 'Usuario')}.svg`;
 
 
 
@@ -1109,7 +1102,7 @@ export const ProfilePage = () => {
 
     coverPreview ??
 
-    resolveAssetUrl(coverImageUrl) ??
+    coverImageUrl ??
 
     'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80';
 
@@ -1175,6 +1168,16 @@ export const ProfilePage = () => {
 
     if (!file) return;
 
+    event.target.value = '';
+
+    const url = URL.createObjectURL(file);
+
+    setCoverCropperSrc(url);
+
+  };
+
+  const handleCoverCropperConfirm = (file: File) => {
+
     const previewUrl = URL.createObjectURL(file);
 
     setCoverPreview((previous) => {
@@ -1186,6 +1189,20 @@ export const ProfilePage = () => {
     });
 
     updateCoverMutation.mutate(file);
+
+    closeCoverCropper();
+
+  };
+
+  const closeCoverCropper = () => {
+
+    setCoverCropperSrc((prev) => {
+
+      if (prev) URL.revokeObjectURL(prev);
+
+      return null;
+
+    });
 
   };
 
@@ -1325,6 +1342,22 @@ export const ProfilePage = () => {
 
   );
 
+  useEffect(
+
+    () => () => {
+
+      if (coverCropperSrc) {
+
+        URL.revokeObjectURL(coverCropperSrc);
+
+      }
+
+    },
+
+    [coverCropperSrc]
+
+  );
+
 
 
   useEffect(() => {
@@ -1395,107 +1428,159 @@ export const ProfilePage = () => {
 
           <div className="space-y-6">
 
-            <Card className="relative overflow-visible rounded-[32px] glass-liquid-strong p-0">
+            <Card className="relative overflow-visible rounded-[32px] border border-white/25 bg-white/45 p-0 shadow-[0_14px_30px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
 
               <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[38px] bg-[radial-gradient(circle_at_center,_rgba(18,55,29,0.06)_0%,_rgba(18,55,29,0.025)_38%,_transparent_70%)] blur-xl" />
 
               <div className="relative h-48 w-full overflow-visible rounded-t-[32px] sm:h-52 md:h-56">
-
-                <div className="relative h-full overflow-hidden rounded-t-[32px] glass-liquid">
-
-                  <img
-
-                    src={displayCoverImage}
-
-                    alt="Portada de perfil"
-
-                    className="h-full w-full object-cover"
-
-                  />
-
+                <button
+                  type="button"
+                  onClick={toggleCoverEditorMenu}
+                  className="absolute inset-0 z-10 flex items-center justify-center rounded-t-[32px] border-0 bg-transparent transition hover:bg-black/20 focus:outline-none focus:ring-2 focus:ring-sena-green/50"
+                  aria-label="Cambiar portada"
+                />
+                <div className="relative h-full overflow-hidden rounded-t-[32px] border border-white/20 shadow-[0_16px_28px_rgba(18,55,29,0.12)]">
+                  <img src={displayCoverImage} alt="Portada de perfil" className="h-full w-full object-cover" />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/40 via-white/10 to-white/0 dark:from-slate-900/30 dark:via-slate-900/10 dark:to-slate-900/0" />
-
                 </div>
-
-                {(isCoverBusy || isAvatarBusy) && (
-
-                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/35 backdrop-blur-sm">
-
-                    <Loader2 className="h-6 w-6 animate-spin text-white" />
-
+                {isCoverEditorMenuOpen && (
+                  <div ref={coverEditorMenuRef} className="absolute right-4 top-4 z-20">
+                    <div role="menu" className="rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left text-[var(--color-text)] shadow-xl backdrop-blur">
+                      {coverMenuItems.map(({ id, label, icon: Icon, disabled, onClick }) => (
+                        <button key={id} type="button" onClick={onClick} disabled={disabled} className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-xs font-semibold transition hover:bg-sena-green/10 disabled:opacity-60">
+                          <Icon className="h-3.5 w-3.5 text-sena-green" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-
                 )}
-
+                <input ref={coverFileInputRef} type="file" accept="image/*" onChange={handleCoverFileChange} className="hidden" />
+                {(isCoverBusy || isAvatarBusy) && (
+                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/35 backdrop-blur-sm">
+                    <Loader2 className="h-6 w-6 animate-spin text-white" />
+                  </div>
+                )}
                 <div className="absolute -bottom-16 left-6 z-30">
-
-                  <AvatarUploader
-
-                    imageUrl={resolveAssetUrl(profile?.avatarUrl)}
-
-                    loading={isAvatarBusy}
-
-                    onSelect={(file) => {
-
-                      uploadAvatarMutation.mutate(file);
-
-                    }}
-
-                    showTriggerButton={false}
-
-                  />
-
+                  <button
+                    type="button"
+                    onClick={() => avatarUploaderRef.current?.openPicker()}
+                    disabled={isAvatarBusy}
+                    className="rounded-full outline-none ring-0 focus:ring-2 focus:ring-sena-green/50 focus:ring-offset-2 disabled:opacity-70"
+                    aria-label="Cambiar foto de perfil"
+                  >
+                    <AvatarUploader
+                      imageUrl={profile?.avatarUrl}
+                      loading={isAvatarBusy}
+                      onSelect={(file) => uploadAvatarMutation.mutate(file)}
+                      showTriggerButton={false}
+                    />
+                  </button>
+                  <div ref={avatarMenuRef} className="absolute -bottom-1 right-0">
+                    <button
+                      type="button"
+                      onClick={toggleAvatarMenu}
+                      aria-haspopup="menu"
+                      aria-expanded={isAvatarMenuOpen}
+                      className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/70 bg-white/95 text-sena-green shadow-lg backdrop-blur transition hover:bg-white"
+                      aria-label="Opciones de avatar"
+                    >
+                      <ImageUp className="h-4 w-4" />
+                    </button>
+                    {isAvatarMenuOpen && (
+                      <div role="menu" className="absolute left-full top-0 mt-0 w-48 translate-x-2 rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left shadow-xl backdrop-blur">
+                        {avatarMenuItems.map(({ id, label, icon: Icon, disabled, onClick }) => (
+                          <button key={id} type="button" onClick={onClick} disabled={disabled} className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-xs font-semibold text-[var(--color-text)] transition hover:bg-sena-green/10 disabled:opacity-60">
+                            <Icon className="h-3.5 w-3.5 text-sena-green" />
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-
               </div>
 
               <div className="flex flex-col gap-6 px-6 pb-6 pt-20 sm:flex-row sm:items-center sm:gap-8">
-
-                <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
-                  <div>
-
-                    <p className="text-xl font-semibold text-[var(--color-text)]">
-
-                      {profile?.firstName} {profile?.lastName}
-
-                    </p>
-
-                    <p className="text-sm text-[var(--color-muted)]">
-
-                      {profile?.headline ?? 'Agrega un titular atractivo para tu perfil.'}
-
-                    </p>
-
-                  </div>
-
-                  <div className="w-full sm:w-auto">
-
-                    <Button
-
-                      variant="secondary"
-
-                      size="sm"
-
-                      onClick={() => handleOpenEditor()}
-
-                      disabled={isSaving || isMediaBusy}
-
-                      className="w-full px-2.5 text-[11px] shadow-[0_10px_20px_rgba(18,55,29,0.18)] backdrop-blur sm:w-auto"
-
+                <div className="flex flex-1 flex-col gap-4">
+                  {!editingName ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingName(true);
+                        setInlineFirstName(profile?.firstName ?? '');
+                        setInlineLastName(profile?.lastName ?? '');
+                      }}
+                      className="text-left outline-none focus:ring-2 focus:ring-sena-green/30 focus:ring-offset-2 rounded-lg px-1 -mx-1"
                     >
-
-                      Editar perfil
-
-                    </Button>
-
-                  </div>
-
+                      <p className="text-xl font-semibold text-[var(--color-text)]">
+                        {profile?.firstName} {profile?.lastName}
+                      </p>
+                    </button>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="text"
+                        value={inlineFirstName}
+                        onChange={(e) => setInlineFirstName(e.target.value)}
+                        onBlur={() => {
+                          if (inlineFirstName.trim() !== (profile?.firstName ?? '') || inlineLastName.trim() !== (profile?.lastName ?? '')) {
+                            updateProfileMutation.mutate({ firstName: inlineFirstName.trim(), lastName: inlineLastName.trim() });
+                          }
+                          setEditingName(false);
+                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                        placeholder="Nombre"
+                        className="rounded-lg border border-white/30 bg-white/60 px-2 py-1 text-lg font-semibold text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
+                        autoFocus
+                      />
+                      <input
+                        type="text"
+                        value={inlineLastName}
+                        onChange={(e) => setInlineLastName(e.target.value)}
+                        onBlur={() => {
+                          if (inlineFirstName.trim() !== (profile?.firstName ?? '') || inlineLastName.trim() !== (profile?.lastName ?? '')) {
+                            updateProfileMutation.mutate({ firstName: inlineFirstName.trim(), lastName: inlineLastName.trim() });
+                          }
+                          setEditingName(false);
+                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                        placeholder="Apellido"
+                        className="rounded-lg border border-white/30 bg-white/60 px-2 py-1 text-lg font-semibold text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
+                      />
+                    </div>
+                  )}
+                  {!editingBio ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingBio(true);
+                        setInlineBio(profile?.bio ?? '');
+                      }}
+                      className="text-left outline-none focus:ring-2 focus:ring-sena-green/30 focus:ring-offset-2 rounded-lg px-1 -mx-1 w-full"
+                    >
+                      <p className="text-sm text-[var(--color-muted)]">
+                        {profile?.bio ?? 'Agrega un titular atractivo para tu perfil.'}
+                      </p>
+                    </button>
+                  ) : (
+                    <textarea
+                      value={inlineBio}
+                      onChange={(e) => setInlineBio(e.target.value)}
+                      onBlur={() => {
+                        if (inlineBio !== (profile?.bio ?? '')) {
+                          updateProfileMutation.mutate({ bio: inlineBio.trim() || null });
+                        }
+                        setEditingBio(false);
+                      }}
+                      placeholder="Agrega un titular atractivo para tu perfil."
+                      rows={2}
+                      className="w-full resize-none rounded-lg border border-white/30 bg-white/60 px-2 py-1 text-sm text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
+                      autoFocus
+                    />
+                  )}
                 </div>
-
               </div>
-
-              {!isEditing && (
 
                 <div className="flex flex-wrap gap-2 px-6 pb-6">
 
@@ -1505,7 +1590,7 @@ export const ProfilePage = () => {
 
                       key={skill}
 
-                      className="rounded-full bg-[var(--color-accent-soft)] px-4 py-1 text-xs font-semibold text-sena-green shadow-[0_10px_20px_rgba(18,55,29,0.16)]"
+                      className="rounded-full bg-sena-green/10 px-3 py-1.5 text-xs font-semibold text-sena-green"
 
                     >
 
@@ -1516,8 +1601,6 @@ export const ProfilePage = () => {
                   ))}
 
                 </div>
-
-              )}
 
               {profileSocialLinks.length > 0 && (
 
@@ -1537,7 +1620,7 @@ export const ProfilePage = () => {
 
                       title={rawValue}
 
-                      className="inline-flex items-center gap-2 rounded-full glass-liquid px-4 py-1.5 text-xs font-semibold text-sena-green transition hover:opacity-80"
+                      className="inline-flex items-center gap-2 rounded-full bg-sena-green/10 px-3 py-1.5 text-xs font-semibold text-sena-green transition hover:bg-sena-green/20"
 
                     >
 
@@ -1555,23 +1638,7 @@ export const ProfilePage = () => {
 
             </Card>
 
-
-
-            <Card className="glass-liquid">
-
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Acerca de mi</h3>
-
-              <p className="mt-3 text-sm text-[var(--color-text)]">
-
-                {profile?.bio ?? 'Describe tus intereses, experiencias y metas dentro del SENA.'}
-
-              </p>
-
-            </Card>
-
-
-
-            <Card className="glass-liquid">
+            <Card className="border border-white/30 bg-white/60 shadow-[0_10px_22px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
 
               <div className="flex items-center justify-between">
 
@@ -1615,7 +1682,7 @@ export const ProfilePage = () => {
 
                     >
 
-                      <div className="rounded-2xl glass-liquid px-4 py-3 text-sm text-[var(--color-text)] transition hover:border-sena-green/60">
+                      <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
 
                         <div className="flex items-center justify-between gap-3">
 
@@ -1703,7 +1770,7 @@ export const ProfilePage = () => {
                   {activityStats.map(({ id, label, value, icon: Icon, accent }) => (
                     <div
                       key={id}
-                      className="group relative flex min-h-[110px] flex-col items-center justify-center gap-3 rounded-2xl glass-liquid px-4 py-5 text-center"
+                      className="group relative flex min-h-[110px] flex-col items-center justify-center gap-3 rounded-2xl border border-white/25 bg-white/35 px-4 py-5 text-center shadow-[0_16px_28px_rgba(18,55,29,0.14)]"
                       role="figure"
                       title={label}
                       aria-label={label}
@@ -1764,510 +1831,6 @@ export const ProfilePage = () => {
 
         </div>
 
-
-
-        <AnimatePresence>
-
-          {isEditing && (
-
-            <motion.div
-
-              key="profile-editor"
-
-              initial={{ opacity: 0 }}
-
-              animate={{ opacity: 1 }}
-
-              exit={{ opacity: 0 }}
-
-              className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/30 px-4 py-6 backdrop-blur-[28px] sm:px-6 md:py-10 hide-scrollbar"
-            >
-
-              <motion.div
-
-                initial={{ opacity: 0, y: 20 }}
-
-                animate={{ opacity: 1, y: 0 }}
-
-                exit={{ opacity: 0, y: 16 }}
-
-                transition={{ duration: 0.25, ease: 'easeInOut' }}
-
-                className="relative w-full max-w-3xl overflow-hidden rounded-[32px] glass-liquid-strong"
-              >
-
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.5),_transparent_70%)] opacity-90 dark:opacity-40" />
-
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/15 to-white/10 dark:from-white/5 dark:via-white/0 dark:to-white/5" />
-
-                <div className="relative z-10 max-h-[88vh] overflow-y-auto p-6 sm:p-8 space-y-6 hide-scrollbar">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-
-                    <div>
-
-                      <h3 className="text-lg font-semibold text-[var(--color-text)]">Editar perfil</h3>
-
-                      <p className="text-sm text-[var(--color-muted)]">
-
-                        Personaliza tu informacion, portada y enlaces para destacar tu trabajo.
-
-                      </p>
-
-                    </div>
-
-                    <Button variant="ghost" onClick={closeEditor} className="self-start text-[var(--color-muted)] hover:text-sena-green">
-
-                      <CloseIcon className="mr-1 h-4 w-4" /> Cerrar
-
-                    </Button>
-
-                  </div>
-
-
-
-                  <div className="rounded-[24px] glass-liquid p-4">
-
-                    <div className="relative h-36 overflow-hidden rounded-3xl glass-liquid sm:h-40 md:h-44">
-                      <img src={displayCoverImage} alt="Portada actual" className="h-full w-full object-cover" />
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/22 via-transparent to-black/8" />
-
-                      {isCoverBusy && (
-
-                        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm">
-
-                          <Loader2 className="h-6 w-6 animate-spin text-white" />
-
-                        </div>
-
-                      )}
-
-                      <div ref={coverEditorMenuRef} className="absolute right-4 top-4">
-
-                        <button
-
-                          type="button"
-
-                          onClick={toggleCoverEditorMenu}
-
-                          aria-haspopup="menu"
-
-                          aria-expanded={isCoverEditorMenuOpen}
-
-                          className="flex h-10 w-10 items-center justify-center rounded-2xl glass-liquid text-sena-green transition hover:opacity-80"
-
-                        >
-
-                          <ImageUp className="h-4 w-4" />
-
-                          <span className="sr-only">Opciones de portada</span>
-
-                        </button>
-
-                        {isCoverEditorMenuOpen && (
-
-                          <div
-
-                            role="menu"
-
-                            className="absolute right-0 top-full mt-2 w-48 transform -translate-x-full rounded-2xl glass-liquid-strong p-1.5 text-left text-[var(--color-text)]"
-
-                          >
-
-                            {coverMenuItems.map(({ id, label, icon: Icon, disabled, onClick }) => (
-
-                              <button
-
-                                key={id}
-
-                                type="button"
-
-                                onClick={onClick}
-
-                                disabled={disabled}
-
-                                className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-xs font-semibold transition hover:bg-sena-green/10 disabled:cursor-not-allowed disabled:opacity-60"
-
-                              >
-
-                                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-sena-green/15 text-sena-green shadow-[0_8px_14px_rgba(18,55,29,0.18)]">
-
-                                  <Icon className="h-3.5 w-3.5" />
-
-                                </span>
-
-                                {label}
-
-                              </button>
-
-                            ))}
-
-                          </div>
-
-                        )}
-
-                      </div>
-
-                    </div>
-
-                    <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-6">
-
-                      <div className="-mt-14 sm:-mt-16 flex flex-col items-center gap-3">
-
-                        <div className="relative">
-
-                          <AvatarUploader
-
-                            ref={avatarUploaderRef}
-
-                            imageUrl={resolveAssetUrl(profile?.avatarUrl)}
-
-                            loading={isAvatarBusy}
-
-                            showTriggerButton={false}
-
-                            onSelect={(file) => {
-
-                              uploadAvatarMutation.mutate(file);
-
-                            }}
-
-                          />
-
-                          <div ref={avatarMenuRef} className="absolute -bottom-1 right-0">
-
-                            <button
-
-                              type="button"
-
-                              onClick={toggleAvatarMenu}
-
-                              aria-haspopup="menu"
-
-                              aria-expanded={isAvatarMenuOpen}
-
-                              className="flex h-9 w-9 items-center justify-center rounded-2xl glass-liquid text-sena-green transition hover:opacity-80"
-
-                            >
-
-                              <ImageUp className="h-4 w-4" />
-
-                              <span className="sr-only">Opciones de avatar</span>
-
-                            </button>
-
-                            {isAvatarMenuOpen && (
-
-                              <div
-
-                                role="menu"
-
-                                className="absolute left-full top-0 mt-0 w-48 translate-x-2 rounded-2xl glass-liquid-strong p-1.5 text-left"
-
-                              >
-
-                                {avatarMenuItems.map(({ id, label, icon: Icon, disabled, onClick }) => (
-
-                                  <button
-
-                                    key={id}
-
-                                    type="button"
-
-                                    onClick={onClick}
-
-                                    disabled={disabled}
-
-                                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-xs font-semibold text-[var(--color-text)] transition hover:bg-sena-green/10 disabled:cursor-not-allowed disabled:opacity-60"
-
-                                  >
-
-                                    <Icon className="h-3.5 w-3.5 text-sena-green" />
-
-                                    {label}
-
-                                  </button>
-
-                                ))}
-
-                              </div>
-
-                            )}
-
-                          </div>
-
-                        </div>
-
-                      </div>
-
-                      <div className="flex-1 space-y-2">
-
-                        <p className="text-sm font-semibold text-[var(--color-text)]">
-
-                          {profile?.firstName} {profile?.lastName}
-
-                        </p>
-
-                        <p className="text-xs text-[var(--color-muted)]">
-
-                          Sube una imagen panoramica (1600x400 px recomendado) para personalizar tu portada.
-
-                        </p>
-
-                      </div>
-
-                    </div>
-
-                    <input
-
-                      ref={coverFileInputRef}
-
-                      type="file"
-
-                      accept="image/*"
-
-                      onChange={handleCoverFileChange}
-
-                      className="hidden"
-
-                    />
-
-                  </div>
-
-
-
-                  <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-
-                      <Input
-
-                        label="Nombre"
-
-                        error={errors.firstName?.message}
-
-                        disabled={isLoading || isSaving}
-
-                        {...register('firstName')}
-
-                      />
-
-                      <Input
-
-                        label="Apellido"
-
-                        error={errors.lastName?.message}
-
-                        disabled={isLoading || isSaving}
-
-                        {...register('lastName')}
-
-                      />
-
-                    </div>
-
-
-
-                    <TextArea
-
-                      label="Biografia"
-
-                      hint="Comparte tu experiencia, intereses o habilidades destacadas."
-
-                      error={errors.bio?.message}
-
-                      rows={5}
-
-                      disabled={isLoading || isSaving}
-
-                      {...register('bio')}
-
-                    />
-
-
-
-                    <div className="space-y-3">
-
-                      <p className="text-sm font-semibold text-[var(--color-text)]">Enlaces</p>
-
-                      <p className="text-xs text-[var(--color-muted)]">
-
-                        Agrega solo las redes que quieras mostrar. Haz clic en el icono + para desplegar el campo.
-
-                      </p>
-
-                      <div className="grid gap-3 md:grid-cols-2">
-
-                        {socialLinkConfigs.map(({ name, label, icon: Icon, placeholder, type }) => {
-
-                          const currentValue = watch(name) ?? '';
-
-                          const hasValue = currentValue.trim().length > 0;
-
-                          const isActive = Boolean(activeLinkEditors[name as string]);
-
-
-
-                          if (!isActive) {
-
-                            return (
-
-                              <button
-
-                                key={name}
-
-                                type="button"
-
-                                onClick={() => handleActivateLinkField(name)}
-
-                                className="flex h-32 flex-col items-center justify-center gap-2 rounded-2xl glass-liquid border-dashed px-4 text-center text-sm font-semibold text-[var(--color-muted)] transition hover:border-sena-green/60 hover:text-sena-green"
-
-                              >
-
-                                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sena-green/15 text-sena-green shadow-[0_10px_18px_rgba(18,55,29,0.18)]">
-
-                                  <Plus className="h-5 w-5" />
-
-                                </span>
-
-                                {label}
-
-                              </button>
-
-                            );
-
-                          }
-
-
-
-                          return (
-
-                            <div
-
-                              key={name}
-
-                              className="rounded-2xl glass-liquid p-4"
-
-                            >
-
-                              <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-
-                                {label}
-
-                                <div className="flex items-center gap-1">
-
-                                  {hasValue && (
-
-                                    <button
-
-                                      type="button"
-
-                                      onClick={() => handleClearLinkField(name)}
-
-                                      className="flex h-7 w-7 items-center justify-center rounded-full glass-liquid text-[var(--color-muted)] transition hover:border-red-300 hover:text-red-400"
-
-                                      aria-label={`Eliminar ${label}`}
-
-                                    >
-
-                                      <Trash2 className="h-3.5 w-3.5" />
-
-                                    </button>
-
-                                  )}
-
-                                  <button
-
-                                    type="button"
-
-                                    onClick={() => handleCollapseLinkField(name)}
-
-                                    className="flex h-7 w-7 items-center justify-center rounded-full glass-liquid text-[var(--color-muted)] transition hover:border-sena-green/60 hover:text-sena-green"
-
-                                    aria-label={`Cerrar ${label}`}
-
-                                  >
-
-                                    <CloseIcon className="h-3.5 w-3.5" />
-
-                                  </button>
-
-                                </div>
-
-                              </div>
-
-                              <div className="flex items-start gap-3">
-
-                                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sena-green/15 text-sena-green shadow-[0_10px_18px_rgba(18,55,29,0.18)]">
-
-                                  <Icon className="h-4 w-4" />
-
-                                </span>
-
-                                <div className="flex-1">
-
-                                  <Input
-
-                                    label={undefined}
-
-                                    type={type === 'email' ? 'email' : 'url'}
-
-                                    placeholder={placeholder}
-
-                                    error={getErrorMessage(name)}
-
-                                    disabled={isLoading || isSaving}
-
-                                    autoComplete={type === 'email' ? 'email' : 'url'}
-
-                                    {...register(name)}
-
-                                  />
-
-                                </div>
-
-                              </div>
-
-                            </div>
-
-                          );
-
-                        })}
-
-                      </div>
-
-                    </div>
-
-
-
-                    <div className="flex justify-end gap-3">
-
-                      <Button type="button" variant="secondary" onClick={closeEditor}>
-
-                        Cancelar
-
-                      </Button>
-
-                      <Button type="submit" disabled={isSaving} loading={isSaving}>
-
-                        Guardar cambios
-
-                      </Button>
-
-                    </div>
-
-                  </form>
-
-                </div>
-
-              </motion.div>
-
-            </motion.div>
-
-          )}
-
-        </AnimatePresence>
-
       <GlassDialog
         open={isSavedModalOpen}
         onClose={handleCloseSavedModal}
@@ -2288,7 +1851,7 @@ export const ProfilePage = () => {
             Cerrar
           </Button>
         </div>
-        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
+        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
           {savedPosts.length === 0 ? (
             <p className="text-xs text-[var(--color-muted)]">Aun no tienes publicaciones guardadas.</p>
           ) : (
@@ -2318,9 +1881,9 @@ export const ProfilePage = () => {
               </Button>
             </div>
             {selectedSavedPost.mediaUrl && (
-              <div className="overflow-hidden rounded-2xl glass-liquid">
+              <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/10">
                 <img
-                  src={resolveAssetUrl(selectedSavedPost.mediaUrl) ?? selectedSavedPost.mediaUrl}
+                  src={selectedSavedPost.mediaUrl}
                   alt="Vista previa de la publicacion guardada"
                   className="max-h-56 w-full object-cover"
                 />
@@ -2331,31 +1894,12 @@ export const ProfilePage = () => {
             )}
             {selectedSavedPost.attachments?.length ? (
               <div className="grid gap-2 md:grid-cols-2">
-                {selectedSavedPost.attachments.map((attachment) => {
-                  const resolvedUrl = resolveAssetUrl(attachment.url) ?? attachment.url;
-                  const mediaType = detectMediaType(resolvedUrl, attachment.mimeType);
-                  return (
-                    <div key={attachment.id} className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/10">
-                      {mediaType === 'image' && (
-                        <img src={resolvedUrl} alt="Adjunto" className="h-full w-full object-cover" />
-                      )}
-                      {mediaType === 'video' && (
-                        <video src={resolvedUrl} controls className="h-full w-full bg-black object-cover" preload="metadata" />
-                      )}
-                      {(mediaType === 'pdf' || mediaType === 'other') && (
-                        <div className="flex items-center gap-2 p-3 text-[11px]">
-                          <FileText className="h-6 w-6 text-sena-green" />
-                          <div className="min-w-0">
-                            <p className="font-semibold text-[var(--color-text)] truncate">
-                              {mediaType === 'pdf' ? 'Documento PDF' : 'Archivo adjunto'}
-                            </p>
-                            <p className="text-[10px] text-[var(--color-muted)]">{attachment.mimeType ?? 'Archivo adjunto'}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {selectedSavedPost.attachments.map((attachment) => (
+                  <div key={attachment.id} className="rounded-2xl border border-white/20 bg-white/10 p-3 text-[11px]">
+                    <p className="font-semibold text-[var(--color-text)] truncate">{attachment.url}</p>
+                    <p className="text-[10px] text-[var(--color-muted)]">{attachment.mimeType ?? 'Archivo adjunto'}</p>
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>
@@ -2397,7 +1941,7 @@ export const ProfilePage = () => {
 
         </div>
 
-        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
+        <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
 
           {profilePosts.length === 0 ? (
 
@@ -2419,7 +1963,7 @@ export const ProfilePage = () => {
 
               >
 
-                <div className="rounded-2xl glass-liquid px-4 py-3 text-sm text-[var(--color-text)] transition hover:border-sena-green/60">
+                <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
 
                   <div className="flex items-center justify-between gap-3">
 
@@ -2475,18 +2019,13 @@ export const ProfilePage = () => {
 
           <div className="space-y-5">
             {selectedProfilePost.source === 'shared' && (
-              <div className="rounded-2xl glass-liquid p-3">
+              <div className="rounded-2xl border border-white/20 bg-white/25 p-3 shadow-[0_16px_30px_rgba(18,55,29,0.18)] backdrop-blur">
                 <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 overflow-hidden rounded-full border border-white/30 bg-white/70 p-[2px]">
-                    <img
-                      src={getAvatarUrl(
-                        `${profile?.firstName ?? user?.firstName ?? 'Tu'} ${profile?.lastName ?? user?.lastName ?? 'perfil'}`,
-                        profile?.avatarUrl ?? user?.avatarUrl
-                      )}
-                      alt="Quien compartio"
-                      className="h-full w-full rounded-full object-cover"
-                    />
-                  </div>
+                  <UserAvatar
+                    fullName={profile ? `${profile.firstName} ${profile.lastName}` : user ? `${user.firstName} ${user.lastName}` : 'Tu perfil'}
+                    avatarUrl={profile?.avatarUrl ?? user?.avatarUrl}
+                    size="md"
+                  />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-[var(--color-text)]">
                       Compartido por {profile ? `${profile.firstName} ${profile.lastName}` : 'tu perfil'}
@@ -2505,15 +2044,13 @@ export const ProfilePage = () => {
               </div>
             )}
 
-            <div className="space-y-4 rounded-3xl glass-liquid p-4 text-[var(--color-text)]">
+            <div className="space-y-4 rounded-3xl border border-white/25 bg-white/40 p-4 text-[var(--color-text)] shadow-[0_24px_45px_rgba(18,55,29,0.2)] backdrop-blur-xl dark:border-white/15 dark:bg-white/10">
               <div className="flex items-start gap-3">
-                <div className="h-11 w-11 overflow-hidden rounded-full border border-white/30 bg-white/70 p-[2px]">
-                  <img
-                    src={getAvatarUrl(selectedProfilePost.author.fullName, selectedProfilePost.author.avatarUrl)}
-                    alt={selectedProfilePost.author.fullName}
-                    className="h-full w-full rounded-full object-cover"
-                  />
-                </div>
+                <UserAvatar
+                  fullName={selectedProfilePost.author.fullName}
+                  avatarUrl={selectedProfilePost.author.avatarUrl}
+                  size="md"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-[var(--color-text)]">
                     {selectedProfilePost.author.fullName}
@@ -2534,9 +2071,9 @@ export const ProfilePage = () => {
               )}
 
               {selectedProfilePost.mediaUrl && (
-                <div className="overflow-hidden rounded-2xl glass-liquid">
+                <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/10">
                   <img
-                    src={resolveAssetUrl(selectedProfilePost.mediaUrl) ?? selectedProfilePost.mediaUrl}
+                    src={selectedProfilePost.mediaUrl}
                     alt="Contenido de la publicacion"
                     className="max-h-72 w-full object-cover"
                   />
@@ -2545,36 +2082,17 @@ export const ProfilePage = () => {
 
               {selectedProfilePost.attachments?.length ? (
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {selectedProfilePost.attachments.map((attachment) => {
-                    const resolvedUrl = resolveAssetUrl(attachment.url) ?? attachment.url;
-                    const mediaType = detectMediaType(resolvedUrl, attachment.mimeType);
-                    return (
-                      <div
-                        key={attachment.id}
-                        className="relative overflow-hidden rounded-2xl glass-liquid"
-                      >
-                        {mediaType === 'image' && (
-                          <img src={resolvedUrl} alt="Adjunto" className="h-full w-full object-cover" />
-                        )}
-                        {mediaType === 'video' && (
-                          <video src={resolvedUrl} controls className="h-full w-full bg-black object-cover" preload="metadata" />
-                        )}
-                        {(mediaType === 'pdf' || mediaType === 'other') && (
-                          <div className="flex items-center gap-2 p-3 text-[11px]">
-                            <FileText className="h-6 w-6 text-sena-green" />
-                            <div className="min-w-0">
-                              <p className="font-semibold text-[var(--color-text)] truncate">
-                                {mediaType === 'pdf' ? 'Documento PDF' : 'Archivo adjunto'}
-                              </p>
-                              <p className="text-[10px] text-[var(--color-muted)]">
-                                {attachment.mimeType ?? 'Archivo adjunto'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {selectedProfilePost.attachments.map((attachment) => (
+                    <div
+                      key={attachment.id}
+                      className="rounded-2xl border border-white/20 bg-white/12 p-3 text-[11px] shadow-sm"
+                    >
+                      <p className="font-semibold text-[var(--color-text)] truncate">{attachment.url}</p>
+                      <p className="text-[10px] text-[var(--color-muted)]">
+                        {attachment.mimeType ?? 'Archivo adjunto'}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               ) : null}
 
@@ -2604,6 +2122,48 @@ export const ProfilePage = () => {
         </GlassDialog>
 
       )}
+
+      <GlassDialog
+
+        open={Boolean(coverCropperSrc)}
+
+        onClose={closeCoverCropper}
+
+        size="lg"
+
+        contentClassName="max-w-2xl"
+
+      >
+
+        <h3 className="text-lg font-semibold text-[var(--color-text)]">Recortar foto de portada</h3>
+
+        {coverCropperSrc && (
+
+          <ImageCropper
+
+            imageSrc={coverCropperSrc}
+
+            aspectRatio={4}
+
+            outputWidth={1600}
+
+            outputHeight={400}
+
+            outputFileName="cover.jpg"
+
+            onConfirm={handleCoverCropperConfirm}
+
+            onCancel={closeCoverCropper}
+
+            confirmLabel="Aplicar"
+
+            cancelLabel="Cancelar"
+
+          />
+
+        )}
+
+      </GlassDialog>
 
     </LayoutGroup>
 

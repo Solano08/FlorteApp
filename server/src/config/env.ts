@@ -2,13 +2,16 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Railway usa MYSQLHOST, MYSQLUSER, etc.; el servidor espera DB_*
+const getDbHost = () => process.env.DB_HOST ?? process.env.MYSQLHOST ?? 'localhost';
+const getDbPort = () => parseInt(process.env.DB_PORT ?? process.env.MYSQLPORT ?? '3306', 10);
+const getDbUser = () => process.env.DB_USER ?? process.env.MYSQLUSER ?? 'root';
+const getDbPassword = () => process.env.DB_PASSWORD ?? process.env.MYSQLPASSWORD ?? '';
+const getDbName = () => process.env.DB_NAME ?? process.env.MYSQLDATABASE ?? 'florte_app';
+
 const requiredEnv = [
   'JWT_ACCESS_SECRET',
-  'JWT_REFRESH_SECRET',
-  'DB_HOST',
-  'DB_USER',
-  'DB_PASSWORD',
-  'DB_NAME'
+  'JWT_REFRESH_SECRET'
 ];
 
 const missing = requiredEnv.filter((key) => !process.env[key]);
@@ -26,11 +29,11 @@ export const env = {
   jwtAccessExpiry: process.env.JWT_ACCESS_EXPIRY ?? '15m',
   jwtRefreshExpiry: process.env.JWT_REFRESH_EXPIRY ?? '7d',
   db: {
-    host: process.env.DB_HOST ?? 'localhost',
-    port: parseInt(process.env.DB_PORT ?? '3306', 10),
-    user: process.env.DB_USER ?? 'root',
-    password: process.env.DB_PASSWORD ?? '',
-    database: process.env.DB_NAME ?? 'florte_app',
+    host: getDbHost(),
+    port: getDbPort(),
+    user: getDbUser(),
+    password: getDbPassword(),
+    database: getDbName(),
     connectionLimit: parseInt(process.env.DB_POOL_SIZE ?? '10', 10)
   },
   storage: {

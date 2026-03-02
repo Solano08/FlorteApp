@@ -13,7 +13,14 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['"Inter"', 'system-ui', 'sans-serif']
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"SF Pro Display"',
+          '"SF Pro Text"',
+          'system-ui',
+          'sans-serif'
+        ]
       },
       boxShadow: {
         card: '0 10px 40px -15px rgba(0,0,0,0.3)'

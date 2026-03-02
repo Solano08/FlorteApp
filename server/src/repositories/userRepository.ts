@@ -251,5 +251,37 @@ export const userRepository = {
     const updated = await this.findById(input.userId);
     if (!updated) throw new Error('Usuario no encontrado despues de actualizar el estado');
     return updated;
+  },
+
+  async blockUser(blockerId: string, blockedId: string): Promise<void> {
+    await getPool().execute<ResultSetHeader>(
+      `INSERT INTO user_blocks (blocker_id, blocked_id)
+       VALUES (:blockerId, :blockedId)
+       ON DUPLICATE KEY UPDATE blocker_id = blocker_id`,
+      { blockerId, blockedId }
+    );
+  },
+
+  async unblockUser(blockerId: string, blockedId: string): Promise<void> {
+    await getPool().execute<ResultSetHeader>(
+      'DELETE FROM user_blocks WHERE blocker_id = :blockerId AND blocked_id = :blockedId',
+      { blockerId, blockedId }
+    );
+  },
+
+  async isBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      'SELECT 1 FROM user_blocks WHERE blocker_id = :blockerId AND blocked_id = :blockedId LIMIT 1',
+      { blockerId, blockedId }
+    );
+    return rows.length > 0;
+  },
+
+  async getBlockedUsers(blockerId: string): Promise<string[]> {
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      'SELECT blocked_id FROM user_blocks WHERE blocker_id = :blockerId',
+      { blockerId }
+    );
+    return rows.map((row) => row.blocked_id as string);
   }
 };

@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosRequestHeaders, InternalAxiosRequestConfig } from 'axios';
 import { storage } from '../utils/storage';
+import { normalizeAuthUserMedia } from '../utils/media';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
 
@@ -21,7 +22,7 @@ const refreshTokens = async (): Promise<string | null> => {
           storage.setSession(tokens.accessToken, tokens.refreshToken);
         }
         if (user) {
-          storage.setUser(user);
+          storage.setUser(normalizeAuthUserMedia(user));
         }
         return tokens?.accessToken ?? null;
       } catch (error) {
@@ -54,19 +55,36 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as RetryConfig;
+    
+    // Solo intentar refrescar tokens si es un 401 y no es una ruta de autenticación
     if (error.response?.status === 401 && !originalRequest?._retry) {
-      originalRequest._retry = true;
-      const newAccessToken = await refreshTokens();
-      if (newAccessToken) {
-        const headers = (originalRequest.headers ?? {}) as AxiosRequestHeaders;
-        headers.Authorization =
-          newAccessToken.startsWith('JWT ') || newAccessToken.startsWith('Bearer ')
-            ? newAccessToken
-            : `JWT ${newAccessToken}`;
-        originalRequest.headers = headers;
-        return await apiClient(originalRequest);
+      const isAuthRoute = originalRequest?.url?.includes('/auth/login') || 
+                          originalRequest?.url?.includes('/auth/register');
+      
+      if (!isAuthRoute) {
+        originalRequest._retry = true;
+        const newAccessToken = await refreshTokens();
+        if (newAccessToken) {
+          const headers = (originalRequest.headers ?? {}) as AxiosRequestHeaders;
+          headers.Authorization =
+            newAccessToken.startsWith('JWT ') || newAccessToken.startsWith('Bearer ')
+              ? newAccessToken
+              : `JWT ${newAccessToken}`;
+          originalRequest.headers = headers;
+          return await apiClient(originalRequest);
+        }
       }
     }
+    
+    // Mejorar mensajes de error de conexión
+    if (!error.response) {
+      const baseURL = API_BASE_URL;
+      const connectionError = new Error(
+        `No se pudo conectar con el servidor en ${baseURL}. Verifica que el servidor esté ejecutándose.`
+      );
+      return await Promise.reject(connectionError);
+    }
+    
     return await Promise.reject(error);
   }
 );

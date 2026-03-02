@@ -31,5 +31,14 @@ export const projectController = {
     const data = updateProjectSchema.parse(req.body);
     const project = await projectService.updateProject(userId, { projectId, ...data });
     res.json({ success: true, project });
+
+  },
+
+  delete: async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Autenticación requerida', 401);
+    const { projectId } = req.params;
+    await projectService.deleteProject(userId, projectId);
+    res.status(204).send();
   }
 };

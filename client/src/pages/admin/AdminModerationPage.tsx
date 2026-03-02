@@ -17,6 +17,8 @@ import { Profile } from '../../types/profile';
 import { FeedPostAggregate, FeedReport, ReportStatus } from '../../types/feed';
 import { Shield, ShieldCheck, ShieldHalf, X } from 'lucide-react';
 import { floatingModalContentClass } from '../../utils/modalStyles';
+import { resolveAssetUrl } from '../../utils/media';
+import { useToast } from '../../hooks/useToast';
 
 const roleFilterOptions: Array<{ value: UserRole | 'all'; label: string }> = [
   { value: 'all', label: 'Todos los roles' },
@@ -79,6 +81,7 @@ type AdminUpdatePayload = Parameters<typeof adminService.updateUser>[1];
 
 export const AdminModerationPage = () => {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
@@ -106,7 +109,7 @@ export const AdminModerationPage = () => {
         setReportPostError('No se encontró la publicación reportada.');
       }
     } catch (error) {
-      console.error('No fue posible cargar la publicación', error);
+      toast.error('No fue posible cargar la publicación');
       setReportPostError('No fue posible cargar la publicación.');
     } finally {
       setReportPostLoading(false);
@@ -154,7 +157,7 @@ export const AdminModerationPage = () => {
       handleCloseReportPost();
     },
     onError: (error) => {
-      console.error('No fue posible eliminar la publicación', error);
+      toast.error('No fue posible eliminar la publicación');
     }
   });
 
@@ -354,7 +357,7 @@ export const AdminModerationPage = () => {
         </Card>
 
         <Card padded={false} className="overflow-hidden">
-          <div className="overflow-x-auto hide-scrollbar">
+          <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-white/10 text-xs text-[var(--color-text)]">
               <thead className="bg-white/5 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
                 <tr>
@@ -388,7 +391,7 @@ export const AdminModerationPage = () => {
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-3">
                         <img
-                          src={user.avatarUrl ?? 'https://avatars.dicebear.com/api/initials/FlorteApp.svg'}
+                          src={resolveAssetUrl(user.avatarUrl) ?? 'https://avatars.dicebear.com/api/initials/FlorteApp.svg'}
                           alt={user.firstName}
                           className="h-8 w-8 rounded-full object-cover"
                         />

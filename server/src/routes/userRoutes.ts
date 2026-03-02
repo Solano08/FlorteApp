@@ -4,6 +4,11 @@ import { requireAuth, requireRole } from '../middleware/authMiddleware';
 
 const router = Router();
 
+// Rutas públicas de bloqueo (solo requieren autenticación)
+router.post('/:userId/block', requireAuth, userController.block);
+router.delete('/:userId/block', requireAuth, userController.unblock);
+
+// Rutas de administración (requieren rol admin)
 router.use(requireAuth, requireRole('admin'));
 
 router.get('/', userController.list);

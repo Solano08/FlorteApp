@@ -12,6 +12,7 @@ export interface Message {
   senderId: string;
   content: string;
   attachmentUrl?: string | null;
+  sharedPostId?: string | null;
   createdAt: Date;
 }
 
@@ -27,4 +28,5 @@ export interface CreateMessageInput {
   senderId: string;
   content: string;
   attachmentUrl?: string;
+  sharedPostId?: string | null;
 }
