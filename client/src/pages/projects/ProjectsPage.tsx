@@ -77,9 +77,9 @@ const statusDisplay: Record<
   },
   in_progress: {
     icon: Hammer,
-    accent: 'text-blue-500',
+    accent: 'text-sena-green',
     helper: 'Coordina tareas, commits y avances.',
-    badge: 'bg-blue-50/60 text-blue-600'
+    badge: 'bg-sena-green/10 text-sena-green'
   },
   completed: {
     icon: CheckCircle,
@@ -584,9 +584,9 @@ export const ProjectsPage = () => {
                       activeShadow: 'shadow-[0_8px_24px_rgba(245,158,11,0.25)] dark:shadow-[0_8px_24px_rgba(245,158,11,0.2)]'
                     },
                     in_progress: {
-                      gradient: 'from-blue-50/80 via-blue-100/60 to-cyan-50/80 dark:from-blue-950/30 dark:via-blue-900/20 dark:to-cyan-950/30',
-                      border: 'border-blue-300/50 dark:border-blue-700/40',
-                      borderHover: 'hover:border-blue-400/60 dark:hover:border-blue-600/50',
+                      gradient: 'from-sena-green/10 via-sena-green/5 to-emerald-50/80 dark:from-sena-green/20 dark:via-sena-green/10 dark:to-emerald-950/30',
+                      border: 'border-sena-green/30 dark:border-sena-green/40',
+                      borderHover: 'hover:border-sena-green/50 dark:hover:border-sena-green/50',
                       shadow: 'shadow-[0_4px_16px_rgba(59,130,246,0.2)] dark:shadow-[0_4px_16px_rgba(59,130,246,0.15)]',
                       shadowHover: 'hover:shadow-[0_6px_20px_rgba(59,130,246,0.3)] dark:hover:shadow-[0_6px_20px_rgba(59,130,246,0.2)]',
                       activeShadow: 'shadow-[0_8px_24px_rgba(59,130,246,0.25)] dark:shadow-[0_8px_24px_rgba(59,130,246,0.2)]'
@@ -610,7 +610,7 @@ export const ProjectsPage = () => {
                           isActive
                             ? `${config.border} ${config.activeShadow} scale-[1.05] ring-2 ring-offset-2 ring-offset-transparent ${
                                 status === 'draft' ? 'ring-amber-400/30 dark:ring-amber-600/30' :
-                                status === 'in_progress' ? 'ring-blue-400/30 dark:ring-blue-600/30' :
+                                status === 'in_progress' ? 'ring-sena-green/30 dark:ring-sena-green/30' :
                                 'ring-brand/30 dark:ring-emerald-600/30'
                               }`
                             : `${config.border} ${config.shadow} ${config.borderHover} ${config.shadowHover} hover:scale-[1.03]`
@@ -623,13 +623,13 @@ export const ProjectsPage = () => {
                         </span>
                         <p className={`mt-2 text-xl font-bold transition-colors ${
                           status === 'draft' ? 'text-amber-700 dark:text-amber-400' :
-                          status === 'in_progress' ? 'text-blue-700 dark:text-blue-400' :
+                          status === 'in_progress' ? 'text-sena-dark dark:text-sena-green' :
                           'text-brand dark:text-emerald-400'
                         }`}>{stats[status]}</p>
                         {/* Nombre del estado en la parte inferior - solo visible en hover */}
                         <p className={`mt-1 text-[9px] font-semibold uppercase tracking-wide transition-all duration-200 opacity-0 group-hover:opacity-100 ${
                           status === 'draft' ? 'text-amber-700/80 dark:text-amber-400/80' :
-                          status === 'in_progress' ? 'text-blue-700/80 dark:text-blue-400/80' :
+                          status === 'in_progress' ? 'text-sena-dark/80 dark:text-sena-green/80' :
                           'text-brand/80 dark:text-emerald-400/80'
                         }`}>
                           {statusLabels[status]}

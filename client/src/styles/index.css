@@ -13,8 +13,8 @@ html {
   --color-text: #1a1a1a;
   --color-muted: rgba(60, 60, 60, 0.72);
   --color-border: rgba(255, 255, 255, 0.35);
-  --color-accent: #3b82f6;
-  --color-accent-soft: rgba(59, 130, 246, 0.18);
+  --color-accent: #39A900;
+  --color-accent-soft: rgba(57, 169, 0, 0.18);
   --drop-shadow-strong: 0 35px 65px rgba(20, 20, 20, 0.12);
   --drop-shadow-soft: 0 18px 40px rgba(20, 20, 20, 0.08);
 }
@@ -26,8 +26,8 @@ html {
   --color-text: #e8e8e8;
   --color-muted: rgba(170, 170, 170, 0.65);
   --color-border: rgba(255, 255, 255, 0.03);
-  --color-accent: #60a5fa;
-  --color-accent-soft: rgba(96, 165, 250, 0.12);
+  --color-accent: #5BD116;
+  --color-accent-soft: rgba(91, 209, 22, 0.12);
   --drop-shadow-strong: 0 35px 65px rgba(0, 0, 0, 0.6);
   --drop-shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.4);
 }
@@ -37,8 +37,8 @@ body {
   margin: 0;
   min-height: 100vh;
   background-image:
-    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.12), transparent 45%),
-    radial-gradient(circle at 80% 0%, rgba(96, 165, 250, 0.10), transparent 42%),
+    radial-gradient(circle at 20% 20%, rgba(57, 169, 0, 0.12), transparent 45%),
+    radial-gradient(circle at 80% 0%, rgba(91, 209, 22, 0.10), transparent 42%),
     linear-gradient(125deg, rgba(255, 255, 255, 0.08), transparent);
   transition: background-color 0.3s ease, background-image 0.3s ease;
 }
@@ -520,6 +520,126 @@ body {
       transparent 50%,
       rgba(255, 255, 255, 0.08) 75%,
       rgba(255, 255, 255, 0.15) 100%);
+  }
+
+  /* Gradiente cónico animado con contorno en ondas para el botón Crear historia */
+  .story-create-wave {
+    position: relative;
+    padding: 2px;
+    border-radius: 50%;
+    overflow: visible;
+  }
+  .story-create-wave::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      rgba(57, 169, 0, 0.2) 0deg,
+      rgba(57, 169, 0, 0.45) 70deg,
+      rgba(16, 185, 129, 0.45) 150deg,
+      rgba(57, 169, 0, 0.3) 230deg,
+      rgba(57, 169, 0, 0.45) 310deg,
+      rgba(57, 169, 0, 0.2) 360deg
+    );
+    animation: story-wave-rotate 5s linear infinite;
+    pointer-events: none;
+  }
+  /* Contorno en ondas - sobresale sutilmente, tono suave */
+  .story-create-wave::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    padding: 1.5px;
+    background: conic-gradient(
+      from 0deg,
+      rgba(57, 169, 0, 0.12) 0deg,
+      rgba(57, 169, 0, 0.06) 45deg,
+      rgba(16, 185, 129, 0.14) 90deg,
+      rgba(16, 185, 129, 0.05) 135deg,
+      rgba(57, 169, 0, 0.1) 180deg,
+      rgba(57, 169, 0, 0.04) 225deg,
+      rgba(16, 185, 129, 0.12) 270deg,
+      rgba(16, 185, 129, 0.06) 315deg,
+      rgba(57, 169, 0, 0.12) 360deg
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: story-wave-morph 3s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite, story-wave-rotate 5s linear infinite;
+    pointer-events: none;
+  }
+  .story-create-wave > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Mismo estilo que Crear/Tus historias pero sin animación - para otros usuarios */
+  .story-create-wave-static {
+    position: relative;
+    padding: 2px;
+    border-radius: 50%;
+    overflow: visible;
+  }
+  .story-create-wave-static::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      rgba(57, 169, 0, 0.2) 0deg,
+      rgba(57, 169, 0, 0.45) 70deg,
+      rgba(16, 185, 129, 0.45) 150deg,
+      rgba(57, 169, 0, 0.3) 230deg,
+      rgba(57, 169, 0, 0.45) 310deg,
+      rgba(57, 169, 0, 0.2) 360deg
+    );
+    pointer-events: none;
+  }
+  .story-create-wave-static::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: 55% 45% 52% 48% / 48% 55% 45% 52%;
+    background: conic-gradient(
+      from 0deg,
+      rgba(57, 169, 0, 0.12) 0deg,
+      rgba(57, 169, 0, 0.06) 45deg,
+      rgba(16, 185, 129, 0.14) 90deg,
+      rgba(16, 185, 129, 0.05) 135deg,
+      rgba(57, 169, 0, 0.1) 180deg,
+      rgba(57, 169, 0, 0.04) 225deg,
+      rgba(16, 185, 129, 0.12) 270deg,
+      rgba(16, 185, 129, 0.06) 315deg,
+      rgba(57, 169, 0, 0.12) 360deg
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .story-create-wave-static > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes story-wave-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  /* Ondas más realistas: 8 fases para propagación fluida tipo agua */
+  @keyframes story-wave-morph {
+    0%, 100% { border-radius: 58% 42% 55% 45% / 42% 58% 42% 58%; }
+    12.5% { border-radius: 52% 48% 58% 42% / 48% 52% 48% 52%; }
+    25% { border-radius: 45% 55% 48% 52% / 55% 45% 55% 45%; }
+    37.5% { border-radius: 48% 52% 45% 55% / 52% 48% 52% 48%; }
+    50% { border-radius: 55% 45% 52% 48% / 45% 55% 45% 55%; }
+    62.5% { border-radius: 42% 58% 55% 45% / 58% 42% 58% 42%; }
+    75% { border-radius: 48% 52% 42% 58% / 52% 48% 52% 48%; }
+    87.5% { border-radius: 52% 48% 55% 45% / 48% 52% 48% 52%; }
   }
 
   /* Fondo sutil para la vista de comunidades, distinto al dashboard principal */

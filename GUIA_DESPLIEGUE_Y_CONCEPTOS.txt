@@ -1,0 +1,280 @@
+================================================================================
+  GUÍA DE DESPLIEGUE Y CONCEPTOS CLAVE - FlorteApp
+  Proceso completo, arquitectura y aprendizajes
+================================================================================
+
+ÍNDICE
+------
+1. Resumen del proyecto y arquitectura
+2. Conceptos clave explicados
+3. Proceso de despliegue paso a paso
+4. Conexión a la base de datos
+5. Variables de entorno
+6. Problemas comunes y soluciones
+7. Resumen de aprendizajes
+
+
+================================================================================
+1. RESUMEN DEL PROYECTO Y ARQUITECTURA
+================================================================================
+
+FlorteApp es una aplicación web full-stack con:
+- FRONTEND: React + Vite + TypeScript (desplegado en Vercel)
+- BACKEND: Express + Node.js + TypeScript (desplegado en Railway)
+- BASE DE DATOS: MySQL (proporcionada por Railway)
+
+Estructura del repositorio:
+
+  FlorteApp/
+  ├── client/          <- Código del frontend (React)
+  ├── server/          <- Código del backend (Express)
+  ├── vercel.json      <- Configuración de despliegue en Vercel
+  └── server/
+      └── railway.json <- Configuración de despliegue en Railway
+
+Flujo de la aplicación:
+  Usuario (navegador) --> Vercel (HTML/JS/CSS) --> Railway (API) --> MySQL
+
+
+================================================================================
+2. CONCEPTOS CLAVE EXPLICADOS
+================================================================================
+
+--- ROOT DIRECTORY (Directorio raíz) ---
+
+¿Qué es?
+  El Root Directory es la carpeta desde la cual la plataforma de despliegue
+  ejecuta los comandos de build e inicia la aplicación.
+
+¿Por qué importa?
+  FlorteApp tiene DOS partes en el mismo repositorio: client/ y server/.
+  Cada plataforma necesita saber DÓNDE está el código que debe desplegar.
+
+  - En VERCEL (frontend): Root Directory = "." (raíz del repo)
+    Porque vercel.json indica que el build está en "client/" y el output
+    en "client/dist". Vercel trabaja desde la raíz y entra a client/ con
+    el comando de build.
+
+  - En RAILWAY (backend): Root Directory = "server"
+    Railway solo despliega el backend. Al poner "server", Railway entra
+    directamente a esa carpeta, ejecuta "npm install" y "npm run build"
+    ahí, y arranca con "npm start". No ve la carpeta client/.
+
+--- SPA (Single Page Application) ---
+
+  Una SPA es una aplicación web que carga una sola página HTML y luego
+  actualiza el contenido dinámicamente con JavaScript (React en nuestro caso).
+  Las rutas como /dashboard, /profile, etc. se manejan en el cliente.
+  Por eso Vercel necesita "rewrites": cualquier ruta que no sea un archivo
+  estático debe devolver index.html para que React Router funcione.
+
+--- CORS (Cross-Origin Resource Sharing) ---
+
+  El frontend está en https://florte-app18.vercel.app
+  El backend está en https://tu-app.railway.app
+
+  Son dominios diferentes (orígenes distintos). Por seguridad, el navegador
+  bloquea peticiones entre orígenes distintos a menos que el servidor
+  lo permita explícitamente con cabeceras CORS.
+
+  En nuestro backend (server/src/app.ts):
+  - cors({ origin: env.clientUrl, credentials: true })
+  - CLIENT_URL debe ser exactamente la URL de Vercel (ej: https://florte-app18.vercel.app)
+  - Sin barra final, sin /login ni rutas adicionales
+
+--- Variables de entorno VITE_* ---
+
+  En Vite, las variables que empiezan por VITE_ se incluyen en el build
+  del frontend. Son "públicas" (visibles en el código del navegador).
+  VITE_API_URL indica al frontend dónde está la API (Railway).
+
+  IMPORTANTE: Si añades o cambias VITE_API_URL en Vercel, debes hacer
+  REDEPLOY. El valor se "hornea" en el build; un deploy anterior
+  seguirá usando el valor viejo.
+
+--- Build vs Runtime ---
+
+  - BUILD: Momento en que se compila el código (npm run build).
+    Las variables VITE_* se sustituyen en ese momento.
+
+  - RUNTIME: Cuando la aplicación ya está corriendo.
+    Las variables del backend (JWT_SECRET, DB_HOST, etc.) se leen
+    cada vez que el servidor arranca.
+
+
+================================================================================
+3. PROCESO DE DESPLIEGUE PASO A PASO
+================================================================================
+
+FASE A: RAILWAY (Backend)
+-------------------------
+
+Paso 1. Crear proyecto
+  - Ir a railway.app, iniciar sesión con GitHub
+  - New Project > Deploy from GitHub repo
+  - Seleccionar el repositorio FlorteApp
+
+Paso 2. Configurar Root Directory
+  - Clic en el servicio FlorteApp > Settings > Source
+  - Root Directory: server
+  - Guardar (Railway redesplegará)
+
+Paso 3. Añadir MySQL
+  - En el panel: + New > Database > Add MySQL
+  - Esperar a que esté Online
+
+Paso 4. Conectar MySQL al backend
+  - Servicio FlorteApp > Variables
+  - Usar "Add Reference" o "Connect to MySQL" si está disponible
+  - O copiar manualmente MYSQLHOST, MYSQLUSER, MYSQLPASSWORD,
+    MYSQLDATABASE, MYSQLPORT del servicio MySQL y añadirlos como
+    DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT en el backend
+
+Paso 5. Variables adicionales del backend
+  - NODE_ENV = production
+  - CLIENT_URL = https://florte-app18.vercel.app (tu URL de Vercel)
+  - JWT_ACCESS_SECRET = (generar con: openssl rand -hex 32)
+  - JWT_REFRESH_SECRET = (otro valor distinto con el mismo comando)
+  - NO añadir PORT; Railway lo asigna automáticamente
+
+Paso 6. Generar dominio público
+  - Settings > Networking > Generate Domain
+  - Copiar la URL (ej: https://florteapp-production-xxxx.up.railway.app)
+
+Paso 7. Verificar
+  - Abrir https://tu-url.railway.app/health
+  - Debe responder: {"status":"ok","timestamp":"..."}
+
+
+FASE B: VERCEL (Frontend)
+-------------------------
+
+Paso 1. Crear proyecto
+  - Ir a vercel.com, Add New > Project
+  - Importar el repositorio FlorteApp
+
+Paso 2. Configuración (vercel.json ya lo define)
+  - Root Directory: . (raíz)
+  - Build Command: cd client && npm ci && npm run build
+  - Output Directory: client/dist
+  - Rewrites: todas las rutas a /index.html (para SPA)
+
+Paso 3. Variables de entorno
+  - VITE_API_URL = https://tu-url-railway.app/api
+  - Sustituir por la URL real de Railway del Paso A6
+
+Paso 4. Deploy
+  - Clic en Deploy
+  - Copiar la URL generada (ej: https://florte-app18.vercel.app)
+
+
+FASE C: INTEGRACIÓN FINAL
+-------------------------
+
+Paso 1. Actualizar CLIENT_URL en Railway
+  - Railway > FlorteApp > Variables
+  - CLIENT_URL = https://florte-app18.vercel.app (URL real de Vercel)
+  - Railway redesplegará automáticamente
+
+Paso 2. Probar
+  - Abrir la URL de Vercel
+  - Registrarse, iniciar sesión, probar funcionalidades
+
+
+================================================================================
+4. CONEXIÓN A LA BASE DE DATOS
+================================================================================
+
+Railway proporciona MySQL como servicio separado. Las credenciales se
+inyectan como variables de entorno. Nuestro código (server/src/config/env.ts)
+está preparado para leer tanto el formato estándar como el de Railway:
+
+  - DB_HOST o MYSQLHOST o MYSQL_HOST o RAILWAY_PRIVATE_DOMAIN
+  - DB_PORT o MYSQLPORT o MYSQL_PORT (default: 3306)
+  - DB_USER o MYSQLUSER o MYSQL_USER (default: root)
+  - DB_PASSWORD o MYSQLPASSWORD o MYSQL_PASSWORD
+  - DB_NAME o MYSQLDATABASE o MYSQL_DATABASE (default: florte_app)
+
+Al conectar el servicio MySQL al backend en Railway, Railway inyecta
+automáticamente MYSQLHOST, MYSQLUSER, etc. Nuestro env.ts los usa.
+
+Las tablas se crean automáticamente al arrancar el servidor (initDb.ts):
+users, user_sessions, password_reset_tokens, chats, chat_members, etc.
+
+
+================================================================================
+5. VARIABLES DE ENTORNO - RESUMEN
+================================================================================
+
+BACKEND (Railway):
+  NODE_ENV          = production
+  CLIENT_URL        = https://florte-app18.vercel.app
+  JWT_ACCESS_SECRET = (hex 32 chars)
+  JWT_REFRESH_SECRET= (hex 32 chars)
+  DB_HOST           = (valor de MYSQLHOST de Railway)
+  DB_PORT           = 3306
+  DB_USER           = (valor de MYSQLUSER)
+  DB_PASSWORD       = (valor de MYSQLPASSWORD)
+  DB_NAME           = (valor de MYSQLDATABASE)
+
+FRONTEND (Vercel):
+  VITE_API_URL      = https://tu-url.railway.app/api
+
+
+================================================================================
+6. PROBLEMAS COMUNES Y SOLUCIONES
+================================================================================
+
+"Failed to connect to MySQL" / ECONNREFUSED
+  -> DB_HOST vacío o localhost. Copiar MYSQLHOST real de Railway a DB_HOST.
+
+Login/Registro no funciona
+  -> Verificar VITE_API_URL en Vercel apunta a Railway.
+  -> Después de cambiar variables en Vercel: REDEPLOY.
+  -> Verificar CLIENT_URL en Railway = URL exacta de Vercel.
+
+CORS bloqueado
+  -> CLIENT_URL debe ser solo protocolo+host (sin /login, sin barra final).
+
+Archivos subidos se pierden
+  -> Railway usa disco efímero. Para producción: S3, Cloudinary o Vercel Blob.
+
+
+================================================================================
+7. RESUMEN DE APRENDIZAJES
+================================================================================
+
+Durante el proceso de despliegue aprendiste:
+
+1. ROOT DIRECTORY
+   Cada plataforma necesita saber desde qué carpeta trabajar cuando el
+   repositorio tiene múltiples proyectos (monorepo).
+
+2. SEPARACIÓN FRONTEND/BACKEND
+   El frontend (estático) va a un CDN (Vercel). El backend (dinámico) va
+   a un servidor que corre 24/7 (Railway).
+
+3. VARIABLES DE ENTORNO
+   No se guardan en el código. Se configuran en cada plataforma.
+   Las VITE_* se incluyen en el build; las del backend se leen al arrancar.
+
+4. CORS
+   El navegador exige que el servidor permita explícitamente peticiones
+   desde el origen del frontend. CLIENT_URL debe coincidir exactamente.
+
+5. BASE DE DATOS EN LA NUBE
+   Railway ofrece MySQL gestionado. Las credenciales se inyectan como
+   variables. El código debe soportar los nombres que usa Railway
+   (MYSQLHOST, MYSQLUSER, etc.).
+
+6. SPA Y REWRITES
+   Una SPA tiene una sola página HTML. Todas las rutas deben devolver
+   index.html para que React Router funcione al recargar o compartir URLs.
+
+7. BUILD Y REDEPLOY
+   Cambiar variables de entorno en Vercel requiere redeploy para que
+   el nuevo valor se incluya en el build del frontend.
+
+================================================================================
+Fin del documento
+================================================================================
