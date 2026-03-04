@@ -6,6 +6,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: '#39A900',
         sena: {
           green: '#39A900',
           dark: '#2E8700',

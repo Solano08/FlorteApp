@@ -74,7 +74,7 @@ interface ComposerAttachment {
 }
 
 const reactionOptions = [
-  { type: 'like' as ReactionType, label: 'Me gusta', emoji: '👍', color: 'text-blue-400' },
+  { type: 'like' as ReactionType, label: 'Me gusta', emoji: '👍', color: 'text-sena-green' },
   { type: 'love' as ReactionType, label: 'Me encanta', emoji: '❤️', color: 'text-rose-500' },
   { type: 'insightful' as ReactionType, label: 'Me asombra', emoji: '✨', color: 'text-amber-500' },
   { type: 'celebrate' as ReactionType, label: 'Me divierte', emoji: '🎉', color: 'text-emerald-500' },
@@ -1763,8 +1763,8 @@ export const HomePage = () => {
                             }
                           }}
                           className={classNames(
-                            "inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-[#308CFF] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] disabled:cursor-not-allowed disabled:opacity-50",
-                            isEmojiAction && isEmojiOpen && "ring-2 ring-[#308CFF]/50 ring-offset-2 ring-offset-[var(--color-background)]"
+                            "inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-sena-green transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] disabled:cursor-not-allowed disabled:opacity-50",
+                            isEmojiAction && isEmojiOpen && "ring-2 ring-sena-green/50 ring-offset-2 ring-offset-[var(--color-background)]"
                           )}
                           aria-label={`${label} comentario`}
                           onClick={(e) => {
@@ -1920,7 +1920,7 @@ export const HomePage = () => {
                       onClick={() => navigate(`/projects/${project.id}`)}
                       className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-[#308CFF] transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(48,140,255,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1950,7 +1950,7 @@ export const HomePage = () => {
                       onClick={() => navigate(`/projects/${project.id}`)}
                       className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-[#308CFF] transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(48,140,255,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1977,7 +1977,7 @@ export const HomePage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="!bg-transparent !text-slate-500 px-2 py-0.5 text-[10px] hover:!text-[#308CFF] hover:shadow-[0_0_12px_rgba(48,140,255,0.25)] transition !border-transparent"
+                className="!bg-transparent !text-slate-500 px-2 py-0.5 text-[10px] hover:!text-sena-green hover:shadow-[0_0_12px_rgba(57,169,0,0.25)] transition !border-transparent"
                 onClick={handleOpenStoryPicker}
               >
                 Subir
@@ -2003,7 +2003,10 @@ export const HomePage = () => {
                     key={story.id}
                     type="button"
                     onClick={() => handleStoryClick(story)}
-                    className="group relative z-[60] flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                    className={classNames(
+                      'group relative z-[60] flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-300 active:scale-[0.98]',
+                      story.id === 'create' && 'hover:scale-[1.02]'
+                    )}
                     style={{ zIndex: 60, position: 'relative' }}
                   >
                     <div
@@ -2011,24 +2014,19 @@ export const HomePage = () => {
                         'relative h-12 w-12 rounded-full transition-all duration-300',
                         isViewed
                           ? 'border border-black/70 p-0'
-                          : classNames(
-                              'p-[2.5px]',
-                              story.id === 'create' && !hasStories
-                                ? 'bg-gradient-to-tr from-[#308CFF]/45 via-[#308CFF]/30 to-blue-500/45 shadow-[0_2px_6px_rgba(48,140,255,0.02)] group-hover:shadow-none group-hover:scale-[1.02]'
-                                : hasStories && story.id !== 'create'
-                                  ? 'bg-gradient-to-tr from-[#308CFF]/45 via-[#308CFF]/30 to-blue-500/45 group-hover:shadow-none'
-                                  : 'bg-gradient-to-tr from-[#308CFF]/45 via-[#308CFF]/30 to-blue-500/45 group-hover:shadow-none group-hover:scale-[1.02]'
-                            )
+                          : story.id === 'create'
+                            ? 'story-create-wave group-hover:scale-[1.02]'
+                            : isViewed
+                              ? 'border border-black/70 p-0'
+                              : 'story-create-wave-static'
                       )}
                       style={{ zIndex: 61, position: 'relative' }}
                     >
                       <div className={classNames(
                         'relative flex h-full w-full items-center justify-center rounded-full transition-all duration-300 overflow-hidden',
-                        story.id === 'create' && !hasStories
-                          ? 'border-2 border-[var(--color-surface)] bg-white dark:bg-slate-900 group-hover:border-[#308CFF]/20'
-                          : isViewed
-                            ? 'border-0 bg-[var(--color-surface)]'
-                            : 'border-2 border-[var(--color-surface)] bg-[var(--color-surface)] group-hover:border-[#308CFF]/20'
+                        story.id === 'create' || !isViewed
+                          ? 'bg-white dark:bg-slate-900'
+                          : 'border-0 bg-[var(--color-surface)]'
                       )} style={{ zIndex: 62 }}>
                         {story.id === 'create' ? (
                           storyPreview ? (
@@ -2038,13 +2036,13 @@ export const HomePage = () => {
                               className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                           ) : (
-                            <Plus className="h-5 w-5 text-[#308CFF] transition-all duration-300 group-hover:scale-110 group-hover:rotate-45 drop-shadow-[0_1px_2px_rgba(48,140,255,0.06)]" />
+                            <Plus className="h-5 w-5 text-sena-green transition-all duration-300 group-hover:scale-110 group-hover:rotate-45 drop-shadow-[0_1px_2px_rgba(57,169,0,0.06)]" />
                           )
                         ) : storyPreview ? (
                           <img
                             src={storyPreview}
                             alt={story.name}
-                            className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-110"
+                            className="h-full w-full rounded-full object-cover"
                           />
                         ) : (
                           <UserAvatar
@@ -2057,7 +2055,10 @@ export const HomePage = () => {
                         )}
                       </div>
                     </div>
-                    <span className="text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate transition-colors duration-300 group-hover:text-[#308CFF]/80">
+                    <span className={classNames(
+                      'text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate transition-colors duration-300',
+                      story.id === 'create' && 'group-hover:text-sena-green/80'
+                    )}>
                       {story.id === 'create' 
                         ? (hasStories ? 'Tus historias' : 'Crear historia')
                         : story.name}
@@ -2098,7 +2099,7 @@ export const HomePage = () => {
                         <div key={action} className={classNames('relative overflow-visible', isEmojiAction && 'z-30')}>
                           <button
                             type="button"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-[#308CFF] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-sena-green transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
                             aria-label={label}
                             onClick={() => handleComposerToolClick(action)}
                             disabled={isPublishing}
@@ -2116,9 +2117,9 @@ export const HomePage = () => {
                   </div>
                   <Button
                     size="sm"
-                    variant="secondary"
+                    variant="primary"
                     leftIcon={<Sparkles className="h-4 w-4" />}
-                    className="!bg-white !text-slate-700 !border-slate-200 hover:!bg-[#308CFF] hover:!text-white hover:!border-[#308CFF] hover:shadow-[0_0_20px_rgba(48,140,255,0.45)] disabled:hover:!bg-white disabled:hover:!text-slate-700 disabled:hover:!border-slate-200 disabled:hover:shadow-none px-3 py-2 text-xs"
+                    className="!bg-sena-light !text-white !border-sena-light/30 hover:!bg-sena-light hover:!text-white hover:!border-sena-light disabled:!bg-white disabled:!text-slate-700 disabled:!border-slate-200 disabled:hover:!bg-white disabled:hover:!text-slate-700 disabled:hover:!border-slate-200 px-3 py-2 text-xs"
                     loading={isPublishing}
                     disabled={isPublishing || !composerContent.trim()}
                     onClick={handleComposerSubmit}
@@ -2321,7 +2322,7 @@ export const HomePage = () => {
                       >
                         <div className="relative flex-shrink-0">
                           {chat.isGroup ? (
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 shadow-[0_8px_16px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:ring-2 group-hover:ring-white/20">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_8px_16px_rgba(57,169,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:ring-2 group-hover:ring-white/20">
                               <UsersIcon className="h-5 w-5 text-white" />
                             </div>
                           ) : chatOtherUser ? (
@@ -2388,7 +2389,7 @@ export const HomePage = () => {
                     {currentStories.length > 0 && (
                       <button
                         type="button"
-                        className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
+                        className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/65"
                         onClick={(e) => { e.stopPropagation(); goToPrevStory(); }}
                         aria-label="Anterior"
                       >
@@ -2413,7 +2414,7 @@ export const HomePage = () => {
                                   <button
                                     ref={storyViewsButtonRef}
                                     type="button"
-                                    className="inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/80"
+                                    className="inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-sena-green shadow-lg backdrop-blur transition hover:bg-black/80"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       const btn = storyViewsButtonRef.current;
@@ -2493,7 +2494,7 @@ export const HomePage = () => {
                         <>
                           <button
                             type="button"
-                            className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur transition hover:bg-black/70"
+                            className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/70"
                             onClick={() => setIsStoryMenuOpen((prev) => !prev)}
                           >
                             <MoreHorizontal className="h-5 w-5" />
@@ -2516,13 +2517,13 @@ export const HomePage = () => {
                         return currentStories.length > 1 ? (
                           <div className="absolute left-1/2 top-4 flex -translate-x-1/2 gap-2">
                             {currentStories.map((_, index) => (
-                              <span
-                                key={`story-dot-${index}`}
-                                className={classNames(
-                                  'h-1.5 w-8 rounded-full transition',
-                                  index === currentStoryIndex ? 'bg-white' : 'bg-white/40'
-                                )}
-                              />
+                                <span
+                                  key={`story-dot-${index}`}
+                                  className={classNames(
+                                    'h-1.5 w-8 rounded-full transition',
+                                    index === currentStoryIndex ? 'bg-sena-green' : 'bg-sena-green/40'
+                                  )}
+                                />
                             ))}
                           </div>
                         ) : null;
@@ -2531,7 +2532,7 @@ export const HomePage = () => {
                     {currentStories.length > 0 && (
                         <button
                           type="button"
-                          className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
+                          className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/65"
                           onClick={(e) => { e.stopPropagation(); goToNextStory(); }}
                           aria-label="Siguiente"
                         >
@@ -3065,7 +3066,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
         <div className="flex items-center justify-between border-b border-white/20 px-4 py-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {chat.isGroup ? (
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex-shrink-0 shadow-[0_8px_16px_rgba(0,0,0,0.15)]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sena-green to-emerald-500 flex-shrink-0 shadow-[0_8px_16px_rgba(57,169,0,0.15)]">
                 <UsersIcon className="h-5 w-5 text-white" />
               </div>
             ) : otherUser ? (

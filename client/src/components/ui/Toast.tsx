@@ -28,7 +28,7 @@ const toastStyles = {
     'bg-gradient-to-r from-sena-green to-emerald-500 text-white border-white/25 shadow-[0_12px_30px_rgba(16,185,129,0.35)]',
   error: 'bg-red-500/15 text-red-500 border-red-500/30',
   warning: 'bg-yellow-500/15 text-yellow-500 border-yellow-500/30',
-  info: 'bg-blue-500/15 text-blue-500 border-blue-500/30'
+  info: 'bg-sena-green/15 text-sena-green border-sena-green/30'
 };
 
 export const ToastComponent = ({ toast, onClose }: ToastProps) => {

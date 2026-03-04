@@ -198,7 +198,7 @@ export const UserEdit = ({ userId, onSave, onCancel }: UserEditProps) => {
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-500 text-white rounded"
+          className="px-4 py-2 bg-sena-green text-white rounded"
           disabled={saving}
         >
           {saving ? 'Guardando...' : 'Guardar'}

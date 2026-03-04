@@ -29,7 +29,7 @@ const roleFilterOptions: Array<{ value: UserRole | 'all'; label: string }> = [
 
 const RoleIcon = ({ role }: { role: UserRole }) => {
   if (role === 'admin') return <Shield className="h-4 w-4 text-sena-green" />;
-  if (role === 'instructor') return <ShieldCheck className="h-4 w-4 text-blue-500" />;
+  if (role === 'instructor') return <ShieldCheck className="h-4 w-4 text-sena-green" />;
   return <ShieldHalf className="h-4 w-4 text-amber-500" />;
 };
 
