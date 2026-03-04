@@ -239,7 +239,30 @@ Sustituye `tu-url-railway.app` por la URL real de Railway del Paso A6.
 - Verifica que `CLIENT_URL` en Railway sea exactamente la URL de Vercel (con `https://`).
 - No añadas barra final: `https://florteapp.vercel.app` (no `https://florteapp.vercel.app/`).
 
-## Archivos subidos se pierden
+## Archivos subidos se pierden / Historias no se ven
 
-- Railway usa sistema de archivos efímero. Los uploads se pierden al redesplegar.
-- Para producción seria: usar Vercel Blob, AWS S3 o Cloudinary.
+**Causa:** Railway usa disco efímero por defecto. Los archivos (historias, avatares, etc.) se pierden al redesplegar o reiniciar.
+
+**Solución 1 – Railway Volume (recomendado para este proyecto):**
+
+1. En Railway → tu proyecto → clic derecho en el lienzo o `⌘K` → **Add Volume**.
+2. Conecta el volumen al servicio **FlorteApp** (backend).
+3. Configura el **Mount Path**: `/app/uploads`
+4. Guarda. Railway redesplegará.
+5. Los archivos subidos a `uploads/` persistirán entre despliegues.
+
+**Solución 2 – Almacenamiento en la nube (escalable):**
+
+- Para apps con muchos usuarios: usar Vercel Blob, AWS S3 o Cloudinary.
+
+## Historias suben pero no se ven (imagen vacía o 404)
+
+1. **Verificar VITE_API_URL en Vercel**
+   - Las imágenes se cargan desde `https://tu-railway.app/uploads/feed/...`
+   - El frontend usa `VITE_API_URL` para construir esas URLs.
+   - Si falta o está mal, las imágenes apuntarán a `localhost` o a una URL incorrecta.
+   - En Vercel: **Settings** → **Environment Variables** → `VITE_API_URL` = `https://tu-url.railway.app/api` (con `/api` al final).
+   - **Importante:** Después de cambiar, haz **Redeploy** del frontend.
+
+2. **Verificar que el Volume esté montado en Railway**
+   - Sin Volume en `/app/uploads`, los archivos se pierden y las imágenes devuelven 404.
