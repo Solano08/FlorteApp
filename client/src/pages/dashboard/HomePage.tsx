@@ -47,6 +47,7 @@ import { FeedAttachment, FeedComment, FeedPostAggregate, ReactionType } from '..
 import { useLocation, useNavigate } from 'react-router-dom';
 import { floatingModalContentClass } from '../../utils/modalStyles';
 import { resolveAssetUrl } from '../../utils/media';
+import { compressImageForUpload } from '../../utils/imageCompress';
 
 interface ChatWindowProps {
   chat: Chat;
@@ -300,13 +301,13 @@ export const HomePage = () => {
   const handleStoryFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !user?.id) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      createStoryMutation.mutate(base64String);
-    };
-    reader.readAsDataURL(file);
     event.target.value = '';
+    try {
+      const compressedDataUrl = await compressImageForUpload(file);
+      createStoryMutation.mutate(compressedDataUrl);
+    } catch {
+      toast.error('No se pudo procesar la imagen');
+    }
   };
 
   const [selectedStoryUser, setSelectedStoryUser] = useState<{ userId: string; stories: StoryData[] } | null>(null);
