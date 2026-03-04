@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { resolveAssetUrl } from '../../utils/media';
 
 /** Avatar de usuario: solo círculo, sin marco/cuadro (no usar glass-liquid ni bordes de caja). */
@@ -80,16 +80,20 @@ export const UserAvatar: FC<UserAvatarProps> = ({
   const displayName = fullName || `${firstName || ''} ${lastName || ''}`.trim() || 'Usuario';
   const resolvedAvatarUrl = avatarUrl ? resolveAssetUrl(avatarUrl) : null;
   const avatarColor = getAvatarColor(displayName);
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => setImgError(false), [avatarUrl]);
+  const showImage = resolvedAvatarUrl && !imgError;
 
   return (
     <div className={`relative inline-block ${className}`}>
-      {resolvedAvatarUrl ? (
+      {showImage ? (
         <div className={`${sizeClasses[size]} rounded-full overflow-hidden`} style={{ borderRadius: '9999px' }}>
           <img
             src={resolvedAvatarUrl}
             alt={displayName}
             className="h-full w-full object-cover"
             style={{ borderRadius: '9999px' }}
+            onError={() => setImgError(true)}
           />
         </div>
       ) : (

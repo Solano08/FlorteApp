@@ -18,12 +18,15 @@ export interface AvatarUploaderHandle {
 
 const AVATAR_SIZE = 400;
 
-export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderProps>(
+export const FALLBACK_AVATAR = 'https://avatars.dicebear.com/api/initials/FlorteApp.svg';
+
+const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderProps>(
   ({ imageUrl, onSelect, loading, showTriggerButton = true }, ref) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [cropperFile, setCropperFile] = useState<File | null>(null);
     const [cropperSrc, setCropperSrc] = useState<string | null>(null);
+    const [imgError, setImgError] = useState(false);
 
     const handleSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -54,6 +57,7 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
       }
     }, [cropperSrc]);
 
+    useEffect(() => setImgError(false), [imageUrl]);
     useEffect(() => {
       return () => {
         if (preview) URL.revokeObjectURL(preview);
@@ -105,9 +109,10 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
           )}
         >
           <img
-            src={preview ?? resolveAssetUrl(imageUrl) ?? 'https://avatars.dicebear.com/api/initials/FlorteApp.svg'}
+            src={preview ?? (imgError ? FALLBACK_AVATAR : resolveAssetUrl(imageUrl)) ?? FALLBACK_AVATAR}
             alt="Avatar"
             className="h-full w-full object-cover"
+            onError={() => setImgError(true)}
           />
         </div>
         {showTriggerButton && (
