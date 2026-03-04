@@ -2396,12 +2396,24 @@ export const HomePage = () => {
                         <ChevronLeft className="h-6 w-6" />
                       </button>
                     )}
-                    <div ref={storyImageContainerRef} className="relative inline-block max-h-[80vh] max-w-[90vw] overflow-hidden rounded-3xl">
+                    <div ref={storyImageContainerRef} className="relative flex max-h-[80vh] max-w-[90vw] min-h-[300px] items-center justify-center overflow-hidden rounded-3xl bg-black/50">
                       <img
                         src={(currentStories[currentStoryIndex] as StoryData).mediaUrl}
                         alt="Historia"
                         className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.35)] block"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const placeholder = target.nextElementSibling as HTMLElement | null;
+                          if (placeholder) placeholder.classList.remove('hidden');
+                        }}
                       />
+                      <div className="hidden flex-col items-center justify-center gap-3 rounded-3xl p-8 text-center text-sm text-white/80">
+                        <p>No se pudo cargar la imagen.</p>
+                        <p className="text-xs opacity-75">
+                          Verifica que Railway tenga un Volume en /app/uploads y que VITE_API_URL en Vercel apunte a tu API. Ver DEPLOY.md.
+                        </p>
+                      </div>
                       {selectedStoryUser?.userId === user?.id && (
                         <>
                           {(() => {

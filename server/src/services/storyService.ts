@@ -4,6 +4,8 @@ import { storyRepository } from '../repositories/storyRepository';
 import { friendRepository } from '../repositories/friendRepository';
 import { AppError } from '../utils/appError';
 
+// La app escribe en server/uploads/feed. En Railway (rootDir=server) eso es /app/uploads/feed.
+// Para persistir: crear un Volume en Railway y montarlo en /app/uploads (ver DEPLOY.md).
 const feedUploadsDir = path.resolve(__dirname, '..', '..', 'uploads', 'feed');
 const ensureDir = () => {
   if (!fs.existsSync(feedUploadsDir)) {

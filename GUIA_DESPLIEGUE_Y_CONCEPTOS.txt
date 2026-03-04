@@ -236,8 +236,11 @@ Login/Registro no funciona
 CORS bloqueado
   -> CLIENT_URL debe ser solo protocolo+host (sin /login, sin barra final).
 
-Archivos subidos se pierden
-  -> Railway usa disco efímero. Para producción: S3, Cloudinary o Vercel Blob.
+Archivos subidos se pierden / Historias no se ven
+  -> Railway usa disco efímero por defecto.
+  -> SOLUCIÓN: En Railway, crear un Volume y montarlo en /app/uploads.
+    (Add Volume > conectar al servicio FlorteApp > Mount Path: /app/uploads)
+  -> Alternativa: S3, Cloudinary o Vercel Blob para escalar.
 
 
 ================================================================================
