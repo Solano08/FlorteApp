@@ -223,7 +223,7 @@ export const UIPlaygroundPage = () => {
                   <X className="h-3 w-3" />
                   Inactivo
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50/60 px-3 py-1 text-xs font-semibold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <span className="inline-flex items-center gap-1 rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold text-sena-green dark:bg-sena-green/20 dark:text-sena-green">
                   <Info className="h-3 w-3" />
                   Información
                 </span>

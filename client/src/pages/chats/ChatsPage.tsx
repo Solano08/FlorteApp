@@ -103,7 +103,7 @@ const getChatName = (name: string | null | undefined, isGroup: boolean) =>
 
 const avatarGradientPalette = [
   'from-sena-green/90 to-emerald-400/80',
-  'from-blue-500/90 to-cyan-400/80',
+  'from-sena-green/90 to-emerald-400/80',
   'from-amber-500/90 to-orange-400/80',
   'from-purple-500/90 to-indigo-400/80'
 ];
@@ -3009,8 +3009,8 @@ export const ChatsPage = () => {
               onClick={() => handleNewChatTypeSelection('group')}
               className="group flex flex-col items-center gap-3 rounded-2xl glass-liquid-strong p-6 transition-all hover:scale-105 hover:shadow-lg border-2 border-transparent hover:border-sena-green/30"
             >
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 group-hover:from-blue-500/30 group-hover:to-cyan-500/30 transition-all">
-                <UsersIcon className="h-8 w-8 text-blue-500" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-sena-green/20 to-emerald-500/20 group-hover:from-sena-green/30 group-hover:to-emerald-500/30 transition-all">
+                <UsersIcon className="h-8 w-8 text-sena-green" />
               </div>
               <div className="text-center">
                 <h4 className="text-sm font-semibold text-[var(--color-text)]">Nuevo Grupo</h4>

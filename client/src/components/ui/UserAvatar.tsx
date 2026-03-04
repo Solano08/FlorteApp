@@ -31,18 +31,18 @@ const statusSizeClasses = {
 
 // Paleta de colores para avatares
 const avatarColors = [
-  { from: 'from-blue-500', via: 'via-blue-600', to: 'to-cyan-500' },
+  { from: 'from-sena-green', via: 'via-sena-dark', to: 'to-emerald-500' },
   { from: 'from-purple-500', via: 'via-purple-600', to: 'to-pink-500' },
   { from: 'from-green-500', via: 'via-green-600', to: 'to-emerald-500' },
   { from: 'from-orange-500', via: 'via-orange-600', to: 'to-red-500' },
-  { from: 'from-indigo-500', via: 'via-indigo-600', to: 'to-blue-500' },
+  { from: 'from-indigo-500', via: 'via-indigo-600', to: 'to-sena-green' },
   { from: 'from-pink-500', via: 'via-pink-600', to: 'to-rose-500' },
-  { from: 'from-teal-500', via: 'via-teal-600', to: 'to-cyan-500' },
+  { from: 'from-teal-500', via: 'via-teal-600', to: 'to-emerald-500' },
   { from: 'from-amber-500', via: 'via-amber-600', to: 'to-yellow-500' },
   { from: 'from-violet-500', via: 'via-violet-600', to: 'to-purple-500' },
   { from: 'from-rose-500', via: 'via-rose-600', to: 'to-pink-500' },
   { from: 'from-emerald-500', via: 'via-emerald-600', to: 'to-green-500' },
-  { from: 'from-cyan-500', via: 'via-cyan-600', to: 'to-blue-500' }
+  { from: 'from-emerald-500', via: 'via-emerald-600', to: 'to-sena-green' }
 ];
 
 // Función para obtener un color único basado en el nombre del usuario

@@ -81,7 +81,7 @@ export const UserList = ({ onEdit, refreshToken }: UserListProps) => {
                   <button
                     type="button"
                     onClick={() => onEdit(user.id)}
-                    className="bg-blue-500 text-white px-2 py-1 rounded"
+                    className="bg-sena-green text-white px-2 py-1 rounded"
                   >
                     Editar
                   </button>
