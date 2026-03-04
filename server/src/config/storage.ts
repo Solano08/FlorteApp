@@ -1,31 +1,10 @@
-import fs from 'fs';
-import path from 'path';
 import multer from 'multer';
 
-const rootUploadsDir = path.resolve(__dirname, '..', '..', 'uploads');
-const avatarDir = path.join(rootUploadsDir, 'avatars');
-const coverDir = path.join(rootUploadsDir, 'covers');
-const communitiesDir = path.join(rootUploadsDir, 'communities');
-
-for (const dir of [rootUploadsDir, avatarDir, coverDir, communitiesDir]) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-const avatarStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, avatarDir);
-  },
-  filename: (_req, file, cb) => {
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    cb(null, `${timestamp}-${Math.round(Math.random() * 1e9)}${ext}`);
-  }
-});
+// Usamos memoryStorage para subir a Cloudinary en lugar de disco local
+const memoryStorage = multer.memoryStorage();
 
 export const avatarUpload = multer({
-  storage: avatarStorage,
+  storage: memoryStorage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB
   },
@@ -38,19 +17,8 @@ export const avatarUpload = multer({
   }
 });
 
-const coverStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, coverDir);
-  },
-  filename: (_req, file, cb) => {
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    cb(null, `${timestamp}-${Math.round(Math.random() * 1e9)}${ext}`);
-  }
-});
-
 export const coverUpload = multer({
-  storage: coverStorage,
+  storage: memoryStorage,
   limits: {
     fileSize: 8 * 1024 * 1024 // 8MB
   },
@@ -63,19 +31,8 @@ export const coverUpload = multer({
   }
 });
 
-const communityIconStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, communitiesDir);
-  },
-  filename: (_req, file, cb) => {
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    cb(null, `icon-${timestamp}-${Math.round(Math.random() * 1e9)}${ext}`);
-  }
-});
-
 export const communityIconUpload = multer({
-  storage: communityIconStorage,
+  storage: memoryStorage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB
   },
@@ -88,19 +45,8 @@ export const communityIconUpload = multer({
   }
 });
 
-const communityCoverStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, communitiesDir);
-  },
-  filename: (_req, file, cb) => {
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    cb(null, `cover-${timestamp}-${Math.round(Math.random() * 1e9)}${ext}`);
-  }
-});
-
 export const communityCoverUpload = multer({
-  storage: communityCoverStorage,
+  storage: memoryStorage,
   limits: {
     fileSize: 8 * 1024 * 1024 // 8MB
   },

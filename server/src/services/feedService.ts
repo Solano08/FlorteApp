@@ -1,6 +1,5 @@
-import fs from 'fs';
-import path from 'path';
 import { feedRepository } from '../repositories/feedRepository';
+import { uploadDataUrl } from './cloudinaryService';
 import { AppError } from '../utils/appError';
 import { UserRole } from '../types/user';
 import {
@@ -60,55 +59,36 @@ const validateReportTarget = async (input: ReportPostInput): Promise<void> => {
   }
 };
 
-const feedUploadsDir = path.resolve(__dirname, '..', '..', 'uploads', 'feed');
-
-const ensureFeedUploadsDir = () => {
-  if (!fs.existsSync(feedUploadsDir)) {
-    fs.mkdirSync(feedUploadsDir, { recursive: true });
-  }
-};
-
-const persistDataUrl = (dataUrl: string): string => {
-  ensureFeedUploadsDir();
-  const match = dataUrl.match(/^data:(.*?);base64,(.+)$/);
-  if (!match) {
-    throw new AppError('Formato de archivo invalido', 400);
-  }
-  const mimeType = match[1] || 'application/octet-stream';
-  const base64Data = match[2];
-  const buffer = Buffer.from(base64Data, 'base64');
-  const extension = mimeType.split('/')[1] || 'bin';
-  const filename = `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
-  const filePath = path.join(feedUploadsDir, filename);
-  fs.writeFileSync(filePath, buffer);
-  return `/uploads/feed/${filename}`;
-};
-
-const processMediaUrl = (value?: string | null): string | null => {
+const processMediaUrl = async (value?: string | null): Promise<string | null> => {
   if (!value) return null;
   if (value.startsWith('data:')) {
-    return persistDataUrl(value);
+    return uploadDataUrl(value, 'feed');
   }
   return value;
 };
 
-const processAttachments = (
+const processAttachments = async (
   attachments?: Array<{ url: string; mimeType?: string | null }>
-): Array<{ url: string; mimeType?: string | null }> => {
+): Promise<Array<{ url: string; mimeType?: string | null }>> => {
   if (!attachments?.length) return [];
-  return attachments.map((attachment) => {
-    const processedUrl = processMediaUrl(attachment.url);
-    return {
-      url: processedUrl ?? attachment.url,
-      mimeType: attachment.mimeType ?? null
-    };
-  });
+  const results = await Promise.all(
+    attachments.map(async (attachment) => {
+      const processedUrl = await processMediaUrl(attachment.url);
+      return {
+        url: processedUrl ?? attachment.url,
+        mimeType: attachment.mimeType ?? null
+      };
+    })
+  );
+  return results;
 };
 
 export const feedService = {
   async createPost(input: CreatePostInput, viewerId: string): Promise<FeedPostAggregate> {
-    const processedMediaUrl = processMediaUrl(input.mediaUrl);
-    const processedAttachments = processAttachments(input.attachments);
+    const [processedMediaUrl, processedAttachments] = await Promise.all([
+      processMediaUrl(input.mediaUrl),
+      processAttachments(input.attachments)
+    ]);
     const post = await feedRepository.createPost({
       ...input,
       mediaUrl: processedMediaUrl,
@@ -132,7 +112,11 @@ export const feedService = {
     viewerRole: UserRole
   ): Promise<FeedPostAggregate> {
     await assertPostAccess(postId, viewerId, viewerRole);
-    await feedRepository.updatePost(postId, updates);
+    const processedUpdates = { ...updates };
+    if (updates.mediaUrl !== undefined) {
+      processedUpdates.mediaUrl = await processMediaUrl(updates.mediaUrl);
+    }
+    await feedRepository.updatePost(postId, processedUpdates);
     const post = await feedRepository.findPostWithMeta(postId, viewerId);
     if (!post) {
       throw new Error('No fue posible cargar la publicacion actualizada');
@@ -157,7 +141,7 @@ export const feedService = {
     viewerReaction: ReactionType | null;
     isSaved: boolean;
   }> {
-    const processedAttachmentUrl = processMediaUrl(input.attachmentUrl);
+    const processedAttachmentUrl = await processMediaUrl(input.attachmentUrl);
     const comment = await feedRepository.addComment({ ...input, attachmentUrl: processedAttachmentUrl });
     const metrics = await feedRepository.getPostMetrics(input.postId, viewerId);
     return {

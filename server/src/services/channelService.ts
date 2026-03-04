@@ -45,6 +45,11 @@ export const channelService = {
     if (!input.content?.trim() && !input.attachmentUrl) {
       throw new AppError('El mensaje debe tener contenido o un archivo adjunto', 400);
     }
+    let attachmentUrl = input.attachmentUrl;
+    if (attachmentUrl?.startsWith('data:')) {
+      const { uploadDataUrl } = await import('./cloudinaryService');
+      attachmentUrl = await uploadDataUrl(attachmentUrl, 'channels') ?? attachmentUrl;
+    }
 
     // Verificar que el canal existe
     const channel = await channelRepository.findById(input.channelId);
@@ -52,7 +57,10 @@ export const channelService = {
       throw new AppError('Canal no encontrado', 404);
     }
 
-    return await channelRepository.createMessage(input);
+    return await channelRepository.createMessage({
+      ...input,
+      attachmentUrl: attachmentUrl ?? input.attachmentUrl
+    });
   },
 
   async listMessages(channelId: string, limit: number = 100, offset: number = 0): Promise<ChannelMessage[]> {

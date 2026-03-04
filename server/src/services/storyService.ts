@@ -1,45 +1,19 @@
-import fs from 'fs';
-import path from 'path';
 import { storyRepository } from '../repositories/storyRepository';
 import { friendRepository } from '../repositories/friendRepository';
+import { uploadDataUrl } from './cloudinaryService';
 import { AppError } from '../utils/appError';
 
-// La app escribe en server/uploads/feed. En Railway (rootDir=server) eso es /app/uploads/feed.
-// Para persistir: crear un Volume en Railway y montarlo en /app/uploads (ver DEPLOY.md).
-const feedUploadsDir = path.resolve(__dirname, '..', '..', 'uploads', 'feed');
-const ensureDir = () => {
-  if (!fs.existsSync(feedUploadsDir)) {
-    fs.mkdirSync(feedUploadsDir, { recursive: true });
-  }
-};
-
-const persistDataUrl = (dataUrl: string): string => {
-  ensureDir();
-  const match = dataUrl.match(/^data:(.*?);base64,(.+)$/);
-  if (!match) {
-    throw new AppError('Formato de archivo invalido', 400);
-  }
-  const mimeType = match[1] || 'application/octet-stream';
-  const base64Data = match[2];
-  const buffer = Buffer.from(base64Data, 'base64');
-  const extension = mimeType.split('/')[1] || 'bin';
-  const filename = `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
-  const filePath = path.join(feedUploadsDir, filename);
-  fs.writeFileSync(filePath, buffer);
-  return `/uploads/feed/${filename}`;
-};
-
-const processMediaUrl = (value?: string | null): string | null => {
+const processMediaUrl = async (value?: string | null): Promise<string | null> => {
   if (!value) return null;
   if (value.startsWith('data:')) {
-    return persistDataUrl(value);
+    return uploadDataUrl(value, 'stories');
   }
   return value;
 };
 
 export const storyService = {
   async createStory(userId: string, mediaUrl: string): Promise<any> {
-    const processed = processMediaUrl(mediaUrl);
+    const processed = await processMediaUrl(mediaUrl);
     if (!processed) throw new AppError('Medio invalido', 400);
     return storyRepository.create(userId, processed);
   },
