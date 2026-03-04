@@ -11,9 +11,10 @@ const createChannelSchema = z.object({
   position: z.number().int().optional()
 });
 
+const dataUrlSchema = z.string().refine((v) => v.startsWith('data:'), 'Debe ser data URL');
 const createMessageSchema = z.object({
   content: z.string().min(1).optional(),
-  attachmentUrl: z.string().url().optional()
+  attachmentUrl: z.union([z.string().url(), dataUrlSchema]).optional()
 }).refine(data => data.content || data.attachmentUrl, {
   message: 'El mensaje debe tener contenido o un archivo adjunto'
 });

@@ -216,6 +216,9 @@ BACKEND (Railway):
   DB_USER           = (valor de MYSQLUSER)
   DB_PASSWORD       = (valor de MYSQLPASSWORD)
   DB_NAME           = (valor de MYSQLDATABASE)
+  CLOUDINARY_CLOUD_NAME = (de cloudinary.com)
+  CLOUDINARY_API_KEY    = (de cloudinary.com)
+  CLOUDINARY_API_SECRET = (de cloudinary.com)
 
 FRONTEND (Vercel):
   VITE_API_URL      = https://tu-url.railway.app/api
@@ -236,11 +239,10 @@ Login/Registro no funciona
 CORS bloqueado
   -> CLIENT_URL debe ser solo protocolo+host (sin /login, sin barra final).
 
-Archivos subidos se pierden / Historias no se ven
-  -> Railway usa disco efímero por defecto.
-  -> SOLUCIÓN: En Railway, crear un Volume y montarlo en /app/uploads.
-    (Add Volume > conectar al servicio FlorteApp > Mount Path: /app/uploads)
-  -> Alternativa: S3, Cloudinary o Vercel Blob para escalar.
+Imágenes no se ven / Error al subir fotos
+  -> FlorteApp usa Cloudinary para almacenar imágenes (avatares, feed, historias).
+  -> SOLUCIÓN: Añadir en Railway las variables CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET (obtener de cloudinary.com).
 
 
 ================================================================================

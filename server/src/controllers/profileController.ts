@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { uploadBuffer } from '../services/cloudinaryService';
 import { activityService } from '../services/activityService';
 import { feedService } from '../services/feedService';
 import { profileService } from '../services/profileService';
@@ -33,7 +34,13 @@ export const profileController = {
     }
 
     const file = req.file;
-    const avatarUrl = file ? `/uploads/avatars/${file.filename}` : null;
+    let avatarUrl: string | null = null;
+    if (file?.buffer) {
+      avatarUrl = await uploadBuffer(file.buffer, 'avatars', {
+        mimetype: file.mimetype,
+        filename: file.originalname
+      });
+    }
     const profile = await profileService.updateAvatar(userId, avatarUrl);
     res.json({ success: true, profile });
   },
@@ -45,7 +52,13 @@ export const profileController = {
     }
 
     const file = req.file;
-    const coverUrl = file ? `/uploads/covers/${file.filename}` : null;
+    let coverUrl: string | null = null;
+    if (file?.buffer) {
+      coverUrl = await uploadBuffer(file.buffer, 'covers', {
+        mimetype: file.mimetype,
+        filename: file.originalname
+      });
+    }
     const profile = await profileService.updateCover(userId, coverUrl);
     res.json({ success: true, profile });
   },

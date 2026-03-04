@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { uploadBuffer } from '../services/cloudinaryService';
 import { groupService } from '../services/groupService';
 import { createGroupSchema } from '../validators/groupValidators';
 import { AppError } from '../utils/appError';
@@ -67,13 +68,16 @@ export const groupController = {
     const userId = req.user?.userId;
     if (!userId) throw new AppError('Autenticación requerida', 401);
     const { id } = req.params;
-    
+
     const file = req.file;
-    if (!file) {
+    if (!file?.buffer) {
       throw new AppError('No se proporcionó ningún archivo', 400);
     }
-    
-    const iconUrl = `/uploads/communities/${file.filename}`;
+
+    const iconUrl = await uploadBuffer(file.buffer, 'communities', {
+      mimetype: file.mimetype,
+      filename: file.originalname
+    });
     const group = await groupService.updateIcon(id, iconUrl);
     res.json({ success: true, group });
   },
@@ -82,13 +86,16 @@ export const groupController = {
     const userId = req.user?.userId;
     if (!userId) throw new AppError('Autenticación requerida', 401);
     const { id } = req.params;
-    
+
     const file = req.file;
-    if (!file) {
+    if (!file?.buffer) {
       throw new AppError('No se proporcionó ningún archivo', 400);
     }
-    
-    const coverUrl = `/uploads/communities/${file.filename}`;
+
+    const coverUrl = await uploadBuffer(file.buffer, 'communities', {
+      mimetype: file.mimetype,
+      filename: file.originalname
+    });
     const group = await groupService.updateCover(id, coverUrl);
     res.json({ success: true, group });
   }

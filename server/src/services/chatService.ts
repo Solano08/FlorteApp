@@ -1,6 +1,15 @@
 import { chatRepository } from '../repositories/chatRepository';
+import { uploadDataUrl } from './cloudinaryService';
 import { AppError } from '../utils/appError';
 import { Chat, CreateChatInput, CreateMessageInput, Message } from '../types/chat';
+
+const processAttachmentUrl = async (url?: string | null): Promise<string | null> => {
+  if (!url) return null;
+  if (url.startsWith('data:')) {
+    return uploadDataUrl(url, 'chat');
+  }
+  return url;
+};
 
 export const chatService = {
   async createChat(input: CreateChatInput): Promise<Chat> {
@@ -38,7 +47,11 @@ export const chatService = {
     if (!input.content?.trim() && !input.attachmentUrl && !input.sharedPostId) {
       throw new AppError('El mensaje no puede estar vacío', 400);
     }
-    return await chatRepository.createMessage(input);
+    const processedAttachmentUrl = await processAttachmentUrl(input.attachmentUrl);
+    return await chatRepository.createMessage({
+      ...input,
+      attachmentUrl: processedAttachmentUrl ?? input.attachmentUrl ?? undefined
+    });
   },
 
   async deleteMessage(messageId: string, userId: string, chatId: string): Promise<void> {

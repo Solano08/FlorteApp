@@ -7,11 +7,11 @@ Esta guía detalla los pasos para desplegar el frontend en Vercel y el backend e
 ## Resumen de la arquitectura
 
 ```
-┌─────────────────┐         ┌─────────────────────────────┐
-│  Vercel         │         │  Railway                    │
-│  (Frontend)     │  ────►  │  Backend (Express) + MySQL   │
-│  React SPA      │  API    │  uploads/ (efímero)         │
-└─────────────────┘         └─────────────────────────────┘
+┌─────────────────┐         ┌─────────────────────────────┐         ┌─────────────────┐
+│  Vercel         │         │  Railway                    │         │  Cloudinary     │
+│  (Frontend)     │  ────►  │  Backend (Express) + MySQL   │  ────►  │  (Imágenes CDN) │
+│  React SPA      │  API    │                             │  upload │  Avatares, feed │
+└─────────────────┘         └─────────────────────────────┘         └─────────────────┘
 ```
 
 ---
@@ -100,6 +100,27 @@ En el servicio **FlorteApp** → **Variables**, asegúrate de tener:
 | `JWT_REFRESH_SECRET` | Ejecuta de nuevo `openssl rand -hex 32` y pega un valor distinto |
 
 **No añadas `PORT`** — Railway lo asigna automáticamente.
+
+---
+
+## Paso A5b: Configurar Cloudinary (IMPORTANTE para imágenes)
+
+Las fotos de perfil, publicaciones, historias y adjuntos se almacenan en **Cloudinary** (CDN global, persistente, escalable).
+
+1. Crea cuenta gratis en [cloudinary.com](https://cloudinary.com).
+2. En el Dashboard → **Settings** → **API Keys** copia:
+   - **Cloud name**
+   - **API Key**
+   - **API Secret**
+3. En Railway → servicio **FlorteApp** → **Variables** añade:
+
+| Variable | Valor |
+|----------|-------|
+| `CLOUDINARY_CLOUD_NAME` | Tu Cloud name |
+| `CLOUDINARY_API_KEY` | Tu API Key |
+| `CLOUDINARY_API_SECRET` | Tu API Secret |
+
+Sin estas variables, las subidas de imágenes fallarán en producción.
 
 ---
 
@@ -239,30 +260,18 @@ Sustituye `tu-url-railway.app` por la URL real de Railway del Paso A6.
 - Verifica que `CLIENT_URL` en Railway sea exactamente la URL de Vercel (con `https://`).
 - No añadas barra final: `https://florteapp.vercel.app` (no `https://florteapp.vercel.app/`).
 
-## Archivos subidos se pierden / Historias no se ven
+## Imágenes no se ven / Error al subir fotos
 
-**Causa:** Railway usa disco efímero por defecto. Los archivos (historias, avatares, etc.) se pierden al redesplegar o reiniciar.
+**Causa:** Falta la configuración de Cloudinary en Railway.
 
-**Solución 1 – Railway Volume (recomendado para este proyecto):**
+**Solución – Configurar Cloudinary:**
 
-1. En Railway → tu proyecto → clic derecho en el lienzo o `⌘K` → **Add Volume**.
-2. Conecta el volumen al servicio **FlorteApp** (backend).
-3. Configura el **Mount Path**: `/app/uploads`
-4. Guarda. Railway redesplegará.
-5. Los archivos subidos a `uploads/` persistirán entre despliegues.
+1. Crea cuenta en [cloudinary.com](https://cloudinary.com) (plan gratuito disponible).
+2. Dashboard → **Settings** → **API Keys**: copia Cloud name, API Key y API Secret.
+3. En Railway → servicio **FlorteApp** → **Variables** añade:
+   - `CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
+4. Railway redesplegará automáticamente.
 
-**Solución 2 – Almacenamiento en la nube (escalable):**
-
-- Para apps con muchos usuarios: usar Vercel Blob, AWS S3 o Cloudinary.
-
-## Historias suben pero no se ven (imagen vacía o 404)
-
-1. **Verificar VITE_API_URL en Vercel**
-   - Las imágenes se cargan desde `https://tu-railway.app/uploads/feed/...`
-   - El frontend usa `VITE_API_URL` para construir esas URLs.
-   - Si falta o está mal, las imágenes apuntarán a `localhost` o a una URL incorrecta.
-   - En Vercel: **Settings** → **Environment Variables** → `VITE_API_URL` = `https://tu-url.railway.app/api` (con `/api` al final).
-   - **Importante:** Después de cambiar, haz **Redeploy** del frontend.
-
-2. **Verificar que el Volume esté montado en Railway**
-   - Sin Volume en `/app/uploads`, los archivos se pierden y las imágenes devuelven 404.
+Las imágenes se sirven desde la CDN de Cloudinary (alta disponibilidad, velocidad global).
