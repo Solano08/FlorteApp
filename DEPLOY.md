@@ -275,3 +275,15 @@ Sustituye `tu-url-railway.app` por la URL real de Railway del Paso A6.
 4. Railway redesplegará automáticamente.
 
 Las imágenes se sirven desde la CDN de Cloudinary (alta disponibilidad, velocidad global).
+
+## Fotos de perfil no se ven (pero publicaciones sí)
+
+**Causa:** Las fotos subidas *antes* de configurar Cloudinary usan rutas antiguas (`/uploads/avatars/...`) que ya no existen.
+
+**Solución:** Edita tu perfil y **vuelve a subir** la foto. Las nuevas se guardan en Cloudinary y se verán correctamente.
+
+## Error 500 al subir historia
+
+1. Verifica que las **3 variables de Cloudinary** estén en Railway (sin typos).
+2. Revisa los **logs de Railway** (Deployments → View Logs): el mensaje real del error aparecerá ahí (ej. "Error al subir a Cloudinary: ...").
+3. Si la imagen o video es muy pesado, prueba con uno más pequeño (Cloudinary free tier tiene límites).

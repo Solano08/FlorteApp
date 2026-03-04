@@ -18,11 +18,17 @@ export const uploadDataUrl = async (
   folder: string = 'feed'
 ): Promise<string> => {
   if (isCloudinaryEnabled()) {
-    const result = await cloudinary.uploader.upload(dataUrl, {
-      folder: `${FOLDER_PREFIX}/${folder}`,
-      resource_type: 'auto'
-    });
-    return result.secure_url;
+    try {
+      const result = await cloudinary.uploader.upload(dataUrl, {
+        folder: `${FOLDER_PREFIX}/${folder}`,
+        resource_type: 'auto'
+      });
+      if (!result?.secure_url) throw new Error('Cloudinary no devolvió URL');
+      return result.secure_url;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new AppError(`Error al subir a Cloudinary: ${msg}`, 502);
+    }
   }
   // Fallback local (solo desarrollo): guardar en disco
   const match = dataUrl.match(/^data:(.*?);base64,(.+)$/);
