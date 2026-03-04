@@ -230,6 +230,87 @@ export const initDb = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+        // Notifications table
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        user_id CHAR(36) NOT NULL,
+        message TEXT NOT NULL,
+        link VARCHAR(500) NULL,
+        is_read BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Projects table
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        repository_url VARCHAR(500) NULL,
+        status ENUM('draft', 'in_progress', 'completed') NOT NULL DEFAULT 'draft',
+        owner_id CHAR(36) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Project members table
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS project_members (
+        project_id CHAR(36) NOT NULL,
+        user_id CHAR(36) NOT NULL,
+        role ENUM('member', 'lead', 'coach') NOT NULL DEFAULT 'member',
+        PRIMARY KEY (project_id, user_id),
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Library resources table
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS library_resources (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        resource_type ENUM('document', 'video', 'link', 'course', 'other') NOT NULL,
+        url VARCHAR(500) NULL,
+        uploaded_by CHAR(36) NOT NULL,
+        tags JSON NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Friend requests table
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS friend_requests (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        sender_id CHAR(36) NOT NULL,
+        receiver_id CHAR(36) NOT NULL,
+        status ENUM('pending', 'accepted', 'rejected') NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Friends table (friendships)
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS friends (
+        user_id CHAR(36) NOT NULL,
+        friend_id CHAR(36) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, friend_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
         logger.info('Database initialized successfully');
     } catch (error) {
         logger.error('Failed to initialize database', { error });
