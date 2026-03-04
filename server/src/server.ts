@@ -21,7 +21,7 @@ const start = async (): Promise<void> => {
   }
 
   const server = http.createServer(app);
-  server.listen(env.port, () => {
+  server.listen(env.port, '0.0.0.0', () => {
     logger.info(`Server listening on port ${env.port}`);
   });
 };
