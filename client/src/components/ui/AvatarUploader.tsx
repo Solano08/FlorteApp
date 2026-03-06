@@ -20,7 +20,7 @@ const AVATAR_SIZE = 400;
 
 export const FALLBACK_AVATAR = 'https://avatars.dicebear.com/api/initials/FlorteApp.svg';
 
-const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderProps>(
+export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderProps>(
   ({ imageUrl, onSelect, loading, showTriggerButton = true }, ref) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
     const [preview, setPreview] = useState<string | null>(null);

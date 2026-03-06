@@ -1472,7 +1472,7 @@ export const ProfilePage = () => {
                     <AvatarUploader
                       imageUrl={profile?.avatarUrl}
                       loading={isAvatarBusy}
-                      onSelect={(file) => uploadAvatarMutation.mutate(file)}
+                      onSelect={(file: File) => uploadAvatarMutation.mutate(file)}
                       showTriggerButton={false}
                     />
                   </button>
