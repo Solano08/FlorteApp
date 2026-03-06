@@ -116,11 +116,11 @@ Las fotos de perfil, publicaciones, historias y adjuntos se almacenan en **Cloud
 
 | Variable | Valor |
 |----------|-------|
-| `CLOUDINARY_CLOUD_NAME` | Tu Cloud name |
+| `CLOUDINARY_CLOUD_NAME` | Tu Cloud name (ej: `dxxxxxx`) — **Nunca uses "Root"** |
 | `CLOUDINARY_API_KEY` | Tu API Key |
 | `CLOUDINARY_API_SECRET` | Tu API Secret |
 
-Sin estas variables, las subidas de imágenes fallarán en producción.
+**⚠️ Importante:** Si ves `Invalid cloud_name Root` en los logs, `CLOUDINARY_CLOUD_NAME` está mal configurado. Entra en [cloudinary.com](https://cloudinary.com) → Dashboard → copia el **Cloud name** real y pega ese valor en Railway. No uses referencias como "Root".
 
 ---
 

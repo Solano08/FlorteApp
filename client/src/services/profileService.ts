@@ -21,34 +21,27 @@ export const profileService = {
   async updateAvatar(file: File): Promise<Profile> {
     const formData = new FormData();
     formData.append('avatar', file);
-    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/avatar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    // No establecer Content-Type: el navegador debe añadir boundary automáticamente para que multer parsee el archivo
+    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/avatar', formData);
     return normalizeProfile(data.profile);
   },
 
   async removeAvatar(): Promise<Profile> {
     const formData = new FormData();
-    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/avatar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/avatar', formData);
     return normalizeProfile(data.profile);
   },
 
   async updateCover(file: File): Promise<Profile> {
     const formData = new FormData();
     formData.append('cover', file);
-    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/cover', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/cover', formData);
     return normalizeProfile(data.profile);
   },
 
   async removeCover(): Promise<Profile> {
     const formData = new FormData();
-    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/cover', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    const { data } = await apiClient.put<{ success: boolean; profile: Profile }>('/profile/me/cover', formData);
     return normalizeProfile(data.profile);
   }
 };
