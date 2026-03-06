@@ -59,10 +59,10 @@ export const groupService = {
   async uploadCommunityIcon(communityId: string, file: File): Promise<Group> {
     const formData = new FormData();
     formData.append('icon', file);
+    // No establecer Content-Type: el navegador debe añadir boundary automáticamente para que multer parsee el archivo
     const { data } = await apiClient.post<{ success: boolean; group: Group }>(
       `/groups/${communityId}/icon`,
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      formData
     );
     return data.group;
   },
@@ -72,8 +72,7 @@ export const groupService = {
     formData.append('cover', file);
     const { data } = await apiClient.post<{ success: boolean; group: Group }>(
       `/groups/${communityId}/cover`,
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      formData
     );
     return data.group;
   }

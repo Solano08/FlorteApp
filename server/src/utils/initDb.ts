@@ -311,6 +311,33 @@ export const initDb = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+        // User login activity (para actividad de perfil)
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS user_login_activity (
+        user_id CHAR(36) NOT NULL,
+        activity_date DATE NOT NULL,
+        login_count INT NOT NULL DEFAULT 1,
+        last_login DATETIME NULL,
+        PRIMARY KEY (user_id, activity_date),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Project activity logs (contribuciones en proyectos)
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS project_activity_logs (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        user_id CHAR(36) NOT NULL,
+        project_id CHAR(36) NOT NULL,
+        activity_date DATE NOT NULL,
+        contribution_points INT NOT NULL DEFAULT 1,
+        description VARCHAR(500) NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
         logger.info('Database initialized successfully');
     } catch (error) {
         logger.error('Failed to initialize database', { error });
