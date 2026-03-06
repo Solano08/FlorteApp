@@ -86,7 +86,7 @@ export const RegisterPage = () => {
           {...register('confirmPassword')}
         />
 
-        {serverError && <p className="rounded-md bg-red-100 px-3 py-2 text-sm text-red-500">{serverError}</p>}
+        {serverError && <p className="rounded-2xl bg-red-100 px-3 py-2 text-sm text-red-500">{serverError}</p>}
 
         <Button type="submit" className="w-full" loading={isSubmitting}>
           Crear cuenta

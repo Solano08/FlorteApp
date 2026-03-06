@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, MessageSquare, Users, X } from 'lucide-react';
+import { Bell, ChevronRight, MessageSquare, Users, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from './Button';
 import { GlassDialog } from './GlassDialog';
@@ -126,88 +126,61 @@ export const NotificationBell = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 mt-3 w-80"
+            className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] w-80 max-w-[320px]"
           >
-            <div className="p-6 rounded-[32px] glass-notification-dropdown relative space-y-4">
-              {/* Efectos de luz adicionales para glass-liquid-deep */}
-              <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_30%_20%,_rgba(255,255,255,0.25),_transparent_50%)] opacity-60 dark:opacity-20 mix-blend-overlay z-[1]" />
-              <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_70%_80%,_rgba(255,255,255,0.15),_transparent_50%)] opacity-50 dark:opacity-12 mix-blend-overlay z-[1]" />
-              <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-70 dark:opacity-25 z-[1]" />
-              <div className="relative z-10 space-y-4">
-              <div className="flex items-start justify-between gap-4 border-b border-white/30 dark:border-white/10 pb-4">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--color-text)]">Notificaciones</p>
-                  <p className="text-xs text-[var(--color-muted)]">
-                    {unreadCount > 0
-                      ? `Tienes ${unreadCount} novedad${unreadCount === 1 ? '' : 'es'} sin leer`
-                      : 'No tienes novedades nuevas'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5">
+            <div className="rounded-2xl p-2.5 text-sm text-[var(--color-text)] glass-frosted">
+              <div className="flex items-center justify-between gap-2 pb-2">
+                <p className="text-sm font-semibold text-[var(--color-text)]">Notificaciones</p>
+                <div className="flex items-center gap-1">
                   {unreadCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-full text-[10px] text-[var(--color-muted)] glass-liquid hover:text-[var(--color-text)]"
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 rounded-2xl px-3 py-2 text-left text-[10px] transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800"
                       onClick={() => markAllAsReadMutation.mutate()}
                     >
                       Marcar leídas
-                    </Button>
+                    </button>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-2xl transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800"
                     onClick={() => setNotificationsOpen(false)}
-                    className="rounded-full text-[var(--color-muted)] glass-liquid hover:text-[var(--color-text)]"
                   >
                     <X className="h-4 w-4" />
-                  </Button>
+                  </button>
                 </div>
               </div>
 
-              <div className="max-h-72 space-y-3 overflow-y-auto hide-scrollbar">
+              <div className="my-1 h-px bg-slate-200 dark:bg-neutral-700" />
+
+              <div className="max-h-72 space-y-1 overflow-y-auto hide-scrollbar">
                 {pendingReceivedRequests.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                      Solicitudes de amistad
-                    </p>
+                  <div className="space-y-1">
                     {pendingReceivedRequests.map((req) => (
                       <div
                         key={req.id}
-                        className="flex gap-3 rounded-2xl px-4 py-3 text-left glass-liquid transition hover:bg-white/80 !shadow-none border border-sena-green/40"
+                        className="mt-1 rounded-2xl px-3 py-2 transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800 first:mt-0"
                       >
-                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-sena-green/12 text-sena-green shadow-none">
-                          <Users className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-[var(--color-text)]">
-                            {req.sender.firstName} {req.sender.lastName} quiere agregarte como amigo.
-                          </p>
-                          <p className="mt-1 text-[11px] text-[var(--color-muted)]">
-                            Puedes aceptar para iniciar conversaciones privadas y ver su actividad.
-                          </p>
-                          <div className="mt-2 flex gap-2">
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="primary"
-                              className="px-3 text-xs"
-                              loading={acceptRequestMutation.isPending}
-                              onClick={() => acceptRequestMutation.mutate(req.id)}
-                            >
-                              Aceptar
-                            </Button>
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="secondary"
-                              className="px-3 text-xs"
-                              loading={rejectRequestMutation.isPending}
-                              onClick={() => rejectRequestMutation.mutate(req.id)}
-                            >
-                              Rechazar
-                            </Button>
-                          </div>
+                        <p className="text-sm font-medium text-[var(--color-text)]">
+                          {req.sender.firstName} {req.sender.lastName} quiere agregarte como amigo.
+                        </p>
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            type="button"
+                            className="rounded-2xl px-2.5 py-1 text-xs font-semibold text-white bg-sena-green hover:bg-sena-green/90 transition disabled:opacity-50"
+                            disabled={acceptRequestMutation.isPending}
+                            onClick={() => acceptRequestMutation.mutate(req.id)}
+                          >
+                            Aceptar
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-2xl px-2.5 py-1 text-xs font-semibold text-[var(--color-text)] transition hover:bg-slate-100 dark:hover:bg-neutral-700"
+                            disabled={rejectRequestMutation.isPending}
+                            onClick={() => rejectRequestMutation.mutate(req.id)}
+                          >
+                            Rechazar
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -215,11 +188,11 @@ export const NotificationBell = () => {
                 )}
 
                 {notifications.length === 0 && pendingReceivedRequests.length === 0 ? (
-                  <p className="text-xs text-[var(--color-muted)]">
+                  <p className="mt-1 rounded-2xl px-3 py-2 text-xs text-[var(--color-muted)] first:mt-0">
                     Aún no tienes notificaciones en tu cuenta.
                   </p>
                 ) : (
-                  notifications.map((notification) => {
+                  notifications.map((notification, idx) => {
                     const Icon = notification.message.includes('solicitud de amistad')
                       ? Users
                       : MessageSquare;
@@ -235,21 +208,15 @@ export const NotificationBell = () => {
                         key={notification.id}
                         type="button"
                         onClick={() => markAsReadMutation.mutate(notification.id)}
-                        className={`flex w-full gap-3 rounded-2xl px-4 py-3 text-left glass-liquid transition hover:bg-white/80 !shadow-none ${
-                          !notification.isRead ? 'border border-sena-green/40' : ''
-                        }`}
+                        className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800 ${idx > 0 ? 'mt-1' : ''}`}
                       >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sena-green/12 text-sena-green shadow-none">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-[var(--color-text)]">
-                            {notification.message}
-                          </p>
-                          <p className="mt-1 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
-                            {timeLabel}
-                          </p>
-                        </div>
+                        <span className="flex items-center gap-2 flex-1 min-w-0">
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate text-sm">{notification.message}</span>
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wide text-[var(--color-muted)] shrink-0">
+                          {timeLabel}
+                        </span>
                       </button>
                     );
                   })
@@ -257,17 +224,18 @@ export const NotificationBell = () => {
               </div>
 
               {notifications.length + pendingReceivedRequests.length > 0 && (
-                <div className="border-t border-white/30 dark:border-white/10 pt-4">
-                  <Button
-                    variant="secondary"
-                    className="w-full rounded-2xl py-2.5 text-sm font-semibold text-[var(--color-text)] glass-liquid transition-all duration-500 ease-out hover:bg-white/85 hover:border-white/40 hover:shadow-[0_2px_8px_rgba(0,0,0,0.05)] active:scale-[0.99]"
+                <>
+                  <div className="my-1 h-px bg-slate-200 dark:bg-neutral-700" />
+                  <button
+                    type="button"
+                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800"
                     onClick={handleViewAll}
                   >
-                    Ver todas las notificaciones
-                  </Button>
-                </div>
+                    <span>Ver todas las notificaciones</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
               )}
-              </div>
             </div>
           </motion.div>
         )}
@@ -312,9 +280,9 @@ export const NotificationBell = () => {
                     return (
                       <div
                         key={`modal-req-${req.id}`}
-                        className="flex gap-4 rounded-[24px] px-4 py-4 text-left glass-liquid transition hover:border-sena-green/50 !shadow-none border border-sena-green/40"
+                        className="flex gap-4 rounded-2xl px-4 py-4 text-left glass-liquid transition hover:border-sena-green/50 !shadow-none border border-sena-green/40"
                       >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-sena-green/12 text-sena-green shadow-none">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sena-green/12 text-sena-green shadow-none">
                           <Users className="h-5 w-5" />
                         </div>
                         <div className="flex flex-1 flex-col gap-2">
@@ -374,9 +342,9 @@ export const NotificationBell = () => {
                   return (
                     <div
                       key={`modal-${notification.id}`}
-                      className="flex gap-4 rounded-[24px] px-4 py-4 text-left glass-liquid transition hover:border-sena-green/50 !shadow-none"
+                      className="flex gap-4 rounded-2xl px-4 py-4 text-left glass-liquid transition hover:border-sena-green/50 !shadow-none"
                     >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-sena-green/12 text-sena-green shadow-none">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sena-green/12 text-sena-green shadow-none">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="flex flex-1 flex-col gap-1">

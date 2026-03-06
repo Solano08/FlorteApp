@@ -386,12 +386,12 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     <>
       <aside
         ref={sidebarRef}
-        className="relative z-10 flex h-full w-96 flex-col bg-gradient-to-b from-white/70 via-white/50 to-white/60 dark:from-slate-900/70 dark:via-slate-900/50 dark:to-slate-900/60 backdrop-blur-xl shadow-[2px_0_24px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_24px_rgba(0,0,0,0.35)]"
+        className="relative z-10 flex h-full w-96 flex-col bg-gradient-to-b from-white/70 via-white/50 to-white/60 dark:from-neutral-900/70 dark:via-neutral-900/50 dark:to-neutral-900/60 backdrop-blur-xl shadow-[2px_0_24px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_24px_rgba(0,0,0,0.35)]"
         onContextMenu={handleContextMenu}
       >
         {/* Header con nombre de comunidad */}
         {community && (
-          <div className="relative border-b border-white/10 dark:border-white/5 bg-white/85 dark:bg-slate-900/90 px-4 py-3 shadow-[0_4px_10px_rgba(15,23,42,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.6)]">
+          <div className="relative border-b border-white/10 dark:border-white/5 bg-white/85 dark:bg-neutral-900/90 px-4 py-3 shadow-[0_4px_10px_rgba(15,23,42,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.6)]">
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -415,11 +415,11 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                     {isCommunityMenuOpen && (
                       <div
                         ref={communityMenuRef}
-                        className="absolute left-0 top-6 z-30 w-56 rounded-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl py-1.5 text-[12px] text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
+                        className="absolute left-0 top-6 z-30 w-56 rounded-2xl bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl py-1.5 text-[12px] text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
                       >
                         <button
                           type="button"
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-lg mx-1"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-2xl mx-1"
                           onClick={() => {
                             setIsCommunityMenuOpen(false);
                             onCommunitySettings?.();
@@ -428,10 +428,10 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                           <Settings className="h-3.5 w-3.5" />
                           <span>Ajustes de la comunidad</span>
                         </button>
-                        <div className="my-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
+                        <div className="my-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-neutral-700 to-transparent" />
                         <button
                           type="button"
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-150 rounded-lg mx-1"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-150 rounded-2xl mx-1"
                           onClick={() => {
                             setIsCommunityMenuOpen(false);
                             onLeaveCommunity?.();
@@ -448,7 +448,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                 <button
                   type="button"
                   onClick={onInviteFriends}
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-transparent text-[var(--color-muted)] hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-slate-700/80 transition-all duration-200 shadow-none hover:shadow-sm"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-transparent text-[var(--color-muted)] hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 transition-all duration-200 shadow-none hover:shadow-sm"
                   aria-label="Invitar amigos"
                 >
                   <UserPlus className="h-4 w-4" />
@@ -463,7 +463,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
         {/* Lista de canales */}
           <div className="flex-1 space-y-3 overflow-y-auto pr-1">
           {isCreatingCategory && (
-            <div className="mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
+            <div className="mb-2 flex items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm">
               <Folder className="h-4 w-4 text-[var(--color-muted)]" />
               <input
                 autoFocus
@@ -498,7 +498,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                   setIsCreatingCategory(false);
                   setNewCategoryName('');
                 }}
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px]"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
                 aria-label="Cancelar"
               >
                 <X className="h-3.5 w-3.5" />
@@ -556,7 +556,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                           e.stopPropagation();
                           toggleCategoryCollapse(category.id);
                         }}
-                        className="flex items-center justify-center rounded hover:bg-white/50 dark:hover:bg-slate-700/50 transition-all"
+                        className="flex items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 transition-all"
                         aria-label={isCollapsed ? 'Expandir categoría' : 'Colapsar categoría'}
                       >
                         {isCollapsed ? (
@@ -578,7 +578,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             setIsCreatingTextChannel(true);
                             setNewTextChannelName('');
                           }}
-                          className="opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-slate-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
+                          className="opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
                           aria-label="Crear canal en categoría"
                         >
                           <Plus className="h-3 w-3" />
@@ -593,7 +593,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             setSelectedCategoryId(null);
                             setNewTextChannelName('');
                           }}
-                          className="opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-slate-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
+                          className="opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
                           aria-label="Crear canal en Texto"
                         >
                           <Plus className="h-3 w-3" />
@@ -603,7 +603,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                     {!isCollapsed && (
                       <>
                         {isCreatingTextChannel && selectedCategoryId === category.id && (
-                          <div className="ml-4 mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
+                          <div className="ml-4 mb-2 flex items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm">
                             <Hash className="h-4 w-4 text-[var(--color-muted)]" />
                             <input
                               autoFocus
@@ -640,7 +640,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                                 setNewTextChannelName('');
                                 setSelectedCategoryId(null);
                               }}
-                              className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px]"
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
                               aria-label="Cancelar"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -648,7 +648,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                           </div>
                         )}
                         {isCreatingTextChannel && category.id === 'texto' && !selectedCategoryId && (
-                          <div className="ml-4 mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
+                          <div className="ml-4 mb-2 flex items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm">
                             <Hash className="h-4 w-4 text-[var(--color-muted)]" />
                             <input
                               autoFocus
@@ -683,7 +683,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                                 setIsCreatingTextChannel(false);
                                 setNewTextChannelName('');
                               }}
-                              className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px]"
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
                               aria-label="Cancelar"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -720,10 +720,10 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             >
                               <button
                                 onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
-                                className={`relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
+                                className={`relative flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
                                   isActive
-                                    ? 'bg-white/80 dark:bg-slate-800/80 text-sena-green dark:text-emerald-400 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 dark:before:bg-emerald-500/60 before:rounded-full'
-                                    : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-slate-700/50 hover:text-[var(--color-text)]'
+                                    ? 'bg-white/80 dark:bg-neutral-800/80 text-sena-green dark:text-emerald-400 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 dark:before:bg-emerald-500/60 before:rounded-full'
+                                    : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-neutral-700/50 hover:text-[var(--color-text)]'
                                 }`}
                               >
                                 <Hash className="h-4 w-4 flex-shrink-0" />
@@ -745,7 +745,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                       </>
                     )}
                     {isCreatingTextChannel && selectedCategoryId === category.id && (
-                      <div className="ml-4 mb-2 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-slate-800/60 px-2.5 py-2 shadow-sm">
+                      <div className="ml-4 mb-2 flex items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm">
                         <Hash className="h-4 w-4 text-[var(--color-muted)]" />
                         <input
                           autoFocus
@@ -782,7 +782,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             setNewTextChannelName('');
                             setSelectedCategoryId(null);
                           }}
-                          className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px]"
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
                           aria-label="Cancelar"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -852,10 +852,10 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                         >
                           <button
                             onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
-                            className={`relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
+                            className={`relative flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
                               isActive
-                                ? 'bg-white/80 dark:bg-slate-800/80 text-sena-green dark:text-emerald-400 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 dark:before:bg-emerald-500/60 before:rounded-full'
-                                : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-slate-700/50 hover:text-[var(--color-text)]'
+                                ? 'bg-white/80 dark:bg-neutral-800/80 text-sena-green dark:text-emerald-400 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 dark:before:bg-emerald-500/60 before:rounded-full'
+                                : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-neutral-700/50 hover:text-[var(--color-text)]'
                             }`}
                           >
                             <Hash className="h-4 w-4 flex-shrink-0" />
@@ -886,12 +886,12 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     {contextMenu && (
       <div
         ref={contextMenuRef}
-        className="fixed z-50 w-48 rounded-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl py-1.5 text-[12px] text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
+        className="fixed z-50 w-48 rounded-2xl bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl py-1.5 text-[12px] text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
         style={{ left: contextMenu.x, top: contextMenu.y }}
       >
         <button
           type="button"
-          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-lg mx-1"
+          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-2xl mx-1"
           onClick={() => {
             setContextMenu(null);
             setIsCreatingTextChannel(true);
@@ -902,7 +902,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
         </button>
         <button
           type="button"
-          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-lg mx-1"
+          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-2xl mx-1"
           onClick={() => {
             setContextMenu(null);
             setIsCreatingCategory(true);

@@ -12,7 +12,7 @@ export const EmptyCommunitiesView: FC<EmptyCommunitiesViewProps> = ({
 }) => {
   return (
     <div className="flex h-full w-full items-center justify-center px-4">
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/30 bg-white/90 p-6 text-center shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/90 sm:p-7">
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/30 bg-white/90 p-6 text-center shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/90 sm:p-7">
         <div className="pointer-events-none absolute -right-20 -top-20 h-32 w-32 rounded-full bg-sena-green/8 blur-3xl dark:bg-sena-green/10" />
         <div className="pointer-events-none absolute -left-16 bottom-0 h-32 w-32 rounded-full bg-emerald-500/5 blur-3xl dark:bg-emerald-500/8" />
 

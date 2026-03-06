@@ -24,7 +24,7 @@ export const ExploreCommunitiesView: FC<ExploreCommunitiesViewProps> = ({
   onCreateCommunity
 }) => {
   return (
-    <div className="flex h-full flex-1 flex-col gap-5 px-6 py-5 bg-gradient-to-br from-slate-50/80 via-white/90 to-slate-50/80 backdrop-blur-xl dark:from-slate-950/80 dark:via-slate-900/90 dark:to-slate-950/80">
+    <div className="flex h-full flex-1 flex-col gap-5 px-6 py-5 bg-gradient-to-br from-slate-50/80 via-white/90 to-slate-50/80 backdrop-blur-xl dark:from-neutral-950/80 dark:via-neutral-900/90 dark:to-neutral-950/80">
       {/* Encabezado elegante */}
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-2 text-center">
         <h1 className="text-lg font-semibold tracking-tight text-[var(--color-text)] md:text-xl">
@@ -79,7 +79,7 @@ export const ExploreCommunitiesView: FC<ExploreCommunitiesViewProps> = ({
             {communities.map((community) => (
               <Card
                 key={community.id}
-                className="group flex h-full cursor-pointer flex-col justify-between rounded-2xl border border-white/70 bg-gradient-to-br from-white/95 via-white/90 to-slate-50/90 p-3 shadow-[0_18px_45px_rgba(15,23,42,0.06)] ring-1 ring-white/40 transition-all duration-300 hover:-translate-y-1 hover:border-sena-green/50 hover:shadow-[0_22px_60px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-slate-900/90 dark:from-slate-900/95 dark:via-slate-900/90 dark:to-slate-950/90 dark:ring-white/15"
+                className="group flex h-full cursor-pointer flex-col justify-between rounded-2xl border border-white/70 bg-gradient-to-br from-white/95 via-white/90 to-slate-50/90 p-3 shadow-[0_18px_45px_rgba(15,23,42,0.06)] ring-1 ring-white/40 transition-all duration-300 hover:-translate-y-1 hover:border-sena-green/50 hover:shadow-[0_22px_60px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-neutral-900/90 dark:from-neutral-900/95 dark:via-neutral-900/90 dark:to-neutral-950/90 dark:ring-white/15"
                 onClick={() => onSelectCommunity(community.id)}
               >
                 <div className="flex items-start gap-3">
@@ -88,10 +88,10 @@ export const ExploreCommunitiesView: FC<ExploreCommunitiesViewProps> = ({
                     <img
                       src={resolveAssetUrl(community.iconUrl) ?? ''}
                       alt={community.name}
-                      className="h-10 w-10 flex-shrink-0 rounded-xl object-cover ring-1 ring-white/60 dark:ring-white/20"
+                      className="h-10 w-10 flex-shrink-0 rounded-2xl object-cover ring-1 ring-white/60 dark:ring-white/20"
                     />
                   ) : (
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sena-green/20 to-emerald-500/25 text-sena-green ring-1 ring-white/60 dark:ring-white/20">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sena-green/20 to-emerald-500/25 text-sena-green ring-1 ring-white/60 dark:ring-white/20">
                       <Users className="h-5 w-5" />
                     </div>
                   )}

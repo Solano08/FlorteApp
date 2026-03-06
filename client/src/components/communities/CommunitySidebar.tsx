@@ -21,7 +21,7 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
   const { communityId } = useParams<{ communityId?: string }>();
 
   return (
-    <aside className="relative z-[100] flex h-full w-[80px] flex-col items-center justify-between bg-gradient-to-b from-white/70 via-white/50 to-white/70 dark:from-slate-800/70 dark:via-slate-800/50 dark:to-slate-800/70 backdrop-blur-xl px-3 py-4 shadow-[2px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[2px_0_20px_rgba(0,0,0,0.2)] overflow-visible">
+    <aside className="relative z-[100] flex h-full w-[80px] flex-col items-center justify-between bg-gradient-to-b from-white/70 via-white/50 to-white/70 dark:from-neutral-800/70 dark:via-neutral-800/50 dark:to-neutral-800/70 backdrop-blur-xl px-3 py-4 shadow-[2px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[2px_0_20px_rgba(0,0,0,0.2)] overflow-visible">
       {/* Lista de comunidades */}
       <div className="relative z-[100] flex flex-1 flex-col items-center gap-3 overflow-y-visible overflow-x-visible py-4 px-2">
         {isLoading ? (
@@ -47,10 +47,10 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
               >
                 <button
                   onClick={() => navigate(`/communities/${community.id}`)}
-                  className={`group relative z-[200] flex h-12 w-12 items-center justify-center rounded-3xl overflow-visible transition-all duration-200 ${
+                  className={`group relative z-[200] flex h-12 w-12 items-center justify-center rounded-2xl overflow-visible transition-all duration-200 ${
                     isActive
-                      ? 'bg-gradient-to-b from-sena-green/15 via-emerald-500/8 to-sena-green/15 text-[var(--color-text)] shadow-[0_10px_24px_rgba(57,169,0,0.25)] ring-2 ring-sena-green/60 border border-white/60 dark:border-slate-700/60 scale-[1.02]'
-                      : 'bg-white/80 dark:bg-slate-700/80 text-[var(--color-text)] hover:bg-white/95 dark:hover:bg-slate-700/95 hover:shadow-md'
+                      ? 'bg-gradient-to-b from-sena-green/15 via-emerald-500/8 to-sena-green/15 text-[var(--color-text)] shadow-[0_10px_24px_rgba(57,169,0,0.25)] ring-2 ring-sena-green/60 border border-white/60 dark:border-neutral-700/60 scale-[1.02]'
+                      : 'bg-white/80 dark:bg-neutral-700/80 text-[var(--color-text)] hover:bg-white/95 dark:hover:bg-neutral-700/95 hover:shadow-md'
                   }`}
                 >
                   {community.iconUrl ? (
@@ -67,7 +67,7 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
                     </span>
                   )}
                   {/* Etiqueta a la derecha del icono */}
-                  <span className="pointer-events-none absolute left-full top-1/2 z-[9999] ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-sm px-3 py-1.5 text-[10px] font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.3)] group-hover:inline-flex" style={{ position: 'absolute' }}>
+                  <span className="pointer-events-none absolute left-full top-1/2 z-[9999] ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-2xl bg-neutral-900/95 dark:bg-neutral-800/95 backdrop-blur-sm px-3 py-1.5 text-[10px] font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.3)] group-hover:inline-flex" style={{ position: 'absolute' }}>
                     {community.name}
                   </span>
                 </button>
@@ -82,14 +82,14 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
         <button
           type="button"
           onClick={onCreateCommunity}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 dark:bg-slate-700/80 text-[var(--color-text)] shadow-sm transition-all duration-300 hover:scale-110 hover:bg-white dark:hover:bg-slate-700 hover:shadow-md"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 dark:bg-neutral-700/80 text-[var(--color-text)] shadow-sm transition-all duration-300 hover:scale-110 hover:bg-white dark:hover:bg-neutral-700 hover:shadow-md"
         >
           <Plus className="h-5 w-5" />
         </button>
         <button
           type="button"
           onClick={onExploreCommunities}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 dark:bg-slate-700/80 text-[var(--color-text)] shadow-sm transition-all duration-300 hover:scale-110 hover:bg-white dark:hover:bg-slate-700 hover:shadow-md"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 dark:bg-neutral-700/80 text-[var(--color-text)] shadow-sm transition-all duration-300 hover:scale-110 hover:bg-white dark:hover:bg-neutral-700 hover:shadow-md"
         >
           <Compass className="h-5 w-5" />
         </button>

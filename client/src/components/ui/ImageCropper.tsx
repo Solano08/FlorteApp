@@ -111,7 +111,7 @@ export const ImageCropper = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative h-[min(60vh,400px)] w-full overflow-hidden rounded-xl bg-slate-900">
+      <div className="relative h-[min(60vh,400px)] w-full overflow-hidden rounded-2xl bg-neutral-900">
         <img
           ref={imageRef}
           src={imageSrc}

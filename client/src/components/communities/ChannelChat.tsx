@@ -262,10 +262,10 @@ export const ChannelChat: FC<ChannelChatProps> = ({
   };
 
   return (
-    <section className="chat-ios flex h-full min-h-0 flex-1 flex-col bg-gradient-to-br from-white/50 via-white/30 to-white/50 dark:from-slate-900/50 dark:via-slate-900/30 dark:to-slate-900/50 backdrop-blur-xl">
+    <section className="chat-ios flex h-full min-h-0 flex-1 flex-col bg-gradient-to-br from-white/50 via-white/30 to-white/50 dark:from-neutral-900/50 dark:via-neutral-900/30 dark:to-neutral-900/50 backdrop-blur-xl">
       {/* Header del canal */}
-      <header className="flex items-center gap-3 border-b border-white/20 dark:border-white/5 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl px-5 py-3.5 shadow-sm">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sena-green/10 dark:bg-sena-green/20">
+      <header className="flex items-center gap-3 border-b border-white/20 dark:border-white/5 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl px-5 py-3.5 shadow-sm">
+        <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-sena-green/10 dark:bg-sena-green/20">
           <Hash className="h-4.5 w-4.5 text-sena-green dark:text-emerald-400" />
         </div>
         <div className="flex-1 min-w-0">
@@ -279,7 +279,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           <div className="relative">
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/60 text-[var(--color-muted)] shadow-sm transition-all duration-150 hover:bg-white hover:text-sena-green dark:bg-slate-800/70 dark:hover:bg-slate-700"
+              className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white/60 text-[var(--color-muted)] shadow-sm transition-all duration-150 hover:bg-white hover:text-sena-green dark:bg-neutral-800/70 dark:hover:bg-neutral-700"
               onClick={() => setPinnedMenuOpen((prev) => !prev)}
               aria-label="Ver mensajes fijados"
             >
@@ -288,7 +288,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
             {pinnedMenuOpen && (
               <div
                 ref={pinnedMenuRef}
-                className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-white/30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl p-3 text-sm text-[var(--color-text)] shadow-[0_18px_40px_rgba(15,23,42,0.18)] dark:shadow-[0_18px_40px_rgba(0,0,0,0.4)]"
+                className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-white/30 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl p-3 text-sm text-[var(--color-text)] shadow-[0_18px_40px_rgba(15,23,42,0.18)] dark:shadow-[0_18px_40px_rgba(0,0,0,0.4)]"
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
@@ -296,7 +296,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                   </span>
                   <button
                     type="button"
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-[var(--color-muted)] hover:text-sena-green dark:bg-slate-800/80 transition-colors"
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-[var(--color-muted)] hover:text-sena-green dark:bg-neutral-800/80 transition-colors"
                     onClick={() => setPinnedMenuOpen(false)}
                   >
                     <X className="h-3.5 w-3.5" />
@@ -313,7 +313,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           </div>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/60 text-[var(--color-muted)] shadow-sm transition-all duration-150 hover:bg-white hover:text-sena-green dark:bg-slate-800/70 dark:hover:bg-slate-700"
+            className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white/60 text-[var(--color-muted)] shadow-sm transition-all duration-150 hover:bg-white hover:text-sena-green dark:bg-neutral-800/70 dark:hover:bg-neutral-700"
             onClick={() => setMembersOpen(true)}
             aria-label="Ver miembros del canal"
           >
@@ -321,7 +321,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           </button>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/60 text-[var(--color-muted)] shadow-sm transition-all duration-150 hover:bg-white hover:text-sena-green dark:bg-slate-800/70 dark:hover:bg-slate-700"
+            className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white/60 text-[var(--color-muted)] shadow-sm transition-all duration-150 hover:bg-white hover:text-sena-green dark:bg-neutral-800/70 dark:hover:bg-neutral-700"
             onClick={() => setInfoOpen(true)}
             aria-label="Información del canal"
           >
@@ -428,7 +428,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                         const totalVotes = Object.values(counts).reduce((a, b) => a + b, 0);
 
                         return (
-                          <div className="inline-flex max-w-full flex-col rounded-2xl bg-white/95 px-3.5 py-3 text-[13px] leading-relaxed tracking-tight text-[var(--color-text)] shadow-sm ring-1 ring-white/40 dark:bg-slate-800/95 dark:ring-white/10">
+                          <div className="inline-flex max-w-full flex-col rounded-2xl bg-white/95 px-3.5 py-3 text-[13px] leading-relaxed tracking-tight text-[var(--color-text)] shadow-sm ring-1 ring-white/40 dark:bg-neutral-800/95 dark:ring-white/10">
                             <p className="text-xs font-semibold text-[var(--color-text)] mb-2">
                               Encuesta: {poll.title}
                             </p>
@@ -442,10 +442,10 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     key={opt}
                                     type="button"
                                     onClick={() => handleVote(message.id, opt)}
-                                    className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-[11px] transition-all duration-150 border ${
+                                    className={`flex w-full items-center justify-between rounded-2xl px-2.5 py-1.5 text-[11px] transition-all duration-150 border ${
                                       isSelected
                                         ? 'border-sena-green/70 bg-sena-green/10 text-sena-green'
-                                        : 'border-white/60 bg-white/60 text-[var(--color-text)] hover:border-sena-green/40 hover:bg-sena-green/5 dark:border-white/10 dark:bg-slate-800/80'
+                                        : 'border-white/60 bg-white/60 text-[var(--color-text)] hover:border-sena-green/40 hover:bg-sena-green/5 dark:border-white/10 dark:bg-neutral-800/80'
                                     }`}
                                   >
                                     <span className="truncate text-left flex-1">{opt}</span>
@@ -466,7 +466,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                         );
                       })()
                     ) : (
-                      <div className="relative inline-flex max-w-full flex-col rounded-2xl bg-white/95 px-3.5 py-2.5 text-[13px] leading-relaxed tracking-tight text-[var(--color-text)] shadow-sm ring-1 ring-white/40 dark:bg-slate-800/95 dark:ring-white/10">
+                      <div className="relative inline-flex max-w-full flex-col rounded-2xl bg-white/95 px-3.5 py-2.5 text-[13px] leading-relaxed tracking-tight text-[var(--color-text)] shadow-sm ring-1 ring-white/40 dark:bg-neutral-800/95 dark:ring-white/10">
                         <div className="flex items-start gap-2">
                           <p className="flex-1 break-words">
                             {message.content}
@@ -474,7 +474,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                           <div className="relative">
                             <button
                               type="button"
-                              className={`ml-2 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[var(--color-muted)] transition-all duration-150 hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-slate-700/80 ${
+                              className={`ml-2 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[var(--color-muted)] transition-all duration-150 hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 ${
                                 hoveredMessageId === message.id || openMessageMenuId === message.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                               }`}
                               onClick={(e) => {
@@ -498,7 +498,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     setContent(`@${message.sender?.firstName || 'Usuario'} `);
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                                 >
                                   <Reply className="h-4 w-4 text-sena-green" /> Responder
                                 </button>
@@ -510,7 +510,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     }
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                                 >
                                   <Copy className="h-4 w-4 text-sena-green" /> Copiar
                                 </button>
@@ -522,7 +522,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     }
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                                 >
                                   <Forward className="h-4 w-4 text-sena-green" /> Reenviar
                                 </button>
@@ -532,7 +532,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     // TODO: Implementar fijar mensaje
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                                 >
                                   <Pin className="h-4 w-4 text-sena-green" /> Fijar
                                 </button>
@@ -542,7 +542,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     // TODO: Implementar destacar mensaje
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                                 >
                                   <Star className="h-4 w-4 text-sena-green" /> Destacar
                                 </button>
@@ -552,7 +552,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     // TODO: Implementar reportar mensaje
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
                                 >
                                   <Flag className="h-4 w-4 text-rose-500" /> Reportar
                                 </button>
@@ -563,7 +563,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                       // TODO: Implementar eliminar mensaje
                                       setOpenMessageMenuId(null);
                                     }}
-                                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
                                   >
                                     <Trash2 className="h-4 w-4 text-rose-500" /> Eliminar
                                   </button>
@@ -583,7 +583,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                       </div>
                     )}
                     {message.attachmentUrl && (
-                      <div className="mt-2 rounded-xl overflow-hidden shadow-md border border-white/30 dark:border-white/10">
+                      <div className="mt-2 rounded-2xl overflow-hidden shadow-md border border-white/30 dark:border-white/10">
                         <img
                           src={resolveAssetUrl(message.attachmentUrl) ?? ''}
                           alt="Adjunto"
@@ -604,43 +604,43 @@ export const ChannelChat: FC<ChannelChatProps> = ({
         <div className="px-5 pb-5 pt-3 border-t border-white/20 dark:border-white/5">
           <form
             onSubmit={handleSubmit}
-            className="w-full h-16 rounded-2xl border border-white/50 dark:border-white/15 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl px-4 shadow-[0_4px_20px_rgba(15,23,42,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-200 focus-within:border-sena-green/40 dark:focus-within:border-sena-green/30 focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.15)] dark:focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.25)]"
+            className="w-full h-16 rounded-2xl border border-white/50 dark:border-white/15 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl px-4 shadow-[0_4px_20px_rgba(15,23,42,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-200 focus-within:border-sena-green/40 dark:focus-within:border-sena-green/30 focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.15)] dark:focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.25)]"
           >
             <div className="relative flex h-full items-center gap-3">
               <div className="relative">
                 <button
                   type="button"
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white/70 dark:bg-slate-800/70 text-[var(--color-muted)] transition-all duration-200 hover:bg-white/90 dark:hover:bg-slate-700/90 hover:text-sena-green hover:scale-105"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-neutral-800/70 text-[var(--color-muted)] transition-all duration-200 hover:bg-white/90 dark:hover:bg-neutral-700/90 hover:text-sena-green hover:scale-105"
                   onClick={() => setPlusMenuOpen((prev) => !prev)}
                   aria-label="Más opciones"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
                 {plusMenuOpen && (
-                  <div className="absolute bottom-full mb-2 left-0 z-30 w-52 rounded-2xl border border-white/40 bg-white/98 p-2 text-[12px] text-[var(--color-text)] shadow-[0_18px_40px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-slate-900/98">
+                  <div className="absolute bottom-full mb-2 left-0 z-30 w-52 rounded-2xl border border-white/40 bg-white/98 p-2 text-[12px] text-[var(--color-text)] shadow-[0_18px_40px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-neutral-900/98">
                     <button
                       type="button"
-                      className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/80"
+                      className="flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 hover:bg-slate-50 dark:hover:bg-neutral-800/80"
                       onClick={handleAttachFileClick}
                     >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-2xl bg-slate-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
                         📎
                       </span>
                       <span className="text-left">Adjuntar archivo</span>
                     </button>
                     <button
                       type="button"
-                      className="mt-1 flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/80"
+                      className="mt-1 flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 hover:bg-slate-50 dark:hover:bg-neutral-800/80"
                       onClick={openPollDialog}
                     >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-2xl bg-slate-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
                         📊
                       </span>
                       <span className="text-left">Crear encuesta</span>
                     </button>
                     <button
                       type="button"
-                      className="mt-1 flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/80"
+                      className="mt-1 flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 hover:bg-slate-50 dark:hover:bg-neutral-800/80"
                       onClick={() => {
                         setPlusMenuOpen(false);
                         // Hilo simple: solo etiqueta el mensaje como inicio de hilo
@@ -651,7 +651,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                         }
                       }}
                     >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-2xl bg-slate-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
                         🧵
                       </span>
                       <span className="text-left">Crear hilo</span>
@@ -676,7 +676,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                 <button
                   type="button"
                   ref={emojiButtonRef}
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white/70 dark:bg-slate-800/70 text-[var(--color-muted)] transition-all duration-200 hover:bg-white/90 dark:hover:bg-slate-700/90 hover:text-sena-green hover:scale-105"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-neutral-800/70 text-[var(--color-muted)] transition-all duration-200 hover:bg-white/90 dark:hover:bg-neutral-700/90 hover:text-sena-green hover:scale-105"
                   onClick={() => setEmojiPickerOpen((prev) => !prev)}
                 >
                   <Smile className="h-4 w-4" />
@@ -696,7 +696,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
               <Button
                 type="submit"
                 size="sm"
-                className="h-11 w-11 rounded-xl px-0 bg-gradient-to-br from-sena-green to-emerald-600 hover:from-sena-green/95 hover:to-emerald-600/95 shadow-[0_4px_12px_rgba(57,169,0,0.3)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.4)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-11 w-11 rounded-2xl px-0 bg-gradient-to-br from-sena-green to-emerald-600 hover:from-sena-green/95 hover:to-emerald-600/95 shadow-[0_4px_12px_rgba(57,169,0,0.3)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.4)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 loading={sending}
                 disabled={!content.trim()}
               >
@@ -716,7 +716,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
               Detalles rápidos del canal y su actividad reciente.
             </p>
           </div>
-          <div className="space-y-2 rounded-2xl bg-white/80 p-4 text-sm text-[var(--color-text)] shadow-sm dark:bg-slate-900/80">
+          <div className="space-y-2 rounded-2xl bg-white/80 p-4 text-sm text-[var(--color-text)] shadow-sm dark:bg-neutral-900/80">
             <p className="font-semibold">#{channelName}</p>
             {channelDescription && (
               <p className="text-[13px] text-[var(--color-muted)]">{channelDescription}</p>
@@ -742,12 +742,12 @@ export const ChannelChat: FC<ChannelChatProps> = ({
       {membersOpen && (
         <>
           <div
-            className="fixed inset-0 z-[100] bg-slate-950/20"
+            className="fixed inset-0 z-[100] bg-neutral-950/20"
             onClick={() => setMembersOpen(false)}
           />
           <aside
             ref={membersPanelRef}
-            className="fixed right-0 top-0 z-[101] flex h-full w-72 flex-col border-l border-white/20 bg-white/96 dark:bg-slate-950/95 backdrop-blur-xl shadow-[0_0_40px_rgba(15,23,42,0.25)] dark:shadow-[0_0_40px_rgba(0,0,0,0.5)] dark:border-white/10"
+            className="fixed right-0 top-0 z-[101] flex h-full w-72 flex-col border-l border-white/20 bg-white/96 dark:bg-neutral-950/95 backdrop-blur-xl shadow-[0_0_40px_rgba(15,23,42,0.25)] dark:shadow-[0_0_40px_rgba(0,0,0,0.5)] dark:border-white/10"
           >
             <div className="flex items-center justify-between border-b border-white/20 px-4 py-3 dark:border-white/10">
               <div>
@@ -758,7 +758,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
               </div>
               <button
                 type="button"
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-[var(--color-muted)] hover:text-sena-green dark:bg-slate-800/80 transition-colors"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-[var(--color-muted)] hover:text-sena-green dark:bg-neutral-800/80 transition-colors"
                 onClick={() => setMembersOpen(false)}
               >
                 <X className="h-3.5 w-3.5" />
@@ -773,7 +773,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                 activeMembers.map((member) => (
                   <div
                     key={member.id}
-                    className="flex items-center gap-2 rounded-xl bg-white/90 dark:bg-slate-900/90 px-2.5 py-2 text-sm text-[var(--color-text)] shadow-sm ring-1 ring-white/40 dark:ring-white/10 transition-all hover:bg-white dark:hover:bg-slate-800/90"
+                    className="flex items-center gap-2 rounded-2xl bg-white/90 dark:bg-neutral-900/90 px-2.5 py-2 text-sm text-[var(--color-text)] shadow-sm ring-1 ring-white/40 dark:ring-white/10 transition-all hover:bg-white dark:hover:bg-neutral-800/90"
                   >
                     {member.avatarUrl ? (
                       <img
