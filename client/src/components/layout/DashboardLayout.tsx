@@ -108,7 +108,7 @@ export const DashboardLayout = ({
   return (
     <div
       className={classNames(
-        'flex bg-black',
+        'flex bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-black dark:to-black',
         contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen'
       )}
     >
