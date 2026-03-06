@@ -52,8 +52,8 @@ export const ForgotPasswordPage = () => {
           {...register('email')}
         />
 
-        {message && <p className="rounded-md bg-emerald-100 px-3 py-2 text-sm text-emerald-600">{message}</p>}
-        {error && <p className="rounded-md bg-red-100 px-3 py-2 text-sm text-red-500">{error}</p>}
+        {message && <p className="rounded-2xl bg-emerald-100 px-3 py-2 text-sm text-emerald-600">{message}</p>}
+        {error && <p className="rounded-2xl bg-red-100 px-3 py-2 text-sm text-red-500">{error}</p>}
 
         <Button type="submit" className="w-full" loading={isSubmitting}>
           Enviar instrucciones

@@ -127,7 +127,7 @@ export const CommunitySettingsPage = () => {
 
   return (
     <DashboardLayout contentClassName="flex h-full w-full overflow-hidden p-0">
-      <div className="flex h-full w-full min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="flex h-full w-full min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
         <div className="flex h-full w-full min-h-0 overflow-hidden bg-transparent">
           <div className="flex h-full w-full">
             <CommunitySidebar
@@ -140,7 +140,7 @@ export const CommunitySettingsPage = () => {
             />
 
             {/* Sidebar ajustes comunidad */}
-            <aside className="flex w-72 flex-col border-r border-white/10 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl shadow-[12px_0_40px_rgba(15,23,42,0.04)] dark:shadow-[12px_0_40px_rgba(0,0,0,0.6)]">
+            <aside className="flex w-72 flex-col border-r border-white/10 dark:border-white/5 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-2xl shadow-[12px_0_40px_rgba(15,23,42,0.04)] dark:shadow-[12px_0_40px_rgba(0,0,0,0.6)]">
               <div className="px-4 py-4 border-b border-white/10 dark:border-white/5">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
                   Ajustes de la comunidad
@@ -154,10 +154,10 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('general')}
-                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
                     activeSection === 'general'
                       ? 'bg-sena-green/10 text-sena-green dark:bg-sena-green/20 dark:text-emerald-300 font-medium shadow-sm ring-1 ring-sena-green/30'
-                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-[var(--color-text)]'
+                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-[var(--color-text)]'
                   }`}
                 >
                   <span>General</span>
@@ -166,10 +166,10 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('privacy')}
-                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
                     activeSection === 'privacy'
                       ? 'bg-sena-green/10 text-sena-green dark:bg-sena-green/20 dark:text-emerald-300 font-medium shadow-sm ring-1 ring-sena-green/30'
-                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-[var(--color-text)]'
+                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-[var(--color-text)]'
                   }`}
                 >
                   <span>Privacidad y seguridad</span>
@@ -178,10 +178,10 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('members')}
-                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
                     activeSection === 'members'
                       ? 'bg-sena-green/10 text-sena-green dark:bg-sena-green/20 dark:text-emerald-300 font-medium shadow-sm ring-1 ring-sena-green/30'
-                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-[var(--color-text)]'
+                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-[var(--color-text)]'
                   }`}
                 >
                   <span>Miembros</span>
@@ -190,7 +190,7 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('danger')}
-                  className={`mt-4 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`mt-4 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
                     activeSection === 'danger'
                       ? 'bg-red-500/10 text-red-500 dark:bg-red-500/15 dark:text-red-400 font-medium'
                       : 'text-red-500 dark:text-red-400 hover:bg-red-500/5 dark:hover:bg-red-500/10'
@@ -204,7 +204,7 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-slate-900/5 via-slate-900/3 to-slate-900/5 px-3 py-2 text-[13px] text-[var(--color-text)] shadow-sm hover:shadow-md hover:bg-white/80 dark:bg-slate-800/80 dark:hover:bg-slate-800 transition-all duration-200"
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-neutral-900/5 via-neutral-900/3 to-neutral-900/5 px-3 py-2 text-[13px] text-[var(--color-text)] shadow-sm hover:shadow-md hover:bg-white/80 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 transition-all duration-200"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   <span>Volver a la comunidad</span>
@@ -214,7 +214,7 @@ export const CommunitySettingsPage = () => {
 
             {/* Contenido principal */}
             <div className="flex flex-1 flex-col min-h-0">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 dark:border-white/5 bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 dark:border-white/5 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-xl">
                 <div>
                   <h2 className="text-lg font-semibold text-[var(--color-text)]">
                     {activeSection === 'general' && 'Ajustes generales'}
@@ -227,7 +227,7 @@ export const CommunitySettingsPage = () => {
                   </p>
                 </div>
                 {(community.memberCount || community.onlineCount) && (
-                  <div className="rounded-full bg-white/70 px-3 py-1 text-[11px] text-[var(--color-muted)] shadow-sm dark:bg-slate-800/80">
+                  <div className="rounded-full bg-white/70 px-3 py-1 text-[11px] text-[var(--color-muted)] shadow-sm dark:bg-neutral-800/80">
                     {typeof community.memberCount === 'number' && (
                       <span>{community.memberCount} miembros</span>
                     )}

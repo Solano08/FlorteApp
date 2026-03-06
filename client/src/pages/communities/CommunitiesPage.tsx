@@ -376,7 +376,7 @@ export const CommunitiesPage = () => {
               />
             ) : (
               <div className="flex flex-1 items-center justify-center px-4">
-                <Card className="glass-liquid relative max-w-lg overflow-hidden rounded-3xl border border-white/35 bg-white/90 p-7 text-center shadow-[0_18px_45px_rgba(15,23,42,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/90">
+                <Card className="glass-liquid relative max-w-lg overflow-hidden rounded-2xl border border-white/35 bg-white/90 p-7 text-center shadow-[0_18px_45px_rgba(15,23,42,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/90">
                   <div className="pointer-events-none absolute -right-24 -top-24 h-40 w-40 rounded-full bg-sena-green/10 blur-3xl dark:bg-sena-green/20" />
                   <div className="pointer-events-none absolute -left-16 bottom-[-40px] h-36 w-36 rounded-full bg-emerald-500/8 blur-3xl dark:bg-emerald-500/15" />
 
@@ -483,7 +483,7 @@ export const CommunitiesPage = () => {
               friends.map((friend) => (
                 <div
                   key={friend.id}
-                  className="flex items-center gap-3 rounded-xl bg-white/70 px-3 py-2 text-sm text-[var(--color-text)] shadow-sm dark:bg-slate-900/80"
+                  className="flex items-center gap-3 rounded-2xl bg-white/70 px-3 py-2 text-sm text-[var(--color-text)] shadow-sm dark:bg-neutral-900/80"
                 >
                   <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-sena-green/10 text-xs font-semibold text-sena-green overflow-hidden">
                     {friend.avatarUrl ? (
@@ -526,7 +526,7 @@ export const CommunitiesPage = () => {
             <label className="block text-xs font-medium text-[var(--color-muted)]">
               Enlace de invitación
             </label>
-            <div className="flex items-center gap-2 rounded-xl border border-white/40 bg-white/80 px-3 py-2 text-xs text-[var(--color-text)] shadow-sm dark:border-white/10 dark:bg-slate-900/80">
+            <div className="flex items-center gap-2 rounded-2xl border border-white/40 bg-white/80 px-3 py-2 text-xs text-[var(--color-text)] shadow-sm dark:border-white/10 dark:bg-neutral-900/80">
               <span className="flex-1 truncate">{inviteLink}</span>
               <Button
                 type="button"
@@ -587,7 +587,7 @@ export const CommunitiesPage = () => {
               ease: [0.16, 1, 0.3, 1],
               exit: { duration: 0.25, ease: [0.16, 1, 0.3, 1] }
             }}
-            className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
+            className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-2xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
             style={{ willChange: 'transform, opacity' }}
           >
             <p className="text-sm font-medium text-[var(--color-text)] whitespace-nowrap relative z-10">{successMessage}</p>

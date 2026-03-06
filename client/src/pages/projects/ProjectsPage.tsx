@@ -301,18 +301,18 @@ export const ProjectsPage = () => {
               <div className="space-y-1.5">
                 <button
                   onClick={() => navigate('/explore')}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                  className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                     <ArrowUpRight className="h-5 w-5" />
                   </div>
                   <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Explorar proyectos</span>
                 </button>
                 <button
                   onClick={() => navigate('/projects')}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                  className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                     <FolderKanban className="h-5 w-5" />
                   </div>
                   <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Revisar mis proyectos</span>
@@ -338,9 +338,9 @@ export const ProjectsPage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                      className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -392,10 +392,10 @@ export const ProjectsPage = () => {
                         key={category.id}
                         type="button"
                         onClick={() => setCategoryFilter(category.id)}
-                        className={`flex flex-col items-center gap-2 rounded-xl p-3 text-center transition-all duration-200 hover:scale-105 ${
+                        className={`flex flex-col items-center gap-2 rounded-2xl p-3 text-center transition-all duration-200 hover:scale-105 ${
                           isSelected
                             ? 'bg-brand/20 ring-2 ring-brand/40 shadow-lg'
-                            : 'bg-white/50 dark:bg-slate-800/50 hover:bg-white/70 dark:hover:bg-slate-700/70'
+                            : 'bg-white/50 dark:bg-neutral-800/50 hover:bg-white/70 dark:hover:bg-neutral-700/70'
                         }`}
                       >
                         <Icon className={`h-5 w-5 ${isSelected ? 'text-brand' : 'text-[var(--color-muted)]'}`} />
@@ -469,23 +469,23 @@ export const ProjectsPage = () => {
                         <button
                           type="button"
                           onClick={(e) => handleMenuToggle(project.id, e)}
-                          className="flex-shrink-0 rounded-lg p-1.5 text-[var(--color-muted)] transition-all hover:bg-white/40 dark:hover:bg-slate-700/40 hover:text-[var(--color-text)] opacity-0 group-hover:opacity-100"
+                          className="flex-shrink-0 rounded-2xl p-1.5 text-[var(--color-muted)] transition-all hover:bg-white/40 dark:hover:bg-neutral-700/40 hover:text-[var(--color-text)] opacity-0 group-hover:opacity-100"
                           aria-label="Opciones del proyecto"
                         >
                           <MoreHorizontal className="h-5 w-5" />
                         </button>
                         {openMenuId === project.id && (
-                          <div className="absolute right-0 top-8 z-50 w-48 rounded-xl glass-liquid-strong border border-white/20 p-1 shadow-lg">
+                          <div className="absolute right-0 top-8 z-50 w-48 rounded-2xl glass-liquid-strong border border-white/20 p-1 shadow-lg">
                             <button
                               onClick={(e) => handleEditProject(project, e)}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--color-text)] transition-colors hover:bg-white/20"
+                              className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm text-[var(--color-text)] transition-colors hover:bg-white/20"
                             >
                               <Edit className="h-4 w-4" />
                               <span>Editar</span>
                             </button>
                             <button
                               onClick={(e) => handleDeleteProject(project, e)}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/10"
+                              className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/10"
                             >
                               <Trash2 className="h-4 w-4" />
                               <span>Eliminar</span>
@@ -496,7 +496,7 @@ export const ProjectsPage = () => {
                     )}
 
                     <div className="flex items-start gap-3 pr-8">
-                      <div className="flex-shrink-0 rounded-xl bg-gradient-to-br from-brand/20 to-emerald-500/20 p-3 text-brand transition-transform group-hover:scale-110">
+                      <div className="flex-shrink-0 rounded-2xl bg-gradient-to-br from-brand/20 to-emerald-500/20 p-3 text-brand transition-transform group-hover:scale-110">
                         <FolderKanban className="h-6 w-6" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -587,9 +587,9 @@ export const ProjectsPage = () => {
                       gradient: 'from-sena-green/10 via-sena-green/5 to-emerald-50/80 dark:from-sena-green/20 dark:via-sena-green/10 dark:to-emerald-950/30',
                       border: 'border-sena-green/30 dark:border-sena-green/40',
                       borderHover: 'hover:border-sena-green/50 dark:hover:border-sena-green/50',
-                      shadow: 'shadow-[0_4px_16px_rgba(59,130,246,0.2)] dark:shadow-[0_4px_16px_rgba(59,130,246,0.15)]',
-                      shadowHover: 'hover:shadow-[0_6px_20px_rgba(59,130,246,0.3)] dark:hover:shadow-[0_6px_20px_rgba(59,130,246,0.2)]',
-                      activeShadow: 'shadow-[0_8px_24px_rgba(59,130,246,0.25)] dark:shadow-[0_8px_24px_rgba(59,130,246,0.2)]'
+                      shadow: 'shadow-[0_4px_16px_rgba(57,169,0,0.2)] dark:shadow-[0_4px_16px_rgba(57,169,0,0.15)]',
+                      shadowHover: 'hover:shadow-[0_6px_20px_rgba(57,169,0,0.3)] dark:hover:shadow-[0_6px_20px_rgba(57,169,0,0.2)]',
+                      activeShadow: 'shadow-[0_8px_24px_rgba(57,169,0,0.25)] dark:shadow-[0_8px_24px_rgba(57,169,0,0.2)]'
                     },
                     completed: {
                       gradient: 'from-brand/20 via-emerald-100/60 to-green-50/80 dark:from-brand/30 dark:via-emerald-900/20 dark:to-green-950/30',
@@ -616,7 +616,7 @@ export const ProjectsPage = () => {
                             : `${config.border} ${config.shadow} ${config.borderHover} ${config.shadowHover} hover:scale-[1.03]`
                         }`}
                       >
-                        <span className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${badge} ${
+                        <span className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${badge} ${
                           isActive ? 'shadow-lg' : ''
                         }`}>
                           <Icon className={`h-5 w-5 ${accent} transition-transform group-hover:scale-110`} />

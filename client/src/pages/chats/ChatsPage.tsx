@@ -1265,13 +1265,13 @@ export const ChatsPage = () => {
       <div className="grid h-full grid-cols-[320px_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)] gap-0 min-h-0">
         <Card
           padded={false}
-          className="relative flex h-full flex-col overflow-hidden rounded-none border-r border-white/30 dark:border-white/10 bg-gradient-to-br from-white/80 via-white/60 to-white/40 dark:from-slate-800/80 dark:via-slate-800/60 dark:to-slate-800/40 backdrop-blur-xl shadow-[0_0_60px_rgba(0,0,0,0.05)] dark:shadow-[0_0_60px_rgba(0,0,0,0.3)] min-h-0"
+          className="relative flex h-full flex-col overflow-hidden rounded-none border-r border-white/30 dark:border-white/10 bg-gradient-to-br from-white/80 via-white/60 to-white/40 dark:from-neutral-800/80 dark:via-neutral-800/60 dark:to-neutral-800/40 backdrop-blur-xl shadow-[0_0_60px_rgba(0,0,0,0.05)] dark:shadow-[0_0_60px_rgba(0,0,0,0.3)] min-h-0"
         >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(57,169,0,0.08),_transparent_70%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(57,169,0,0.15),_transparent_70%)]" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/40 via-white/20 to-transparent dark:from-white/10 dark:via-white/5 dark:to-transparent" />
 
           <div className="relative z-10 flex h-full flex-col overflow-hidden min-h-0">
-            <header className="flex items-center justify-between gap-3 border-b border-white/30 dark:border-white/10 bg-white/30 dark:bg-slate-800/30 backdrop-blur-sm px-6 py-5">
+            <header className="flex items-center justify-between gap-3 border-b border-white/30 dark:border-white/10 bg-white/30 dark:bg-neutral-800/30 backdrop-blur-sm px-6 py-5">
               <div>
                 <h2 className="text-lg font-bold text-[var(--color-text)] bg-gradient-to-r from-sena-green to-emerald-600 bg-clip-text text-transparent">
                   Chats
@@ -1292,7 +1292,7 @@ export const ChatsPage = () => {
                         setIsMoreMenuOpen((prev) => !prev);
                       }
                     }}
-                    className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all bg-white/10 text-slate-700 backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
+                    className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-2xl font-medium transition-all bg-white/10 text-neutral-700 backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-neutral-300 dark:hover:text-sena-green"
                     aria-label="Mas opciones"
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -1301,7 +1301,7 @@ export const ChatsPage = () => {
                     createPortal(
                       <div
                         ref={moreMenuRef}
-                        className="fixed w-[220px] rounded-[24px] glass-liquid py-2 z-[999999] relative"
+                        className="fixed w-[220px] rounded-2xl glass-liquid py-2 z-[999999] relative"
                       style={{
                         left: `${moreMenuPosition.x}px`,
                         top: `${moreMenuPosition.y}px`,
@@ -1310,9 +1310,9 @@ export const ChatsPage = () => {
                       }}
                     >
                       {/* Efectos visuales glass liquid */}
-                      <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.2),_transparent_60%)] opacity-50 dark:opacity-15 mix-blend-overlay" />
-                      <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.15),_transparent_60%)] opacity-40 dark:opacity-8 mix-blend-overlay" />
-                      <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-gradient-to-br from-white/8 via-transparent to-white/3 dark:from-white/3 dark:to-transparent opacity-40" />
+                      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.2),_transparent_60%)] opacity-50 dark:opacity-15 mix-blend-overlay" />
+                      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.15),_transparent_60%)] opacity-40 dark:opacity-8 mix-blend-overlay" />
+                      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/8 via-transparent to-white/3 dark:from-white/3 dark:to-transparent opacity-40" />
                       <div className="relative z-10">
                         <button
                           type="button"
@@ -1320,7 +1320,7 @@ export const ChatsPage = () => {
                             setIsMoreMenuOpen(false);
                             setShowStarredMessages(true);
                           }}
-                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                         >
                           <Star className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                           <span className="text-left font-medium">Mensajes destacados</span>
@@ -1332,7 +1332,7 @@ export const ChatsPage = () => {
                             setIsMoreMenuOpen(false);
                             setIsSelectionMode(true);
                           }}
-                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                         >
                           <CheckSquare2 className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                           <span className="text-left font-medium">Seleccionar chats</span>
@@ -1356,7 +1356,7 @@ export const ChatsPage = () => {
                               return updated;
                             });
                           }}
-                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                         >
                           <CheckCheck className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                           <span className="text-left font-medium">Marcar todos como leído</span>
@@ -1371,14 +1371,14 @@ export const ChatsPage = () => {
                   type="button"
                   onClick={() => setShowNewChatDialog(true)}
                   aria-label="Nuevo chat"
-                  className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
+                  className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-2xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-neutral-300 dark:hover:text-sena-green"
                 >
                   <MessageCirclePlus className="h-4 w-4 text-sena-green" />
                 </button>
               </div>
             </header>
 
-            <div className="space-y-4 border-b border-white/20 dark:border-white/10 bg-white/20 dark:bg-slate-800/20 backdrop-blur-sm px-6 py-5">
+            <div className="space-y-4 border-b border-white/20 dark:border-white/10 bg-white/20 dark:bg-neutral-800/20 backdrop-blur-sm px-6 py-5">
               <div className="flex items-center gap-3 rounded-2xl glass-liquid px-4 py-3 transition-all duration-200 focus-within:border-sena-green/50 focus-within:ring-2 focus-within:ring-sena-green/20 focus-within:shadow-[0_0_0_4px_rgba(57,169,0,0.1)] hover:shadow-lg">
                 <Search className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                 <input
@@ -1390,7 +1390,7 @@ export const ChatsPage = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 rounded-2xl bg-white/30 dark:bg-slate-700/30 backdrop-blur-sm p-1.5 text-xs text-[var(--color-muted)]">
+              <div className="flex items-center gap-1.5 rounded-2xl bg-white/30 dark:bg-neutral-700/30 backdrop-blur-sm p-1.5 text-xs text-[var(--color-muted)]">
                 {filterTabs.map((tab) => {
                   const Icon = tab.icon;
                   return (
@@ -1399,7 +1399,7 @@ export const ChatsPage = () => {
                       type="button"
                       onClick={() => setActiveFilter(tab.value)}
                       className={classNames(
-                        'flex-1 rounded-xl px-3 py-2 transition-all duration-200 font-medium',
+                        'flex-1 rounded-2xl px-3 py-2 transition-all duration-200 font-medium',
                         activeFilter === tab.value
                           ? 'bg-gradient-to-r from-sena-green to-emerald-500 text-white shadow-[0_4px_12px_rgba(57,169,0,0.35)] scale-105'
                           : 'hover:text-[var(--color-text)] hover:bg-white/20 dark:hover:bg-white/10'
@@ -1414,7 +1414,7 @@ export const ChatsPage = () => {
                               'rounded-full px-2 py-0.5 text-[10px] font-bold transition-all',
                               activeFilter === tab.value
                                 ? 'bg-white/30 text-white'
-                                : 'bg-white/30 dark:bg-slate-600/30 text-[var(--color-muted)]'
+                                : 'bg-white/30 dark:bg-neutral-600/30 text-[var(--color-muted)]'
                             )}
                           >
                             {tabStats[tab.value]}
@@ -1435,8 +1435,8 @@ export const ChatsPage = () => {
                   type="button"
                   onClick={() => setActiveFilter('archived')}
                   className={classNames(
-                    'inline-flex items-center gap-2 rounded-xl bg-white/40 dark:bg-slate-700/40 px-3 py-1.5 text-[11px] font-medium text-[var(--color-text)] shadow-sm transition hover:bg-white/70 dark:hover:bg-slate-700/70',
-                    activeFilter === 'archived' && 'ring-2 ring-sena-green/40 bg-white dark:bg-slate-800'
+                    'inline-flex items-center gap-2 rounded-2xl bg-white/40 dark:bg-neutral-700/40 px-3 py-1.5 text-[11px] font-medium text-[var(--color-text)] shadow-sm transition hover:bg-white/70 dark:hover:bg-neutral-700/70',
+                    activeFilter === 'archived' && 'ring-2 ring-sena-green/40 bg-white dark:bg-neutral-800'
                   )}
                 >
                   <Archive className="h-3.5 w-3.5 text-[var(--color-muted)]" />
@@ -1446,7 +1446,7 @@ export const ChatsPage = () => {
             )}
 
             {isSelectionMode && selectedChats.size > 0 && (
-              <div className="border-b border-white/20 dark:border-white/10 bg-white/30 dark:bg-slate-800/30 backdrop-blur-sm px-6 py-3">
+              <div className="border-b border-white/20 dark:border-white/10 bg-white/30 dark:bg-neutral-800/30 backdrop-blur-sm px-6 py-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-[var(--color-text)]">
                     {selectedChats.size} {selectedChats.size === 1 ? 'chat seleccionado' : 'chats seleccionados'}
@@ -1544,11 +1544,11 @@ export const ChatsPage = () => {
                               'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200 cursor-pointer',
                               isSelected
                                 ? 'bg-gradient-to-r from-sena-green/20 via-emerald-500/15 to-sena-green/20 text-sena-green shadow-[0_8px_32px_rgba(57,169,0,0.25)] border-2 border-sena-green/40 scale-[1.01] backdrop-blur-sm'
-                                : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
+                                : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-neutral-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
                             )}
                           >
                             <div className={classNames(
-                              'flex h-6 w-6 items-center justify-center rounded-lg border-2 transition-all flex-shrink-0',
+                              'flex h-6 w-6 items-center justify-center rounded-2xl border-2 transition-all flex-shrink-0',
                               isSelected
                                 ? 'bg-sena-green border-sena-green text-white'
                                 : 'border-slate-400/50 text-transparent hover:border-sena-green/50'
@@ -1568,7 +1568,7 @@ export const ChatsPage = () => {
                               {!chat.isGroup && (
                                 <span
                                   className={classNames(
-                                    'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-slate-800 transition-all duration-200',
+                                    'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-neutral-800 transition-all duration-200',
                                     hasUnread
                                       ? 'bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_2px_8px_rgba(57,169,0,0.5)]'
                                       : 'bg-transparent'
@@ -1581,7 +1581,7 @@ export const ChatsPage = () => {
                                 </span>
                               )}
                               {isMuted && (
-                                <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-slate-600 text-white">
+                                <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-600 text-white">
                                   <BellOff className="h-2.5 w-2.5" />
                                 </span>
                               )}
@@ -1651,8 +1651,8 @@ export const ChatsPage = () => {
                             className={classNames(
                               'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200',
                               isActive
-                                ? 'bg-gradient-to-r from-white/90 via-white/80 to-white/90 dark:from-slate-800/90 dark:via-slate-800/80 dark:to-slate-800/90 text-[var(--color-text)] shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] border border-white/60 dark:border-slate-700/50 ring-1 ring-white/40 dark:ring-slate-600/30 ring-offset-1 ring-offset-white/50 dark:ring-offset-slate-900/50 scale-[1.005] backdrop-blur-sm'
-                                : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
+                                ? 'bg-gradient-to-r from-white/90 via-white/80 to-white/90 dark:from-neutral-800/90 dark:via-neutral-800/80 dark:to-neutral-800/90 text-[var(--color-text)] shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] border border-white/60 dark:border-neutral-700/50 ring-1 ring-white/40 dark:ring-neutral-600/30 ring-offset-1 ring-offset-white/50 dark:ring-offset-neutral-900/50 scale-[1.005] backdrop-blur-sm'
+                                : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-neutral-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
                             )}
                           >
                             <span className="relative inline-flex flex-shrink-0">
@@ -1668,7 +1668,7 @@ export const ChatsPage = () => {
                               {!chat.isGroup && (
                                 <span
                                   className={classNames(
-                                    'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-slate-800 transition-all duration-200',
+                                    'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-neutral-800 transition-all duration-200',
                                     hasUnread
                                       ? 'bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_2px_8px_rgba(57,169,0,0.5)]'
                                       : 'bg-transparent'
@@ -1681,7 +1681,7 @@ export const ChatsPage = () => {
                                 </span>
                               )}
                               {isMuted && (
-                                <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-slate-600 text-white">
+                                <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-600 text-white">
                                   <BellOff className="h-2.5 w-2.5" />
                                 </span>
                               )}
@@ -1738,10 +1738,10 @@ export const ChatsPage = () => {
                               type="button"
                               onClick={(e) => handleMenuToggle(chat.id, e)}
                               className={classNames(
-                                'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0',
+                                'flex h-8 w-8 items-center justify-center rounded-2xl transition-all duration-200 flex-shrink-0',
                                 openMenuId === chat.id
                                   ? 'opacity-100 bg-sena-green/20 dark:bg-sena-green/30 text-sena-green shadow-md rotate-180'
-                                  : 'opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:bg-white/20 dark:hover:bg-slate-700/20 hover:text-sena-green'
+                                  : 'opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:bg-white/20 dark:hover:bg-neutral-700/20 hover:text-sena-green'
                               )}
                               aria-label="Opciones del chat"
                             >
@@ -1756,7 +1756,7 @@ export const ChatsPage = () => {
                               ref={(el) => {
                                 menuRefs.current[chat.id] = el;
                               }}
-                              className="fixed w-[220px] rounded-[24px] glass-liquid py-2 relative"
+                              className="fixed w-[220px] rounded-2xl glass-liquid py-2 relative"
                               style={{
                                 left: `${menuPosition.x}px`,
                                 top: `${menuPosition.y}px`,
@@ -1767,15 +1767,15 @@ export const ChatsPage = () => {
                               }}
                             >
                             {/* Efectos visuales glass liquid */}
-                            <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.2),_transparent_60%)] opacity-50 dark:opacity-15 mix-blend-overlay" />
-                            <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.15),_transparent_60%)] opacity-40 dark:opacity-8 mix-blend-overlay" />
-                            <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-gradient-to-br from-white/8 via-transparent to-white/3 dark:from-white/3 dark:to-transparent opacity-40" />
+                            <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.2),_transparent_60%)] opacity-50 dark:opacity-15 mix-blend-overlay" />
+                            <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.15),_transparent_60%)] opacity-40 dark:opacity-8 mix-blend-overlay" />
+                            <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/8 via-transparent to-white/3 dark:from-white/3 dark:to-transparent opacity-40" />
                             <div className="relative z-10">
                               {!archivedChats.has(chat.id) ? (
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('archive', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                                 >
                                   <Archive className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                                   <span className="text-left font-medium">Archivar chat</span>
@@ -1784,7 +1784,7 @@ export const ChatsPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('unarchive', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                                 >
                                   <Archive className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                                   <span className="text-left font-medium">Desarchivar chat</span>
@@ -1795,7 +1795,7 @@ export const ChatsPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('mute', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                                 >
                                   <BellOff className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                                   <span className="text-left font-medium">Silenciar notificaciones</span>
@@ -1804,7 +1804,7 @@ export const ChatsPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('unmute', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                                 >
                                   <BellOff className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                                   <span className="text-left font-medium">Activar notificaciones</span>
@@ -1815,7 +1815,7 @@ export const ChatsPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('pin', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                                 >
                                   <Pin className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                                   <span className="text-left font-medium">Fijar chat</span>
@@ -1824,7 +1824,7 @@ export const ChatsPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('unpin', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                                 >
                                   <Pin className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                                   <span className="text-left font-medium">Desfijar chat</span>
@@ -1834,7 +1834,7 @@ export const ChatsPage = () => {
                               <button
                                 type="button"
                                 onClick={() => handleMenuAction('markRead', chat.id)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-sena-green transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                               >
                                 <CheckSquare2 className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                                 <span className="text-left font-medium">Marcar como leído</span>
@@ -1844,7 +1844,7 @@ export const ChatsPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('favorite', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-amber-500 transition-colors hover:bg-white/60 dark:hover:bg-slate-700/60 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-amber-500 transition-colors hover:bg-white/60 dark:hover:bg-neutral-700/60 rounded-2xl mx-2"
                                 >
                                   <Star className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                                   <span className="text-left font-medium">Añadir a Favoritos</span>
@@ -1853,7 +1853,7 @@ export const ChatsPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('unfavorite', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-amber-500 transition-colors hover:bg-white/60 dark:hover:bg-slate-700/60 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-amber-500 transition-colors hover:bg-white/60 dark:hover:bg-neutral-700/60 rounded-2xl mx-2"
                                 >
                                   <Star className="h-4 w-4 text-amber-400 flex-shrink-0 fill-amber-400" />
                                   <span className="text-left font-medium">Quitar de Favoritos</span>
@@ -1864,7 +1864,7 @@ export const ChatsPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleMenuAction('block', chat.id)}
-                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-red-500 transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-xl mx-2"
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[var(--color-text)] hover:text-red-500 transition-colors hover:bg-white/20 dark:hover:bg-white/10 rounded-2xl mx-2"
                                 >
                                   <Ban className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                                   <span className="text-left font-medium">Bloquear</span>
@@ -1942,8 +1942,8 @@ export const ChatsPage = () => {
                                     className={classNames(
                                       'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200',
                               isActive
-                                ? 'bg-gradient-to-r from-sena-green/10 via-emerald-500/8 to-sena-green/10 text-[var(--color-text)] shadow-[0_10px_30px_rgba(15,23,42,0.18)] border border-sena-green/35 ring-1 ring-sena-green/45 ring-offset-2 ring-offset-white/80 dark:ring-offset-slate-900/80 scale-[1.01] backdrop-blur-sm'
-                                        : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
+                                ? 'bg-gradient-to-r from-sena-green/10 via-emerald-500/8 to-sena-green/10 text-[var(--color-text)] shadow-[0_10px_30px_rgba(15,23,42,0.18)] border border-sena-green/35 ring-1 ring-sena-green/45 ring-offset-2 ring-offset-white/80 dark:ring-offset-neutral-900/80 scale-[1.01] backdrop-blur-sm'
+                                        : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-neutral-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
                                     )}
                                   >
                                     <span className="relative inline-flex flex-shrink-0">
@@ -2009,10 +2009,10 @@ export const ChatsPage = () => {
                                       type="button"
                                       onClick={(e) => handleMenuToggle(chat.id, e)}
                                       className={classNames(
-                                        'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0',
+                                        'flex h-8 w-8 items-center justify-center rounded-2xl transition-all duration-200 flex-shrink-0',
                                         openMenuId === chat.id
                                           ? 'opacity-100 bg-sena-green/20 dark:bg-sena-green/30 text-sena-green shadow-md rotate-180'
-                                          : 'opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:bg-white/20 dark:hover:bg-slate-700/20 hover:text-sena-green'
+                                          : 'opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:bg-white/20 dark:hover:bg-neutral-700/20 hover:text-sena-green'
                                       )}
                                       aria-label="Opciones del chat"
                                     >
@@ -2026,7 +2026,7 @@ export const ChatsPage = () => {
                                         ref={(el) => {
                                           menuRefs.current[chat.id] = el;
                                         }}
-                                        className="fixed w-[220px] rounded-2xl bg-slate-800/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2"
+                                        className="fixed w-[220px] rounded-2xl bg-neutral-800/98 dark:bg-neutral-900/98 backdrop-blur-xl border border-neutral-700/50 dark:border-neutral-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2"
                                         style={{
                                           left: `${menuPosition.x}px`,
                                           top: `${menuPosition.y}px`,
@@ -2039,7 +2039,7 @@ export const ChatsPage = () => {
                                         <button
                                           type="button"
                                           onClick={() => handleMenuAction('unarchive', chat.id)}
-                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                         >
                                           <Archive className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                           <span className="text-left font-medium">Desarchivar chat</span>
@@ -2048,7 +2048,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('mute', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                           >
                                             <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Silenciar notificaciones</span>
@@ -2057,7 +2057,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('unmute', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                           >
                                             <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Activar notificaciones</span>
@@ -2067,7 +2067,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('pin', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                           >
                                             <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Fijar chat</span>
@@ -2076,13 +2076,13 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('unpin', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                           >
                                             <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Desfijar chat</span>
                                           </button>
                                         )}
-                                        <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
+                                        <div className="my-1 h-px bg-neutral-700/50 dark:bg-neutral-600/50 mx-2" />
                                         <button
                                           type="button"
                                           onClick={() => handleMenuAction('delete', chat.id)}
@@ -2148,8 +2148,8 @@ export const ChatsPage = () => {
                                     className={classNames(
                                       'group flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all duration-200',
                                       isActive
-                                        ? 'bg-gradient-to-r from-sena-green/10 via-emerald-500/8 to-sena-green/10 text-[var(--color-text)] shadow-[0_10px_30px_rgba(15,23,42,0.18)] border border-sena-green/35 ring-1 ring-sena-green/45 ring-offset-2 ring-offset-white/80 dark:ring-offset-slate-900/80 scale-[1.01] backdrop-blur-sm'
-                                        : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-slate-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
+                                        ? 'bg-gradient-to-r from-sena-green/10 via-emerald-500/8 to-sena-green/10 text-[var(--color-text)] shadow-[0_10px_30px_rgba(15,23,42,0.18)] border border-sena-green/35 ring-1 ring-sena-green/45 ring-offset-2 ring-offset-white/80 dark:ring-offset-neutral-900/80 scale-[1.01] backdrop-blur-sm'
+                                        : 'text-[var(--color-text)] hover:bg-white/30 dark:hover:bg-neutral-700/30 hover:shadow-md hover:scale-[1.01] border border-transparent'
                                     )}
                                   >
                                     <span className="relative inline-flex flex-shrink-0">
@@ -2215,10 +2215,10 @@ export const ChatsPage = () => {
                                       type="button"
                                       onClick={(e) => handleMenuToggle(chat.id, e)}
                                       className={classNames(
-                                        'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 flex-shrink-0',
+                                        'flex h-8 w-8 items-center justify-center rounded-2xl transition-all duration-200 flex-shrink-0',
                                         openMenuId === chat.id
                                           ? 'opacity-100 bg-sena-green/20 dark:bg-sena-green/30 text-sena-green shadow-md rotate-180'
-                                          : 'opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:bg-white/20 dark:hover:bg-slate-700/20 hover:text-sena-green'
+                                          : 'opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:bg-white/20 dark:hover:bg-neutral-700/20 hover:text-sena-green'
                                       )}
                                       aria-label="Opciones del chat"
                                     >
@@ -2232,7 +2232,7 @@ export const ChatsPage = () => {
                                         ref={(el) => {
                                           menuRefs.current[chat.id] = el;
                                         }}
-                                        className="fixed w-[220px] rounded-2xl bg-slate-800/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2"
+                                        className="fixed w-[220px] rounded-2xl bg-neutral-800/98 dark:bg-neutral-900/98 backdrop-blur-xl border border-neutral-700/50 dark:border-neutral-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2"
                                         style={{
                                           left: `${menuPosition.x}px`,
                                           top: `${menuPosition.y}px`,
@@ -2245,7 +2245,7 @@ export const ChatsPage = () => {
                                         <button
                                           type="button"
                                           onClick={() => handleMenuAction('unarchive', chat.id)}
-                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                          className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                         >
                                           <Archive className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                           <span className="text-left font-medium">Desarchivar chat</span>
@@ -2254,7 +2254,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('mute', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                           >
                                             <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Silenciar notificaciones</span>
@@ -2263,7 +2263,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('unmute', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                           >
                                             <BellOff className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Activar notificaciones</span>
@@ -2273,7 +2273,7 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('pin', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                           >
                                             <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Fijar chat</span>
@@ -2282,13 +2282,13 @@ export const ChatsPage = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleMenuAction('unpin', chat.id)}
-                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                           >
                                             <Pin className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                             <span className="text-left font-medium">Desfijar chat</span>
                                           </button>
                                         )}
-                                        <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
+                                        <div className="my-1 h-px bg-neutral-700/50 dark:bg-neutral-600/50 mx-2" />
                                         <button
                                           type="button"
                                           onClick={() => handleMenuAction('delete', chat.id)}
@@ -2315,7 +2315,7 @@ export const ChatsPage = () => {
 
         <Card
           padded={false}
-          className="relative flex h-full flex-col overflow-hidden rounded-none bg-gradient-to-br from-white/90 via-white/70 to-white/50 dark:from-slate-800/90 dark:via-slate-800/70 dark:to-slate-800/50 backdrop-blur-xl shadow-[0_0_60px_rgba(0,0,0,0.05)] dark:shadow-[0_0_60px_rgba(0,0,0,0.3)] min-h-0"
+          className="relative flex h-full flex-col overflow-hidden rounded-none bg-gradient-to-br from-white/90 via-white/70 to-white/50 dark:from-neutral-800/90 dark:via-neutral-800/70 dark:to-neutral-800/50 backdrop-blur-xl shadow-[0_0_60px_rgba(0,0,0,0.05)] dark:shadow-[0_0_60px_rgba(0,0,0,0.3)] min-h-0"
         >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(57,169,0,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top_right,_rgba(57,169,0,0.15),_transparent_60%)]" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/30 via-white/15 to-transparent dark:from-white/10 dark:via-white/5 dark:to-transparent" />
@@ -2323,7 +2323,7 @@ export const ChatsPage = () => {
           <div className="relative z-10 flex h-full flex-col min-h-0">
             {activeChat ? (
               <>
-                <header className="flex-shrink-0 flex items-center justify-between gap-4 border-b border-white/30 dark:border-white/10 bg-white/30 dark:bg-slate-800/30 backdrop-blur-sm px-6 py-5">
+                <header className="flex-shrink-0 flex items-center justify-between gap-4 border-b border-white/30 dark:border-white/10 bg-white/30 dark:bg-neutral-800/30 backdrop-blur-sm px-6 py-5">
                   <div className="flex items-center gap-4">
                     <span
                       className={classNames(
@@ -2334,7 +2334,7 @@ export const ChatsPage = () => {
                       {activeChatInitials}
                     </span>
                     <div>
-                      <h3 className="text-lg font-bold text-[var(--color-text)] bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200 bg-clip-text text-transparent">
+                      <h3 className="text-lg font-bold text-[var(--color-text)] bg-gradient-to-r from-neutral-900 to-neutral-700 dark:from-white dark:to-neutral-200 bg-clip-text text-transparent">
                         {activeChatName}
                       </h3>
                       <p className="text-xs text-[var(--color-muted)] mt-0.5 font-medium">
@@ -2356,10 +2356,10 @@ export const ChatsPage = () => {
                         }
                       }}
                       className={classNames(
-                        "inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all backdrop-blur-md border shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20",
+                        "inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-2xl font-medium transition-all backdrop-blur-md border shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20",
                         selectedChatId && favoriteChats.has(selectedChatId)
                           ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 hover:border-yellow-500/40 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20"
-                          : "bg-white/10 text-[var(--color-muted)] border-white/20 hover:bg-white/20 hover:border-white/40 hover:text-sena-green dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
+                          : "bg-white/10 text-[var(--color-muted)] border-white/20 hover:bg-white/20 hover:border-white/40 hover:text-sena-green dark:bg-white/5 dark:hover:bg-white/10 dark:text-neutral-300 dark:hover:text-sena-green"
                       )}
                       aria-label="Marcar como favorito"
                     >
@@ -2367,14 +2367,14 @@ export const ChatsPage = () => {
                     </button>
                     <button
                       type="button"
-                      className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
+                      className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-2xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-neutral-300 dark:hover:text-sena-green"
                       aria-label="Llamada de voz"
                     >
                       <Phone className="h-4 w-4 text-sena-green" />
                     </button>
                     <button
                       type="button"
-                      className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
+                      className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-2xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-neutral-300 dark:hover:text-sena-green"
                       aria-label="Videollamada"
                     >
                       <Video className="h-4 w-4 text-sena-green" />
@@ -2382,7 +2382,7 @@ export const ChatsPage = () => {
                     <button
                       type="button"
                       onClick={() => setIsInfoModalOpen(true)}
-                      className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 dark:hover:text-sena-green"
+                      className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-2xl font-medium transition-all bg-white/10 text-[var(--color-muted)] backdrop-blur-md border border-white/20 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-white/20 hover:border-white/40 hover:text-sena-green hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-neutral-300 dark:hover:text-sena-green"
                       aria-label="Detalles del chat"
                     >
                       <Info className="h-4 w-4 text-sena-green" />
@@ -2390,12 +2390,12 @@ export const ChatsPage = () => {
                   </div>
                 </header>
 
-                <div ref={messageListRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-6 hide-scrollbar bg-gradient-to-b from-transparent via-transparent to-white/20 dark:to-slate-800/20">
+                <div ref={messageListRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-6 hide-scrollbar bg-gradient-to-b from-transparent via-transparent to-white/20 dark:to-neutral-800/20">
                   <div className="mx-auto flex max-w-3xl flex-col gap-4">
-                    <div className="flex flex-col items-center gap-4 rounded-3xl glass-liquid-strong px-8 py-8 text-center border border-white/30 dark:border-white/10 shadow-xl">
+                    <div className="flex flex-col items-center gap-4 rounded-2xl glass-liquid-strong px-8 py-8 text-center border border-white/30 dark:border-white/10 shadow-xl">
                       <span
                         className={classNames(
-                          'flex h-24 w-24 items-center justify-center rounded-3xl text-3xl font-bold text-white shadow-[0_12px_32px_rgba(0,0,0,0.25)] transition-transform duration-200 hover:scale-110',
+                          'flex h-24 w-24 items-center justify-center rounded-2xl text-3xl font-bold text-white shadow-[0_12px_32px_rgba(0,0,0,0.25)] transition-transform duration-200 hover:scale-110',
                           activeChatGradient
                         )}
                       >
@@ -2416,7 +2416,7 @@ export const ChatsPage = () => {
                         <p className="text-xs text-[var(--color-muted)]">Cargando mensajes...</p>
                       </div>
                     ) : sortedMessages.length === 0 ? (
-                      <div className="rounded-3xl border-2 border-dashed border-sena-green/20 bg-gradient-to-br from-sena-green/5 to-transparent px-8 py-12 text-center">
+                      <div className="rounded-2xl border-2 border-dashed border-sena-green/20 bg-gradient-to-br from-sena-green/5 to-transparent px-8 py-12 text-center">
                         <MessageCirclePlus className="h-16 w-16 mx-auto mb-4 text-sena-green/40" />
                         <p className="text-sm font-semibold text-[var(--color-text)] mb-2">Aún no hay mensajes</p>
                         <p className="text-xs text-[var(--color-muted)]">Escribe el primero!</p>
@@ -2455,7 +2455,7 @@ export const ChatsPage = () => {
                                 'max-w-[75%] rounded-2xl px-5 py-3.5 text-sm shadow-lg transition-all duration-200 relative',
                                 isOwn
                                   ? 'bg-gradient-to-br from-sena-green to-emerald-600 text-white shadow-[0_8px_24px_rgba(57,169,0,0.3)]'
-                                  : 'bg-white/40 dark:bg-slate-700/40 backdrop-blur-sm text-[var(--color-text)] border border-white/50 dark:border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.1)]'
+                                  : 'bg-white/40 dark:bg-neutral-700/40 backdrop-blur-sm text-[var(--color-text)] border border-white/50 dark:border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.1)]'
                               )}
                             >
                               {isOwn && (
@@ -2468,8 +2468,8 @@ export const ChatsPage = () => {
                                   className={classNames(
                                     'absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full transition-all duration-200 z-20',
                                     openMessageMenuId === entry.id
-                                      ? 'opacity-100 bg-white/30 dark:bg-slate-700/50 text-white shadow-lg scale-110'
-                                      : 'opacity-0 group-hover:opacity-100 bg-white/20 dark:bg-slate-700/30 text-white/90 hover:bg-white/30 dark:hover:bg-slate-700/50 hover:scale-110'
+                                      ? 'opacity-100 bg-white/30 dark:bg-neutral-700/50 text-white shadow-lg scale-110'
+                                      : 'opacity-0 group-hover:opacity-100 bg-white/20 dark:bg-neutral-700/30 text-white/90 hover:bg-white/30 dark:hover:bg-neutral-700/50 hover:scale-110'
                                   )}
                                   aria-label="Opciones del mensaje"
                                 >
@@ -2497,12 +2497,12 @@ export const ChatsPage = () => {
                                   (attachmentUrl && attachmentUrl.match(/\.(pdf)$/i));
 
                                 return (
-                                  <div className="mb-2 rounded-xl overflow-hidden">
+                                  <div className="mb-2 rounded-2xl overflow-hidden">
                                     {isImage && attachmentUrl ? (
                                       <img
                                         src={attachmentUrl}
                                         alt="Adjunto"
-                                        className="max-w-full max-h-64 rounded-xl object-cover"
+                                        className="max-w-full max-h-64 rounded-2xl object-cover"
                                       />
                                     ) : (
                                       <a
@@ -2510,14 +2510,14 @@ export const ChatsPage = () => {
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className={classNames(
-                                          'flex items-center gap-3 p-3 rounded-xl transition-all hover:opacity-80',
+                                          'flex items-center gap-3 p-3 rounded-2xl transition-all hover:opacity-80',
                                           isOwn
                                             ? 'bg-white/20 text-white'
-                                            : 'bg-white/30 dark:bg-slate-600/30 text-[var(--color-text)]'
+                                            : 'bg-white/30 dark:bg-neutral-600/30 text-[var(--color-text)]'
                                         )}
                                       >
                                         <div className={classNames(
-                                          'flex h-10 w-10 items-center justify-center rounded-lg',
+                                          'flex h-10 w-10 items-center justify-center rounded-2xl',
                                           isOwn ? 'bg-white/20' : 'bg-sena-green/20'
                                         )}>
                                           {isPdf ? (
@@ -2562,7 +2562,7 @@ export const ChatsPage = () => {
                                   ref={(el) => {
                                     messageMenuRefs.current[entry.id] = el;
                                   }}
-                                  className="fixed w-[200px] rounded-2xl bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-white/50 dark:border-slate-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2 z-[999999]"
+                                  className="fixed w-[200px] rounded-2xl bg-white/98 dark:bg-neutral-900/98 backdrop-blur-xl border border-white/50 dark:border-neutral-600/30 shadow-[0_12px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] py-2 z-[999999]"
                                   style={{
                                     left: `${messageMenuPosition.x}px`,
                                     top: `${messageMenuPosition.y}px`,
@@ -2574,40 +2574,40 @@ export const ChatsPage = () => {
                                   <button
                                     type="button"
                                     onClick={() => handleMessageAction('reply', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                   >
-                                    <Reply className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
+                                    <Reply className="h-4 w-4 text-neutral-600 dark:text-neutral-400 flex-shrink-0" />
                                     <span className="text-left font-medium">Responder</span>
                                   </button>
                                   {entry.content && (
                                     <button
                                       type="button"
                                       onClick={() => handleMessageAction('copy', entry)}
-                                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                     >
-                                      <Copy className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
+                                      <Copy className="h-4 w-4 text-neutral-600 dark:text-neutral-400 flex-shrink-0" />
                                       <span className="text-left font-medium">Copiar</span>
                                     </button>
                                   )}
                                   <button
                                     type="button"
                                     onClick={() => handleMessageAction('forward', entry)}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                   >
-                                    <Forward className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
+                                    <Forward className="h-4 w-4 text-neutral-600 dark:text-neutral-400 flex-shrink-0" />
                                     <span className="text-left font-medium">Reenviar</span>
                                   </button>
                                   {entry.attachmentUrl && (
                                     <button
                                       type="button"
                                       onClick={() => handleMessageAction('download', entry)}
-                                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/70"
+                                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-neutral-700/70"
                                     >
-                                      <Download className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
+                                      <Download className="h-4 w-4 text-neutral-600 dark:text-neutral-400 flex-shrink-0" />
                                       <span className="text-left font-medium">Descargar</span>
                                     </button>
                                   )}
-                                  <div className="my-1 h-px bg-slate-700/50 dark:bg-slate-600/50 mx-2" />
+                                  <div className="my-1 h-px bg-neutral-700/50 dark:bg-neutral-600/50 mx-2" />
                                   <button
                                     type="button"
                                     onClick={() => handleMessageAction('star', entry)}
@@ -2618,7 +2618,7 @@ export const ChatsPage = () => {
                                         const isStarred = starredMessages.includes(entry.id);
                                         return isStarred
                                           ? "text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/30"
-                                          : "text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700/70";
+                                          : "text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-neutral-700/70";
                                       })()
                                     )}
                                   >
@@ -2629,12 +2629,12 @@ export const ChatsPage = () => {
                                         const isStarred = starredMessages.includes(entry.id);
                                         return isStarred
                                           ? "text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400"
-                                          : "text-slate-600 dark:text-slate-400";
+                                          : "text-neutral-600 dark:text-neutral-400";
                                       })()
                                     )} />
                                     <span className="text-left font-medium">Destacar</span>
                                   </button>
-                                  <div className="my-1 h-px bg-slate-200 dark:bg-slate-600/50 mx-2" />
+                                  <div className="my-1 h-px bg-slate-200 dark:bg-neutral-600/50 mx-2" />
                                   <button
                                     type="button"
                                     onClick={() => handleMessageAction('delete', entry)}
@@ -2654,9 +2654,9 @@ export const ChatsPage = () => {
                   </div>
                 </div>
 
-                <form className="flex-shrink-0 border-t border-white/30 dark:border-white/10 bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm px-6 py-5" onSubmit={handleSendMessage}>
+                <form className="flex-shrink-0 border-t border-white/30 dark:border-white/10 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-sm px-6 py-5" onSubmit={handleSendMessage}>
                   {replyingTo && (
-                    <div className="mb-3 flex items-start gap-3 rounded-xl glass-liquid-strong p-3 border-l-4 border-sena-green/60">
+                    <div className="mb-3 flex items-start gap-3 rounded-2xl glass-liquid-strong p-3 border-l-4 border-sena-green/60">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <Reply className="h-3.5 w-3.5 text-sena-green flex-shrink-0" />
@@ -2679,7 +2679,7 @@ export const ChatsPage = () => {
                       <button
                         type="button"
                         onClick={() => setReplyingTo(null)}
-                        className="flex h-6 w-6 items-center justify-center rounded-lg glass-liquid text-[var(--color-muted)] hover:text-rose-500 transition-all flex-shrink-0"
+                        className="flex h-6 w-6 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] hover:text-rose-500 transition-all flex-shrink-0"
                         aria-label="Cancelar respuesta"
                       >
                         <XIcon className="h-3.5 w-3.5" />
@@ -2687,15 +2687,15 @@ export const ChatsPage = () => {
                     </div>
                   )}
                   {attachment && (
-                    <div className="mb-3 flex items-center gap-3 rounded-xl glass-liquid-strong p-3">
+                    <div className="mb-3 flex items-center gap-3 rounded-2xl glass-liquid-strong p-3">
                       {attachment.mimeType.startsWith('image/') ? (
                         <img
                           src={attachment.dataUrl}
                           alt="Vista previa"
-                          className="h-16 w-16 rounded-lg object-cover"
+                          className="h-16 w-16 rounded-2xl object-cover"
                         />
                       ) : (
-                        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-sena-green/20">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-sena-green/20">
                           <File className="h-8 w-8 text-sena-green" />
                         </div>
                       )}
@@ -2710,7 +2710,7 @@ export const ChatsPage = () => {
                       <button
                         type="button"
                         onClick={handleRemoveAttachment}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg glass-liquid text-[var(--color-muted)] hover:text-rose-500 transition-all"
+                        className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] hover:text-rose-500 transition-all"
                         aria-label="Eliminar adjunto"
                       >
                         <XIcon className="h-4 w-4" />
@@ -2843,7 +2843,7 @@ export const ChatsPage = () => {
             <div className="flex items-center gap-4">
               <span
                 className={classNames(
-                  'flex h-20 w-20 items-center justify-center rounded-3xl text-2xl font-bold text-white shadow-lg',
+                  'flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-bold text-white shadow-lg',
                   activeChatGradient
                 )}
               >
@@ -3028,7 +3028,7 @@ export const ChatsPage = () => {
                     <input
                       type="text"
                       placeholder="Proyecto de innovación"
-                      className="rounded-xl glass-liquid px-3 py-2 text-sm outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                      className="rounded-2xl glass-liquid px-3 py-2 text-sm outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
                       {...register('name')}
                     />
                     {errors.name && <span className="text-[11px] text-rose-400">{errors.name.message}</span>}
@@ -3146,7 +3146,7 @@ export const ChatsPage = () => {
           setChatToDelete(null);
         }}
         size="sm"
-        contentClassName="glass-dialog-delete bg-white/90 dark:bg-slate-900/95 border border-red-500/30 shadow-[0_24px_60px_rgba(239,68,68,0.7)]"
+        contentClassName="glass-dialog-delete bg-white/90 dark:bg-neutral-900/95 border border-red-500/30 shadow-[0_24px_60px_rgba(239,68,68,0.7)]"
       >
         <div className="space-y-4">
           <div>
@@ -3271,7 +3271,7 @@ export const ChatsPage = () => {
                       </span>
                     </div>
                     <div className={classNames(
-                      "rounded-xl p-3",
+                      "rounded-2xl p-3",
                       isOwnMessage ? "bg-sena-green/10 ml-auto max-w-[80%]" : "bg-white/10 max-w-[80%]"
                     )}>
                       {message.content && (
@@ -3327,7 +3327,7 @@ export const ChatsPage = () => {
 
           {/* Vista previa del mensaje a reenviar */}
           {forwardingMessage && (
-            <div className="rounded-xl glass-liquid-strong p-4 border-l-4 border-sena-green/60">
+            <div className="rounded-2xl glass-liquid-strong p-4 border-l-4 border-sena-green/60">
               {forwardingMessage.content && (
                 <p className="text-sm text-[var(--color-text)] line-clamp-3 mb-2">
                   {forwardingMessage.content}
@@ -3373,7 +3373,7 @@ export const ChatsPage = () => {
                           return next;
                         });
                       }}
-                      className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition ${
+                      className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition ${
                         isSelected
                           ? 'bg-sena-green/10 border border-sena-green/40'
                           : 'glass-liquid hover:bg-white/40'
@@ -3381,7 +3381,7 @@ export const ChatsPage = () => {
                     >
                       <span
                         className={classNames(
-                          'flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm',
+                          'flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-sm',
                           gradient
                         )}
                       >
@@ -3471,7 +3471,7 @@ export const ChatsPage = () => {
               ease: [0.16, 1, 0.3, 1],
               exit: { duration: 0.25, ease: [0.16, 1, 0.3, 1] }
             }}
-            className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
+            className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-2xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
             style={{ willChange: 'transform, opacity' }}
           >
             <p className="text-sm font-medium text-[var(--color-text)] whitespace-nowrap relative z-10">{successMessage}</p>

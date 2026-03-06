@@ -27,7 +27,7 @@ export const EmojiPicker = forwardRef<HTMLDivElement, EmojiPickerProps>(
     return (
       <div
         ref={ref}
-        className={`relative w-[min(320px,90vw)] h-[320px] overflow-hidden rounded-[24px] bg-transparent ${className ?? ''}`}
+        className={`relative w-[min(320px,90vw)] h-[320px] overflow-hidden rounded-2xl bg-transparent ${className ?? ''}`}
         style={{ 
           maxHeight: 'calc(100vh - 2rem)',
           height: 'min(320px, calc(100vh - 2rem))'

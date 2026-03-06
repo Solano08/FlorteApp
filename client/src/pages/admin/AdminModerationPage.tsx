@@ -315,15 +315,15 @@ export const AdminModerationPage = () => {
         <Card padded={false} className="p-4 md:p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="grid flex-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
+              <div className="rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
                 <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Total usuarios</p>
                 <p className="mt-1 text-lg font-semibold">{stats.total}</p>
               </div>
-              <div className="rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
+              <div className="rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
                 <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Activos</p>
                 <p className="mt-1 text-lg font-semibold text-sena-green">{stats.active}</p>
               </div>
-              <div className="rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
+              <div className="rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)]">
                 <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Suspendidos</p>
                 <p className="mt-1 text-lg font-semibold text-rose-500">{stats.suspended}</p>
               </div>
@@ -341,7 +341,7 @@ export const AdminModerationPage = () => {
               <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]">
                 Filtrar por rol
                 <select
-                  className="rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                  className="rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
                   value={roleFilter}
                   onChange={(event) => setRoleFilter(event.target.value as UserRole | 'all')}
                 >
@@ -412,7 +412,7 @@ export const AdminModerationPage = () => {
                       <div className="flex items-center gap-2">
                         <RoleIcon role={user.role} />
                         <select
-                          className="rounded-lg border border-white/20 bg-white/15 px-2 py-1 text-[11px] text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-1 focus:ring-sena-green/30 dark:border-white/10 dark:bg-white/10"
+                          className="rounded-2xl border border-white/20 bg-white/15 px-2 py-1 text-[11px] text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-1 focus:ring-sena-green/30 dark:border-white/10 dark:bg-white/10"
                           value={user.role}
                           onChange={(event) =>
                             updateRoleMutation.mutate({
@@ -625,7 +625,7 @@ export const AdminModerationPage = () => {
                         href={attachment.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-[11px] font-semibold text-[var(--color-text)] transition hover:border-sena-green/50"
+                        className="rounded-2xl border border-white/30 bg-white/10 px-3 py-2 text-[11px] font-semibold text-[var(--color-text)] transition hover:border-sena-green/50"
                       >
                         {attachment.mimeType ?? 'Archivo adjunto'}
                       </a>
@@ -717,7 +717,7 @@ export const AdminModerationPage = () => {
 
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
             {formError && (
-              <div className="rounded-[24px] border border-rose-300/50 bg-rose-100/60 px-4 py-3 text-sm text-rose-700 shadow-[0_18px_42px_rgba(220,38,38,0.2)]">
+              <div className="rounded-2xl border border-rose-300/50 bg-rose-100/60 px-4 py-3 text-sm text-rose-700 shadow-[0_18px_42px_rgba(220,38,38,0.2)]">
                 {formError}
               </div>
             )}
@@ -768,7 +768,7 @@ export const AdminModerationPage = () => {
               <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-text)]">
                 Rol
                 <select
-                  className="rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
+                  className="rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
                   disabled={isSaving}
                   {...register('role')}
                 >
@@ -781,7 +781,7 @@ export const AdminModerationPage = () => {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-[24px] px-4 py-4 text-xs text-[var(--color-text)] glass-liquid">
+              <div className="rounded-2xl px-4 py-4 text-xs text-[var(--color-text)] glass-liquid">
                 <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Estado de la cuenta</p>
                 <p className="mt-1 text-sm font-semibold">{isActiveValue ? 'Activo' : 'Suspendido'}</p>
                 <p className="mt-1 text-[11px] text-[var(--color-muted)]">

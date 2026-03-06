@@ -106,7 +106,7 @@ export const UserAvatar: FC<UserAvatarProps> = ({
       )}
       {showStatus && (
         <span
-          className={`absolute bottom-0 right-0 ${statusSizeClasses[size]} rounded-full border-2 border-white dark:border-slate-900 ${
+          className={`absolute bottom-0 right-0 ${statusSizeClasses[size]} rounded-full border-2 border-white dark:border-neutral-900 ${
             isActive ? 'bg-green-500' : 'bg-gray-400'
           }`}
         />

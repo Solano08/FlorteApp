@@ -186,7 +186,7 @@ const renderAttachmentMedia = (attachment: AnyAttachment, className?: string) =>
   return (
     <div
       className={classNames(
-        'flex h-full w-full items-center gap-2 rounded-xl bg-white/80 p-3 text-left text-[var(--color-text)] shadow-inner',
+        'flex h-full w-full items-center gap-2 rounded-2xl bg-white/80 p-3 text-left text-[var(--color-text)] shadow-inner',
         className
       )}
     >
@@ -1269,7 +1269,7 @@ export const HomePage = () => {
                   <button
                     type="button"
                     onClick={() => handleStartEditPost(post)}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                   >
                     <FileText className="h-4 w-4 text-sena-green" /> Editar publicacion
                   </button>
@@ -1278,7 +1278,7 @@ export const HomePage = () => {
                   <button
                     type="button"
                     onClick={() => handleDeletePost(post)}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
                   >
                     <Trash2 className="h-4 w-4 text-rose-500" /> Eliminar
                   </button>
@@ -1286,14 +1286,14 @@ export const HomePage = () => {
                 <button
                   type="button"
                   onClick={() => handleOpenReportForPost(post)}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                 >
                   <Flag className="h-4 w-4 text-rose-500" /> Reportar publicacion
                 </button>
                 <button
                   type="button"
                   onClick={() => handleCopyPostLink(post)}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                 >
                   <Share2 className="h-4 w-4 text-sena-green" /> Copiar enlace
                 </button>
@@ -1431,7 +1431,7 @@ export const HomePage = () => {
             </Button>
             {reactionPickerPost === post.id && (
               <div
-                className="absolute bottom-full left-1/2 z-10 -translate-x-1/2 translate-y-2 rounded-xl glass-frosted px-2 py-2"
+                className="absolute bottom-full left-1/2 z-10 -translate-x-1/2 translate-y-2 rounded-2xl glass-frosted px-2 py-2"
                 onMouseEnter={() => handleReactionHover(post.id)}
               >
                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap hide-scrollbar">
@@ -1439,7 +1439,7 @@ export const HomePage = () => {
                     <button
                       key={type}
                       type="button"
-                      className="flex items-center justify-center rounded-full border border-white/50 bg-white h-8 w-8 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 dark:bg-slate-900/90"
+                      className="flex items-center justify-center rounded-full border border-white/50 bg-white h-8 w-8 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 dark:bg-neutral-900/90"
                       onClick={() => handleReactionSelect(post.id, type, post.viewerReaction)}
                       title={label}
                     >
@@ -1531,7 +1531,7 @@ export const HomePage = () => {
                               rows={3}
                               value={editingCommentContent}
                               onChange={(event) => setEditingCommentContent(event.target.value)}
-                              className="w-full resize-none rounded-xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none focus:ring-0 focus:border-white/25"
+                              className="w-full resize-none rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none focus:ring-0 focus:border-white/25"
                             />
                             <div className="flex justify-end gap-2">
                               <Button
@@ -1583,7 +1583,7 @@ export const HomePage = () => {
                                       <button
                                         type="button"
                                         onClick={() => handleStartEditComment(post.id, comment)}
-                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                        className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                                       >
                                         <FileText className="h-4 w-4 text-sena-green" /> Editar comentario
                                       </button>
@@ -1592,7 +1592,7 @@ export const HomePage = () => {
                                       <button
                                         type="button"
                                         onClick={() => handleDeleteComment(post.id, comment.id)}
-                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                                        className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
                                       >
                                         <Trash2 className="h-4 w-4 text-rose-500" /> Eliminar
                                       </button>
@@ -1600,7 +1600,7 @@ export const HomePage = () => {
                                     <button
                                       type="button"
                                       onClick={() => handleOpenReportForComment(post, comment)}
-                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                      className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                                     >
                                       <Flag className="h-4 w-4 text-rose-500" /> Reportar comentario
                                     </button>
@@ -1610,7 +1610,7 @@ export const HomePage = () => {
                             </div>
                             <p className="mt-1 leading-relaxed">{comment.content}</p>
                             {resolvedCommentAttachmentUrl && (
-                              <div className="mt-2 overflow-hidden rounded-xl glass-liquid">
+                              <div className="mt-2 overflow-hidden rounded-2xl glass-liquid">
                                 {commentAttachmentType === 'image' && (
                                   <img
                                     src={resolvedCommentAttachmentUrl}
@@ -1695,19 +1695,19 @@ export const HomePage = () => {
                     <img
                       src={commentAttachment.dataUrl}
                       alt={commentAttachment.fileName}
-                      className="max-h-32 w-full rounded-xl object-cover"
+                      className="max-h-32 w-full rounded-2xl object-cover"
                     />
                   )}
                   {commentAttachment.kind === 'video' && (
                     <video
                       src={commentAttachment.dataUrl}
                       controls
-                      className="max-h-32 w-full rounded-xl bg-black"
+                      className="max-h-32 w-full rounded-2xl bg-black"
                       preload="metadata"
                     />
                   )}
                   {commentAttachment.kind === 'document' && (
-                    <div className="flex items-center gap-2 rounded-xl bg-white/70 px-3 py-2 text-[var(--color-text)]">
+                    <div className="flex items-center gap-2 rounded-2xl bg-white/70 px-3 py-2 text-[var(--color-text)]">
                       <FileText className="h-5 w-5 text-sena-green" />
                       <div className="min-w-0">
                         <p className="text-sm font-semibold">
@@ -1919,9 +1919,9 @@ export const HomePage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                      className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1949,9 +1949,9 @@ export const HomePage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                      className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -2026,7 +2026,7 @@ export const HomePage = () => {
                       <div className={classNames(
                         'relative flex h-full w-full items-center justify-center rounded-full transition-all duration-300 overflow-hidden',
                         story.id === 'create' || !isViewed
-                          ? 'bg-white dark:bg-slate-900'
+                          ? 'bg-white dark:bg-neutral-900'
                           : 'border-0 bg-[var(--color-surface)]'
                       )} style={{ zIndex: 62 }}>
                         {story.id === 'create' ? (
@@ -2120,7 +2120,7 @@ export const HomePage = () => {
                     size="sm"
                     variant="primary"
                     leftIcon={<Sparkles className="h-4 w-4" />}
-                    className="!bg-sena-light !text-white !border-sena-light/30 hover:!bg-sena-light hover:!text-white hover:!border-sena-light disabled:!bg-white disabled:!text-slate-700 disabled:!border-slate-200 disabled:hover:!bg-white disabled:hover:!text-slate-700 disabled:hover:!border-slate-200 px-3 py-2 text-xs"
+                    className="!bg-sena-light !text-white !border-sena-light/30 hover:!bg-sena-light hover:!text-white hover:!border-sena-light disabled:!bg-white disabled:!text-neutral-700 disabled:!border-slate-200 disabled:hover:!bg-white disabled:hover:!text-neutral-700 disabled:hover:!border-slate-200 px-3 py-2 text-xs"
                     loading={isPublishing}
                     disabled={isPublishing || !composerContent.trim()}
                     onClick={handleComposerSubmit}
@@ -2163,7 +2163,7 @@ export const HomePage = () => {
                           >
                             <X className="h-3 w-3" />
                           </button>
-                          <div className="mx-auto mt-2 h-16 w-16 overflow-hidden rounded-xl">
+                          <div className="mx-auto mt-2 h-16 w-16 overflow-hidden rounded-2xl">
                             {renderAttachmentMedia(attachment, 'h-full w-full')}
                           </div>
                           <p className="mx-2 mt-1 truncate text-[10px] text-[var(--color-muted)]">
@@ -2225,7 +2225,7 @@ export const HomePage = () => {
               <div className="px-2">
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Anuncios</h3>
               </div>
-              <div className="relative h-40 overflow-hidden rounded-xl sm:h-44 lg:h-48">
+              <div className="relative h-40 overflow-hidden rounded-2xl sm:h-44 lg:h-48">
                 <AnimatePresence initial={false} mode="wait">
                   {announcementSlides.map(
                     (slide, index) =>
@@ -2292,7 +2292,7 @@ export const HomePage = () => {
               transition={{ duration: 0.2 }}
               className="fixed bottom-24 right-6 z-40 w-80"
             >
-              <Card padded={false} className="overflow-hidden rounded-3xl glass-liquid-strong">
+              <Card padded={false} className="overflow-hidden rounded-2xl glass-liquid-strong">
                 <div className="flex items-center justify-between border-b border-white/20 px-5 py-4">
                   <div>
                     <p className="text-sm font-semibold text-[var(--color-text)]">Mensajes</p>
@@ -2319,7 +2319,7 @@ export const HomePage = () => {
                         key={chat.id}
                         type="button"
                         onClick={() => handleOpenChat(chat.id)}
-                        className="group relative flex w-full items-center gap-3 rounded-xl border border-transparent bg-transparent px-3 py-2.5 text-left transition-all duration-300 ease-out hover:border-white/30 hover:bg-gradient-to-r hover:from-white/10 hover:via-white/5 hover:to-transparent hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.05)] dark:hover:border-white/20 dark:hover:from-white/8 dark:hover:via-white/4"
+                        className="group relative flex w-full items-center gap-3 rounded-2xl border border-transparent bg-transparent px-3 py-2.5 text-left transition-all duration-300 ease-out hover:border-white/30 hover:bg-gradient-to-r hover:from-white/10 hover:via-white/5 hover:to-transparent hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.05)] dark:hover:border-white/20 dark:hover:from-white/8 dark:hover:via-white/4"
                       >
                         <div className="relative flex-shrink-0">
                           {chat.isGroup ? (
@@ -2351,7 +2351,7 @@ export const HomePage = () => {
                               : 'Sin mensajes'}
                           </p>
                         </div>
-                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
                       </button>
                     );
                   })}
@@ -2397,11 +2397,11 @@ export const HomePage = () => {
                         <ChevronLeft className="h-6 w-6" />
                       </button>
                     )}
-                    <div ref={storyImageContainerRef} className="relative flex max-h-[80vh] max-w-[90vw] min-h-[300px] items-center justify-center overflow-hidden rounded-3xl bg-black/50">
+                    <div ref={storyImageContainerRef} className="relative flex max-h-[80vh] max-w-[90vw] min-h-[300px] items-center justify-center overflow-hidden rounded-2xl bg-black/50">
                       <img
                         src={(currentStories[currentStoryIndex] as StoryData).mediaUrl}
                         alt="Historia"
-                        className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.35)] block"
+                        className="max-h-[80vh] max-w-[90vw] rounded-2xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.35)] block"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
@@ -2409,7 +2409,7 @@ export const HomePage = () => {
                           if (placeholder) placeholder.classList.remove('hidden');
                         }}
                       />
-                      <div className="hidden flex-col items-center justify-center gap-3 rounded-3xl p-8 text-center text-sm text-white/80">
+                      <div className="hidden flex-col items-center justify-center gap-3 rounded-2xl p-8 text-center text-sm text-white/80">
                         <p>No se pudo cargar la imagen.</p>
                         <p className="text-xs opacity-75">
                           Verifica que Railway tenga un Volume en /app/uploads y que VITE_API_URL en Vercel apunte a tu API. Ver DEPLOY.md.
@@ -2455,7 +2455,7 @@ export const HomePage = () => {
                                       animate={{ '--diffuse-radius': 100 } as unknown as Record<string, number>}
                                       exit={{ '--diffuse-radius': 0 } as unknown as Record<string, number>}
                                       transition={{ type: 'spring', damping: 26, stiffness: 180, mass: 0.9 }}
-                                      className="absolute inset-0 z-30 flex flex-col rounded-3xl bg-black/85 backdrop-blur-md overflow-hidden"
+                                      className="absolute inset-0 z-30 flex flex-col rounded-2xl bg-black/85 backdrop-blur-md overflow-hidden"
                                       style={{
                                         maskImage: `radial-gradient(circle at ${storyPanelOriginRef.current.x}% ${storyPanelOriginRef.current.y}%, black 0%, black calc(var(--diffuse-radius, 0) * 0.45%), rgba(0,0,0,0.6) calc(var(--diffuse-radius, 0) * 0.7%), rgba(0,0,0,0.2) calc(var(--diffuse-radius, 0) * 0.9%), transparent calc(var(--diffuse-radius, 0) * 1.1%))`,
                                         WebkitMaskImage: `radial-gradient(circle at ${storyPanelOriginRef.current.x}% ${storyPanelOriginRef.current.y}%, black 0%, black calc(var(--diffuse-radius, 0) * 0.45%), rgba(0,0,0,0.6) calc(var(--diffuse-radius, 0) * 0.7%), rgba(0,0,0,0.2) calc(var(--diffuse-radius, 0) * 0.9%), transparent calc(var(--diffuse-radius, 0) * 1.1%))`,
@@ -2472,7 +2472,7 @@ export const HomePage = () => {
                                             {viewers.map((v) => (
                                               <div
                                                 key={v.id}
-                                                className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/10 transition"
+                                                className="flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-white/10 transition"
                                               >
                                                 <UserAvatar
                                                   firstName={v.firstName}
@@ -2490,7 +2490,7 @@ export const HomePage = () => {
                                       </div>
                                       <button
                                         type="button"
-                                        className="mt-auto p-3 text-sm font-semibold text-white/90 hover:bg-white/10 rounded-b-3xl transition"
+                                        className="mt-auto p-3 text-sm font-semibold text-white/90 hover:bg-white/10 rounded-b-2xl transition"
                                         onClick={() => setIsStoryViewersOpen(false)}
                                       >
                                         Cerrar
@@ -2516,7 +2516,7 @@ export const HomePage = () => {
                             <div className="absolute right-3 top-14 z-10 w-44 rounded-2xl glass-frosted px-3 py-2 text-sm text-white">
                               <button
                                 type="button"
-                                className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-red-500 transition hover:bg-white/10"
+                                className="flex w-full items-center gap-2 rounded-2xl px-2 py-2 text-left text-red-500 transition hover:bg-white/10"
                                 onClick={handleDeleteStory}
                               >
                                 <Trash2 className="h-4 w-4 text-red-500" /> Eliminar historia
@@ -2642,7 +2642,7 @@ export const HomePage = () => {
                           type="button"
                           onClick={() => setShareToFriendId((id) => (id === friend.id ? null : friend.id))}
                           className={classNames(
-                            'flex flex-col items-center gap-1.5 rounded-xl p-2 transition-all duration-200',
+                            'flex flex-col items-center gap-1.5 rounded-2xl p-2 transition-all duration-200',
                             isSelected
                               ? 'ring-2 ring-sena-green bg-sena-green/10'
                               : 'hover:bg-white/10 dark:hover:bg-white/5'
@@ -2772,7 +2772,7 @@ export const HomePage = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 28 }}
               transition={{ type: 'spring', stiffness: 170, damping: 24 }}
-              className="relative mx-auto w-full max-w-3xl overflow-visible rounded-[36px] p-6"
+              className="relative mx-auto w-full max-w-3xl overflow-visible rounded-2xl p-6"
             >
               <div className="relative flex flex-col items-center gap-1 pb-4 text-center">
                 <Button
@@ -2920,7 +2920,7 @@ export const HomePage = () => {
                 ease: [0.16, 1, 0.3, 1],
                 exit: { duration: 0.25, ease: [0.16, 1, 0.3, 1] }
               }}
-              className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
+              className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-2xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
               style={{ willChange: 'transform, opacity' }}
             >
               <p className="text-sm font-medium text-[var(--color-text)] whitespace-nowrap relative z-10">{composerSuccessMessage}</p>
@@ -2946,7 +2946,7 @@ function SharedPostPreview({ postId }: { postId: string }) {
   });
   if (isLoading || !post) {
     return (
-      <div className="my-1.5 rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-xs text-[var(--color-muted)]">
+      <div className="my-1.5 rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-xs text-[var(--color-muted)]">
         Cargando publicación...
       </div>
     );
@@ -2958,7 +2958,7 @@ function SharedPostPreview({ postId }: { postId: string }) {
     minute: '2-digit'
   });
   return (
-    <div className="my-1.5 overflow-hidden rounded-xl border border-white/20 bg-white/5">
+    <div className="my-1.5 overflow-hidden rounded-2xl border border-white/20 bg-white/5">
       <div className="flex items-start gap-2 p-2">
         <UserAvatar
           fullName={post.author.fullName}
@@ -3075,7 +3075,7 @@ const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
       className="fixed bottom-28 z-50 w-80"
       style={{ right: 24 + index * 320 }}
     >
-      <Card padded={false} className="flex h-96 flex-col overflow-hidden rounded-3xl glass-liquid-strong">
+      <Card padded={false} className="flex h-96 flex-col overflow-hidden rounded-2xl glass-liquid-strong">
         <div className="flex items-center justify-between border-b border-white/20 px-4 py-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {chat.isGroup ? (

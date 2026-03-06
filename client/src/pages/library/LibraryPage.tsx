@@ -124,7 +124,7 @@ export const LibraryPage = () => {
               className="group cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg"
             >
               <div className="space-y-4">
-                <div className="relative aspect-video w-full overflow-hidden rounded-xl">
+                <div className="relative aspect-video w-full overflow-hidden rounded-2xl">
                   <img
                     src={resource.image}
                     alt={resource.title}
@@ -199,7 +199,7 @@ export const LibraryPage = () => {
               <div className="flex justify-end pt-4">
                 <button
                   onClick={handleCloseModal}
-                  className="rounded-lg bg-brand px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
+                  className="rounded-2xl bg-brand px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
                 >
                   Cerrar
                 </button>

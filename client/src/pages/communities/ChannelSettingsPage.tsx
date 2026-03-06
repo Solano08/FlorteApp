@@ -140,7 +140,7 @@ export const ChannelSettingsPage = () => {
 
   return (
     <DashboardLayout contentClassName="flex h-full w-full overflow-hidden p-0">
-      <div className="flex h-full w-full min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="flex h-full w-full min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
         <div className="flex h-full w-full min-h-0 overflow-hidden bg-transparent">
           <div className="flex h-full w-full">
             <CommunitySidebar
@@ -151,7 +151,7 @@ export const ChannelSettingsPage = () => {
             />
 
             {/* Sidebar izquierdo ajustes de canal */}
-            <aside className="flex w-72 flex-col border-r border-white/10 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl shadow-[12px_0_40px_rgba(15,23,42,0.04)] dark:shadow-[12px_0_40px_rgba(0,0,0,0.6)]">
+            <aside className="flex w-72 flex-col border-r border-white/10 dark:border-white/5 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-2xl shadow-[12px_0_40px_rgba(15,23,42,0.04)] dark:shadow-[12px_0_40px_rgba(0,0,0,0.6)]">
               <div className="px-4 py-3 border-b border-white/10 dark:border-white/5">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
                   Ajustes del canal
@@ -166,10 +166,10 @@ export const ChannelSettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('general')}
-                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
                     activeSection === 'general'
                       ? 'bg-sena-green/10 text-sena-green dark:bg-sena-green/20 dark:text-emerald-300 font-medium shadow-sm ring-1 ring-sena-green/30'
-                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-[var(--color-text)]'
+                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-[var(--color-text)]'
                   }`}
                 >
                   <Settings className="h-4 w-4" />
@@ -179,10 +179,10 @@ export const ChannelSettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('permissions')}
-                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
                     activeSection === 'permissions'
                       ? 'bg-sena-green/10 text-sena-green dark:bg-sena-green/20 dark:text-emerald-300 font-medium shadow-sm ring-1 ring-sena-green/30'
-                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-[var(--color-text)]'
+                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-[var(--color-text)]'
                   }`}
                 >
                   <Shield className="h-4 w-4" />
@@ -192,10 +192,10 @@ export const ChannelSettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('invitations')}
-                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
                     activeSection === 'invitations'
                       ? 'bg-sena-green/10 text-sena-green dark:bg-sena-green/20 dark:text-emerald-300 font-medium shadow-sm ring-1 ring-sena-green/30'
-                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-[var(--color-text)]'
+                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-[var(--color-text)]'
                   }`}
                 >
                   <UserPlus className="h-4 w-4" />
@@ -205,10 +205,10 @@ export const ChannelSettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('integrations')}
-                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
                     activeSection === 'integrations'
                       ? 'bg-sena-green/10 text-sena-green dark:bg-sena-green/20 dark:text-emerald-300 font-medium shadow-sm ring-1 ring-sena-green/30'
-                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-[var(--color-text)]'
+                      : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-[var(--color-text)]'
                   }`}
                 >
                   <Settings className="h-4 w-4" />
@@ -220,7 +220,7 @@ export const ChannelSettingsPage = () => {
                 <button
                   type="button"
                   onClick={handleDelete}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-150"
+                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-150"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Eliminar canal</span>
@@ -230,7 +230,7 @@ export const ChannelSettingsPage = () => {
 
             {/* Contenido principal */}
             <div className="flex flex-1 flex-col min-h-0">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 dark:border-white/5 bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 dark:border-white/5 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-xl">
                 <h2 className="text-lg font-semibold text-[var(--color-text)]">
                   {activeSection === 'general' && 'Vista general'}
                   {activeSection === 'permissions' && 'Permisos'}
@@ -241,7 +241,7 @@ export const ChannelSettingsPage = () => {
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white/60 dark:bg-slate-700/60 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
                     aria-label="Cerrar"
                   >
                     <X className="h-5 w-5" />
@@ -267,7 +267,7 @@ export const ChannelSettingsPage = () => {
                         />
                         <button
                           type="button"
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/60 dark:bg-slate-700/60 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
                           aria-label="Emoji"
                         >
                           😊
@@ -285,28 +285,28 @@ export const ChannelSettingsPage = () => {
                           <div className="flex items-center gap-1 mb-2">
                             <button
                               type="button"
-                              className="flex h-7 w-7 items-center justify-center rounded bg-white/60 dark:bg-slate-700/60 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                              className="flex h-7 w-7 items-center justify-center rounded bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
                               aria-label="Negrita"
                             >
                               <span className="text-xs font-bold">B</span>
                             </button>
                             <button
                               type="button"
-                              className="flex h-7 w-7 items-center justify-center rounded bg-white/60 dark:bg-slate-700/60 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                              className="flex h-7 w-7 items-center justify-center rounded bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
                               aria-label="Cursiva"
                             >
                               <span className="text-xs italic">I</span>
                             </button>
                             <button
                               type="button"
-                              className="flex h-7 w-7 items-center justify-center rounded bg-white/60 dark:bg-slate-700/60 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                              className="flex h-7 w-7 items-center justify-center rounded bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
                               aria-label="Tachado"
                             >
                               <span className="text-xs line-through">S</span>
                             </button>
                             <button
                               type="button"
-                              className="flex h-7 w-7 items-center justify-center rounded bg-white/60 dark:bg-slate-700/60 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                              className="flex h-7 w-7 items-center justify-center rounded bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
                               aria-label="Oculto"
                             >
                               <span className="text-xs">👁</span>
@@ -327,7 +327,7 @@ export const ChannelSettingsPage = () => {
                         </div>
                         <button
                           type="button"
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/60 dark:bg-slate-700/60 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
                           aria-label="Emoji"
                         >
                           😊
@@ -343,7 +343,7 @@ export const ChannelSettingsPage = () => {
                       <select
                         value={slowMode}
                         onChange={(e) => setSlowMode(e.target.value)}
-                        className="w-full rounded-lg border border-white/20 dark:border-white/10 bg-white/60 dark:bg-slate-700/60 px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-sena-green/50"
+                        className="w-full rounded-2xl border border-white/20 dark:border-white/10 bg-white/60 dark:bg-neutral-700/60 px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-sena-green/50"
                       >
                         <option value="disabled">Desactivado</option>
                         <option value="5">5 segundos</option>
@@ -374,7 +374,7 @@ export const ChannelSettingsPage = () => {
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
                             ageRestricted
                               ? 'bg-sena-green'
-                              : 'bg-slate-300 dark:bg-slate-600'
+                              : 'bg-slate-300 dark:bg-neutral-600'
                           }`}
                           aria-label="Restricción por edad"
                         >

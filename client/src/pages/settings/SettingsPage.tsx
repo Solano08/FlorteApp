@@ -15,7 +15,7 @@ export const SettingsPage = () => {
       <div className="space-y-6">
         <Card className="glass-liquid">
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sena-green/15 text-sena-green">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sena-green/15 text-sena-green">
               <User className="h-5 w-5" />
             </div>
             <div>
@@ -57,7 +57,7 @@ export const SettingsPage = () => {
 
         <Card className="glass-liquid">
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sena-green/15 text-sena-green">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sena-green/15 text-sena-green">
               <Bell className="h-5 w-5" />
             </div>
             <div>
@@ -91,7 +91,7 @@ export const SettingsPage = () => {
 
         <Card className="glass-liquid">
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sena-green/15 text-sena-green">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sena-green/15 text-sena-green">
               <Palette className="h-5 w-5" />
             </div>
             <div>
@@ -112,7 +112,7 @@ export const SettingsPage = () => {
 
         <Card className="glass-liquid">
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sena-green/15 text-sena-green">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sena-green/15 text-sena-green">
               <Lock className="h-5 w-5" />
             </div>
             <div>

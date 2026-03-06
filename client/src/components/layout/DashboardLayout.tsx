@@ -108,7 +108,7 @@ export const DashboardLayout = ({
   return (
     <div
       className={classNames(
-        'flex bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950',
+        'flex bg-black',
         contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen'
       )}
     >
@@ -183,7 +183,7 @@ export const DashboardLayout = ({
                 <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] rounded-2xl p-2.5 text-sm text-[var(--color-text)] glass-frosted">
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-slate-800"
+                    className="flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800"
                     onClick={handleNavigateProfile}
                   >
                     <span className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export const DashboardLayout = ({
                   </button>
                   <button
                     type="button"
-                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-slate-800"
+                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800"
                     onClick={handleViewUserInfo}
                   >
                     <span className="flex items-center gap-2">
@@ -203,7 +203,7 @@ export const DashboardLayout = ({
                   </button>
                   <button
                     type="button"
-                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-slate-800"
+                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800"
                     onClick={handleNavigateSettings}
                   >
                     <span className="flex items-center gap-2">
@@ -211,10 +211,10 @@ export const DashboardLayout = ({
                       Ajustes
                     </span>
                   </button>
-                  <div className="my-1 h-px bg-slate-200 dark:bg-slate-700" />
+                  <div className="my-1 h-px bg-slate-200 dark:bg-neutral-700" />
                   <button
                     type="button"
-                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-red-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-slate-800"
+                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left text-red-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-neutral-800"
                     onClick={handleLogout}
                   >
                     <span>Cerrar sesion</span>

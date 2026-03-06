@@ -359,7 +359,7 @@ export const ProfilePage = () => {
           </div>
           <p className="mt-2 text-[12px] text-[var(--color-muted)] line-clamp-2">{snippet}</p>
           {showMedia && post.mediaUrl && (
-            <div className="mt-3 overflow-hidden rounded-xl border border-white/30">
+            <div className="mt-3 overflow-hidden rounded-2xl border border-white/30">
               <img src={post.mediaUrl} alt="Vista previa de la publicacion" className="h-32 w-full object-cover" />
             </div>
           )}
@@ -1428,26 +1428,26 @@ export const ProfilePage = () => {
 
           <div className="space-y-6">
 
-            <Card className="relative overflow-visible rounded-[32px] border border-white/25 bg-white/45 p-0 shadow-[0_14px_30px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
+            <Card className="relative overflow-visible rounded-2xl border border-white/25 bg-white/45 p-0 shadow-[0_14px_30px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
 
-              <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[38px] bg-[radial-gradient(circle_at_center,_rgba(18,55,29,0.06)_0%,_rgba(18,55,29,0.025)_38%,_transparent_70%)] blur-xl" />
+              <div className="pointer-events-none absolute -inset-6 -z-10 rounded-2xl bg-[radial-gradient(circle_at_center,_rgba(18,55,29,0.06)_0%,_rgba(18,55,29,0.025)_38%,_transparent_70%)] blur-xl" />
 
-              <div className="relative h-48 w-full overflow-visible rounded-t-[32px] sm:h-52 md:h-56">
+              <div className="relative h-48 w-full overflow-visible rounded-t-2xl sm:h-52 md:h-56">
                 <button
                   type="button"
                   onClick={toggleCoverEditorMenu}
-                  className="absolute inset-0 z-10 flex items-center justify-center rounded-t-[32px] border-0 bg-transparent transition hover:bg-black/20 focus:outline-none focus:ring-2 focus:ring-sena-green/50"
+                  className="absolute inset-0 z-10 flex items-center justify-center rounded-t-2xl border-0 bg-transparent transition hover:bg-black/20 focus:outline-none focus:ring-2 focus:ring-sena-green/50"
                   aria-label="Cambiar portada"
                 />
-                <div className="relative h-full overflow-hidden rounded-t-[32px] border border-white/20 shadow-[0_16px_28px_rgba(18,55,29,0.12)]">
+                <div className="relative h-full overflow-hidden rounded-t-2xl border border-white/20 shadow-[0_16px_28px_rgba(18,55,29,0.12)]">
                   <img src={displayCoverImage} alt="Portada de perfil" className="h-full w-full object-cover" />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/40 via-white/10 to-white/0 dark:from-slate-900/30 dark:via-slate-900/10 dark:to-slate-900/0" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/40 via-white/10 to-white/0 dark:from-neutral-900/30 dark:via-neutral-900/10 dark:to-neutral-900/0" />
                 </div>
                 {isCoverEditorMenuOpen && (
                   <div ref={coverEditorMenuRef} className="absolute right-4 top-4 z-20">
                     <div role="menu" className="rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left text-[var(--color-text)] shadow-xl backdrop-blur">
                       {coverMenuItems.map(({ id, label, icon: Icon, disabled, onClick }) => (
-                        <button key={id} type="button" onClick={onClick} disabled={disabled} className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-xs font-semibold transition hover:bg-sena-green/10 disabled:opacity-60">
+                        <button key={id} type="button" onClick={onClick} disabled={disabled} className="flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 text-left text-xs font-semibold transition hover:bg-sena-green/10 disabled:opacity-60">
                           <Icon className="h-3.5 w-3.5 text-sena-green" />
                           {label}
                         </button>
@@ -1457,7 +1457,7 @@ export const ProfilePage = () => {
                 )}
                 <input ref={coverFileInputRef} type="file" accept="image/*" onChange={handleCoverFileChange} className="hidden" />
                 {(isCoverBusy || isAvatarBusy) && (
-                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/35 backdrop-blur-sm">
+                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-neutral-950/35 backdrop-blur-sm">
                     <Loader2 className="h-6 w-6 animate-spin text-white" />
                   </div>
                 )}
@@ -1490,7 +1490,7 @@ export const ProfilePage = () => {
                     {isAvatarMenuOpen && (
                       <div role="menu" className="absolute left-full top-0 mt-0 w-48 translate-x-2 rounded-2xl border border-white/40 bg-white/95 p-1.5 text-left shadow-xl backdrop-blur">
                         {avatarMenuItems.map(({ id, label, icon: Icon, disabled, onClick }) => (
-                          <button key={id} type="button" onClick={onClick} disabled={disabled} className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-xs font-semibold text-[var(--color-text)] transition hover:bg-sena-green/10 disabled:opacity-60">
+                          <button key={id} type="button" onClick={onClick} disabled={disabled} className="flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 text-left text-xs font-semibold text-[var(--color-text)] transition hover:bg-sena-green/10 disabled:opacity-60">
                             <Icon className="h-3.5 w-3.5 text-sena-green" />
                             {label}
                           </button>
@@ -1511,7 +1511,7 @@ export const ProfilePage = () => {
                         setInlineFirstName(profile?.firstName ?? '');
                         setInlineLastName(profile?.lastName ?? '');
                       }}
-                      className="text-left outline-none focus:ring-2 focus:ring-sena-green/30 focus:ring-offset-2 rounded-lg px-1 -mx-1"
+                      className="text-left outline-none focus:ring-2 focus:ring-sena-green/30 focus:ring-offset-2 rounded-2xl px-1 -mx-1"
                     >
                       <p className="text-xl font-semibold text-[var(--color-text)]">
                         {profile?.firstName} {profile?.lastName}
@@ -1531,7 +1531,7 @@ export const ProfilePage = () => {
                         }}
                         onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                         placeholder="Nombre"
-                        className="rounded-lg border border-white/30 bg-white/60 px-2 py-1 text-lg font-semibold text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
+                        className="rounded-2xl border border-white/30 bg-white/60 px-2 py-1 text-lg font-semibold text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
                         autoFocus
                       />
                       <input
@@ -1546,7 +1546,7 @@ export const ProfilePage = () => {
                         }}
                         onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                         placeholder="Apellido"
-                        className="rounded-lg border border-white/30 bg-white/60 px-2 py-1 text-lg font-semibold text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
+                        className="rounded-2xl border border-white/30 bg-white/60 px-2 py-1 text-lg font-semibold text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
                       />
                     </div>
                   )}
@@ -1557,7 +1557,7 @@ export const ProfilePage = () => {
                         setEditingBio(true);
                         setInlineBio(profile?.bio ?? '');
                       }}
-                      className="text-left outline-none focus:ring-2 focus:ring-sena-green/30 focus:ring-offset-2 rounded-lg px-1 -mx-1 w-full"
+                      className="text-left outline-none focus:ring-2 focus:ring-sena-green/30 focus:ring-offset-2 rounded-2xl px-1 -mx-1 w-full"
                     >
                       <p className="text-sm text-[var(--color-muted)]">
                         {profile?.bio ?? 'Agrega un titular atractivo para tu perfil.'}
@@ -1575,7 +1575,7 @@ export const ProfilePage = () => {
                       }}
                       placeholder="Agrega un titular atractivo para tu perfil."
                       rows={2}
-                      className="w-full resize-none rounded-lg border border-white/30 bg-white/60 px-2 py-1 text-sm text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
+                      className="w-full resize-none rounded-2xl border border-white/30 bg-white/60 px-2 py-1 text-sm text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
                       autoFocus
                     />
                   )}
@@ -1777,7 +1777,7 @@ export const ProfilePage = () => {
                     >
                       <p className="text-4xl font-bold text-[var(--color-text)]">{value}</p>
                       <Icon className={`h-7 w-7 ${accent ?? 'text-[var(--color-muted)]'}`} />
-                      <span className="pointer-events-none absolute -bottom-8 rounded-full bg-slate-900/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white opacity-0 shadow-[0_8px_16px_rgba(15,23,42,0.35)] transition group-hover:opacity-100">
+                      <span className="pointer-events-none absolute -bottom-8 rounded-full bg-neutral-900/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white opacity-0 shadow-[0_8px_16px_rgba(15,23,42,0.35)] transition group-hover:opacity-100">
                         {label}
                       </span>
                     </div>
@@ -2044,7 +2044,7 @@ export const ProfilePage = () => {
               </div>
             )}
 
-            <div className="space-y-4 rounded-3xl border border-white/25 bg-white/40 p-4 text-[var(--color-text)] shadow-[0_24px_45px_rgba(18,55,29,0.2)] backdrop-blur-xl dark:border-white/15 dark:bg-white/10">
+            <div className="space-y-4 rounded-2xl border border-white/25 bg-white/40 p-4 text-[var(--color-text)] shadow-[0_24px_45px_rgba(18,55,29,0.2)] backdrop-blur-xl dark:border-white/15 dark:bg-white/10">
               <div className="flex items-start gap-3">
                 <UserAvatar
                   fullName={selectedProfilePost.author.fullName}

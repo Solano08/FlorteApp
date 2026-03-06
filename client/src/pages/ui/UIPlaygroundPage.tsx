@@ -266,7 +266,7 @@ export const UIPlaygroundPage = () => {
                 </p>
               </div>
 
-              <div className="rounded-[32px] glass-liquid p-6">
+              <div className="rounded-2xl glass-liquid p-6">
                 <h3 className="mb-2 text-lg font-semibold text-[var(--color-text)]">Glass Liquid (Notification Panel)</h3>
                 <p className="text-sm text-[var(--color-muted)]">
                   Efecto usado en paneles desplegables como notificaciones, con bordes más redondeados (32px).
@@ -400,7 +400,7 @@ export const UIPlaygroundPage = () => {
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Iconos de Interacción</h3>
               <div className="grid grid-cols-4 gap-4 sm:grid-cols-6 md:grid-cols-8">
                 {[Heart, Star, ThumbsUp, MessageCircle, Share2, Bookmark, Plus, X].map((Icon, index) => (
-                  <div key={index} className="flex flex-col items-center gap-2 rounded-xl p-3 glass-liquid transition hover:scale-110">
+                  <div key={index} className="flex flex-col items-center gap-2 rounded-2xl p-3 glass-liquid transition hover:scale-110">
                     <Icon className="h-6 w-6 text-brand" />
                     <span className="text-[10px] text-[var(--color-muted)]">{Icon.name}</span>
                   </div>
@@ -412,7 +412,7 @@ export const UIPlaygroundPage = () => {
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Iconos de Contenido</h3>
               <div className="grid grid-cols-4 gap-4 sm:grid-cols-6 md:grid-cols-8">
                 {[FileText, Image, Video, Music, Globe, Settings, User, Search].map((Icon, index) => (
-                  <div key={index} className="flex flex-col items-center gap-2 rounded-xl p-3 glass-liquid transition hover:scale-110">
+                  <div key={index} className="flex flex-col items-center gap-2 rounded-2xl p-3 glass-liquid transition hover:scale-110">
                     <Icon className="h-6 w-6 text-brand" />
                     <span className="text-[10px] text-[var(--color-muted)]">{Icon.name}</span>
                   </div>
@@ -424,7 +424,7 @@ export const UIPlaygroundPage = () => {
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Iconos de Navegación</h3>
               <div className="grid grid-cols-4 gap-4 sm:grid-cols-6 md:grid-cols-8">
                 {[ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Filter, Zap, Rocket, Sparkles].map((Icon, index) => (
-                  <div key={index} className="flex flex-col items-center gap-2 rounded-xl p-3 glass-liquid transition hover:scale-110">
+                  <div key={index} className="flex flex-col items-center gap-2 rounded-2xl p-3 glass-liquid transition hover:scale-110">
                     <Icon className="h-6 w-6 text-brand" />
                     <span className="text-[10px] text-[var(--color-muted)]">{Icon.name}</span>
                   </div>
@@ -473,22 +473,22 @@ export const UIPlaygroundPage = () => {
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Colores Principales</h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <div className="h-20 rounded-xl bg-brand" />
+                  <div className="h-20 rounded-2xl bg-brand" />
                   <p className="text-sm font-semibold text-[var(--color-text)]">SENA Green</p>
                   <p className="text-xs text-[var(--color-muted)]">#39A900</p>
                 </div>
                 <div className="space-y-2">
-                  <div className="h-20 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)]" />
+                  <div className="h-20 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]" />
                   <p className="text-sm font-semibold text-[var(--color-text)]">Background</p>
                   <p className="text-xs text-[var(--color-muted)]">Variable CSS</p>
                 </div>
                 <div className="space-y-2">
-                  <div className="h-20 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]" />
+                  <div className="h-20 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)]" />
                   <p className="text-sm font-semibold text-[var(--color-text)]">Surface</p>
                   <p className="text-xs text-[var(--color-muted)]">Variable CSS</p>
                 </div>
                 <div className="space-y-2">
-                  <div className="h-20 rounded-xl bg-[var(--color-accent-soft)]" />
+                  <div className="h-20 rounded-2xl bg-[var(--color-accent-soft)]" />
                   <p className="text-sm font-semibold text-[var(--color-text)]">Accent Soft</p>
                   <p className="text-xs text-[var(--color-muted)]">Variable CSS</p>
                 </div>
@@ -498,13 +498,13 @@ export const UIPlaygroundPage = () => {
             <div>
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Colores de Texto</h3>
               <div className="space-y-3">
-                <div className="rounded-xl glass-liquid p-4">
+                <div className="rounded-2xl glass-liquid p-4">
                   <p className="text-base text-[var(--color-text)]">Texto Principal - var(--color-text)</p>
                 </div>
-                <div className="rounded-xl glass-liquid p-4">
+                <div className="rounded-2xl glass-liquid p-4">
                   <p className="text-base text-[var(--color-muted)]">Texto Secundario - var(--color-muted)</p>
                 </div>
-                <div className="rounded-xl glass-liquid p-4">
+                <div className="rounded-2xl glass-liquid p-4">
                   <p className="text-base text-brand">Texto SENA - brand</p>
                 </div>
               </div>
@@ -520,13 +520,13 @@ export const UIPlaygroundPage = () => {
             <div>
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Efectos Hover</h3>
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-xl glass-liquid p-4 text-center transition-all hover:scale-105 hover:shadow-lg">
+                <div className="rounded-2xl glass-liquid p-4 text-center transition-all hover:scale-105 hover:shadow-lg">
                   <p className="text-sm font-semibold text-[var(--color-text)]">Scale + Shadow</p>
                 </div>
-                <div className="rounded-xl glass-liquid p-4 text-center transition-colors hover:bg-brand/10">
+                <div className="rounded-2xl glass-liquid p-4 text-center transition-colors hover:bg-brand/10">
                   <p className="text-sm font-semibold text-[var(--color-text)]">Color Change</p>
                 </div>
-                <div className="rounded-xl glass-liquid p-4 text-center transition-transform hover:rotate-2">
+                <div className="rounded-2xl glass-liquid p-4 text-center transition-transform hover:rotate-2">
                   <p className="text-sm font-semibold text-[var(--color-text)]">Rotate</p>
                 </div>
               </div>
@@ -536,7 +536,7 @@ export const UIPlaygroundPage = () => {
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Estados de Carga</h3>
               <div className="flex flex-wrap gap-4">
                 <Button loading>Cargando...</Button>
-                <div className="flex items-center gap-2 rounded-xl glass-liquid px-4 py-2">
+                <div className="flex items-center gap-2 rounded-2xl glass-liquid px-4 py-2">
                   <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-b-transparent" />
                   <span className="text-sm text-[var(--color-text)]">Spinner personalizado</span>
                 </div>
@@ -554,7 +554,7 @@ export const UIPlaygroundPage = () => {
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Grid Responsive</h3>
               <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
-                  <div key={item} className="rounded-xl glass-liquid p-4 text-center">
+                  <div key={item} className="rounded-2xl glass-liquid p-4 text-center">
                     <p className="text-sm font-semibold text-[var(--color-text)]">Item {item}</p>
                   </div>
                 ))}
