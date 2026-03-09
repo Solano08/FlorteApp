@@ -132,7 +132,7 @@ export const LibraryPage = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   {resource.type === 'external' && (
-                    <div className="absolute bottom-2 right-2 rounded-full bg-white/90 p-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <div className="absolute bottom-2 right-2 rounded-2xl bg-white/90 p-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                       <ExternalLink className="h-4 w-4 text-brand" />
                     </div>
                   )}
@@ -144,7 +144,7 @@ export const LibraryPage = () => {
                     </h3>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+                    <span className="inline-flex items-center gap-1 rounded-2xl bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
                       {resource.type === 'external' ? (
                         <Globe className="h-3 w-3" />
                       ) : (
@@ -177,7 +177,7 @@ export const LibraryPage = () => {
                 </div>
                 <button
                   onClick={handleCloseModal}
-                  className="rounded-full p-2 transition-colors hover:bg-white/10"
+                  className="rounded-2xl p-2 transition-colors hover:bg-white/10"
                 >
                   <X className="h-5 w-5 text-[var(--color-text)]" />
                 </button>

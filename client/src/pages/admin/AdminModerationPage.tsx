@@ -393,7 +393,7 @@ export const AdminModerationPage = () => {
                         <img
                           src={resolveAssetUrl(user.avatarUrl) ?? 'https://avatars.dicebear.com/api/initials/FlorteApp.svg'}
                           alt={user.firstName}
-                          className="h-8 w-8 rounded-full object-cover"
+                          className="h-8 w-8 rounded-2xl object-cover"
                         />
                         <div className="space-y-1">
                           <p className="text-sm font-semibold">
@@ -430,7 +430,7 @@ export const AdminModerationPage = () => {
                     </td>
 
                     <td className="px-3 py-3">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusPill(user.isActive)}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-2xl px-2.5 py-1 text-[11px] font-semibold ${statusPill(user.isActive)}`}>
                         {user.isActive ? 'Activo' : 'Suspendido'}
                       </span>
                     </td>
@@ -440,7 +440,7 @@ export const AdminModerationPage = () => {
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="rounded-full px-3 py-1.5 text-[11px] font-semibold text-sena-green glass-liquid hover:bg-white/60"
+                          className="rounded-2xl px-3 py-1.5 text-[11px] font-semibold text-sena-green glass-liquid hover:bg-white/60"
                           onClick={() => setEditingUser(user)}
                         >
                           Editar perfil
@@ -476,7 +476,7 @@ export const AdminModerationPage = () => {
                 Gestiona los reportes enviados por la comunidad.
               </p>
             </div>
-            <span className="rounded-full bg-rose-100/80 px-3 py-1 text-[11px] font-semibold text-rose-600">
+            <span className="rounded-2xl bg-rose-100/80 px-3 py-1 text-[11px] font-semibold text-rose-600">
               {pendingReports.length} pendientes
             </span>
           </div>
@@ -501,7 +501,7 @@ export const AdminModerationPage = () => {
                     </div>
                     <span
                       className={classNames(
-                        'rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                        'rounded-2xl px-3 py-1 text-[11px] font-semibold uppercase tracking-wide',
                         report.status === 'pending'
                           ? 'bg-rose-100/80 text-rose-600'
                           : 'bg-emerald-100/80 text-emerald-600'
@@ -582,7 +582,7 @@ export const AdminModerationPage = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleCloseReportPost}
-                className="rounded-full border border-white/30 px-3 py-1 text-xs text-[var(--color-muted)]"
+                className="rounded-2xl border border-white/30 px-3 py-1 text-xs text-[var(--color-muted)]"
               >
                 Cerrar
               </Button>
@@ -601,7 +601,7 @@ export const AdminModerationPage = () => {
                       {new Date(activeReportPost.createdAt).toLocaleDateString('es-CO')}
                     </p>
                   </div>
-                  <span className="rounded-full bg-white/30 px-3 py-0.5 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
+                  <span className="rounded-2xl bg-white/30 px-3 py-0.5 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
                     {activeReportPost.viewerReaction ?? 'Sin reaccion'}
                   </span>
                 </div>
@@ -708,7 +708,7 @@ export const AdminModerationPage = () => {
             <Button
               variant="ghost"
               onClick={handleCloseEditor}
-              className="self-start rounded-full px-3 py-1 text-xs text-[var(--color-muted)] glass-liquid hover:text-sena-green"
+              className="self-start rounded-2xl px-3 py-1 text-xs text-[var(--color-muted)] glass-liquid hover:text-sena-green"
               disabled={isSaving}
             >
               <X className="h-3.5 w-3.5" /> Cerrar
@@ -732,7 +732,7 @@ export const AdminModerationPage = () => {
                     key={shortcut.field}
                     variant="ghost"
                     size="sm"
-                    className="rounded-full border border-white/20 px-3 py-1 text-[11px]"
+                    className="rounded-2xl border border-white/20 px-3 py-1 text-[11px]"
                     onClick={() => handleSocialShortcut(shortcut.field, shortcut.template)}
                     disabled={isSaving}
                   >

@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
 import { authService, LoginPayload, RegisterPayload } from '../services/authService';
 import { AuthUser } from '../types/auth';
 import { storage } from '../utils/storage';
@@ -15,17 +15,25 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+const AUTH_LOADED_KEY = 'florte:auth-initially-loaded';
 
-  useEffect(() => {
+/** Evita desmontar rutas cuando AuthProvider remonta (HMR, isLoading vuelve a true). Persiste en sessionStorage para sobrevivir recargas de módulo. */
+function getHasAuthInitiallyLoaded(): boolean {
+  if (typeof sessionStorage === 'undefined') return false;
+  return sessionStorage.getItem(AUTH_LOADED_KEY) === '1';
+}
+
+function setAuthInitiallyLoaded(): void {
+  if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(AUTH_LOADED_KEY, '1');
+}
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<AuthUser | null>(() => {
     const sessionUser = authService.restoreSession();
-    if (sessionUser) {
-      setUser(sessionUser);
-    }
-    setIsLoading(false);
-  }, []);
+    setAuthInitiallyLoaded();
+    return sessionUser;
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   const login = async (payload: LoginPayload) => {
     setIsLoading(true);
@@ -52,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await authService.logout();
       setUser(null);
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(AUTH_LOADED_KEY);
     } finally {
       setIsLoading(false);
     }
@@ -66,17 +75,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const effectiveLoading = isLoading && !getHasAuthInitiallyLoaded();
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       isAuthenticated: Boolean(user),
-      isLoading,
+      isLoading: effectiveLoading,
       login,
       register,
       logout,
       updateUser
     }),
-    [user, isLoading]
+    [user, effectiveLoading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

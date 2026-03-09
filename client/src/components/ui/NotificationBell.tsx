@@ -105,19 +105,19 @@ export const NotificationBell = () => {
 
   return (
     <div className="relative">
-      <Button
-        variant="ghost"
-        className="h-11 w-11 rounded-full text-[var(--color-text)] glass-liquid hover:bg-white/30 !focus:ring-0 focus:ring-0 focus:ring-transparent focus:ring-offset-0"
+      <button
+        type="button"
         onClick={handleToggle}
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-text)] transition-all duration-200 hover:bg-white/60 hover:shadow-sm dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sena-green/30"
         aria-label="Notificaciones"
       >
-        <Bell className="h-5 w-5" />
+        <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-semibold text-white shadow-md">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
-      </Button>
+      </button>
 
       <AnimatePresence>
         {notificationsOpen && !showAll && (
@@ -128,7 +128,7 @@ export const NotificationBell = () => {
             transition={{ duration: 0.2 }}
             className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] w-80 max-w-[320px]"
           >
-            <div className="rounded-2xl p-2.5 text-sm text-[var(--color-text)] glass-frosted">
+            <div className="rounded-2xl p-2.5 text-sm text-[var(--color-text)] bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
               <div className="flex items-center justify-between gap-2 pb-2">
                 <p className="text-sm font-semibold text-[var(--color-text)]">Notificaciones</p>
                 <div className="flex items-center gap-1">
@@ -257,7 +257,7 @@ export const NotificationBell = () => {
               <Button
                 variant="ghost"
                 onClick={() => setShowAll(false)}
-                className="self-start rounded-full px-3 py-1 text-xs text-[var(--color-muted)] glass-liquid hover:text-[var(--color-text)]"
+                className="self-start rounded-2xl px-3 py-1 text-xs text-[var(--color-muted)] glass-liquid hover:text-[var(--color-text)]"
               >
                 Cerrar
               </Button>

@@ -13,8 +13,8 @@ export const AuthLayout = ({ title, description, children }: AuthLayoutProps) =>
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden p-6 auth-background">
       {/* Decorative background elements */}
-      <div className="absolute top-[-10%] left-[-10%] h-[50vh] w-[50vh] rounded-full bg-brand/10 blur-[100px] animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] h-[50vh] w-[50vh] rounded-full bg-emerald-400/10 blur-[100px] animate-pulse delay-700" />
+      <div className="absolute top-[-10%] left-[-10%] h-[50vh] w-[50vh] rounded-2xl bg-brand/10 blur-[100px] animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] h-[50vh] w-[50vh] rounded-2xl bg-emerald-400/10 blur-[100px] animate-pulse delay-700" />
 
       <div className="absolute top-6 right-6 z-50">
         <ThemeToggle />

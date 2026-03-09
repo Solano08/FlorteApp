@@ -12,19 +12,17 @@ import { ToastProvider } from './contexts/ToastContext';
 const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ThemeProvider>
-          <AuthProvider>
-            <MenuStateProvider>
-              <ToastProvider>
-                <App />
-              </ToastProvider>
-            </MenuStateProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
-  </React.StrictMode>
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <MenuStateProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </MenuStateProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
+  </QueryClientProvider>
 );

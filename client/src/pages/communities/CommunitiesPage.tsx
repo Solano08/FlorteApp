@@ -31,7 +31,6 @@ export const CommunitiesPage = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isExploring, setIsExploring] = useState(false);
   const [exploreSearch, setExploreSearch] = useState('');
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const toast = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -118,8 +117,7 @@ export const CommunitiesPage = () => {
     },
     onSuccess: async (groupId) => {
       await queryClient.invalidateQueries({ queryKey: ['myGroups'] });
-      setSuccessMessage('Te uniste a la comunidad ✨');
-      setTimeout(() => setSuccessMessage(null), 1500);
+      toast.success('Te uniste a la comunidad ✨');
       setIsExploring(false);
       navigate(`/communities/${groupId}`);
     },
@@ -377,8 +375,8 @@ export const CommunitiesPage = () => {
             ) : (
               <div className="flex flex-1 items-center justify-center px-4">
                 <Card className="glass-liquid relative max-w-lg overflow-hidden rounded-2xl border border-white/35 bg-white/90 p-7 text-center shadow-[0_18px_45px_rgba(15,23,42,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/90">
-                  <div className="pointer-events-none absolute -right-24 -top-24 h-40 w-40 rounded-full bg-sena-green/10 blur-3xl dark:bg-sena-green/20" />
-                  <div className="pointer-events-none absolute -left-16 bottom-[-40px] h-36 w-36 rounded-full bg-emerald-500/8 blur-3xl dark:bg-emerald-500/15" />
+                  <div className="pointer-events-none absolute -right-24 -top-24 h-40 w-40 rounded-2xl bg-sena-green/10 blur-3xl dark:bg-sena-green/20" />
+                  <div className="pointer-events-none absolute -left-16 bottom-[-40px] h-36 w-36 rounded-2xl bg-emerald-500/8 blur-3xl dark:bg-emerald-500/15" />
 
                   <div className="relative flex flex-col items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sena-green/12 text-sena-green shadow-[0_10px_30px_rgba(18,55,29,0.35)]">
@@ -485,7 +483,7 @@ export const CommunitiesPage = () => {
                   key={friend.id}
                   className="flex items-center gap-3 rounded-2xl bg-white/70 px-3 py-2 text-sm text-[var(--color-text)] shadow-sm dark:bg-neutral-900/80"
                 >
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-sena-green/10 text-xs font-semibold text-sena-green overflow-hidden">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-2xl bg-sena-green/10 text-xs font-semibold text-sena-green overflow-hidden">
                     {friend.avatarUrl ? (
                       <img
                         src={resolveAssetUrl(friend.avatarUrl) ?? ''}
@@ -506,8 +504,7 @@ export const CommunitiesPage = () => {
                     onClick={async () => {
                       try {
                         await navigator.clipboard.writeText(inviteLink);
-                        setSuccessMessage(`Enlace copiado para invitar a ${friend.fullName || friend.firstName}`);
-                        setTimeout(() => setSuccessMessage(null), 1500);
+                        toast.success(`Enlace copiado para invitar a ${friend.fullName || friend.firstName}`);
                       } catch {
                         toast.error('No se pudo copiar el link. Por favor, intenta nuevamente.');
                       }
@@ -535,8 +532,7 @@ export const CommunitiesPage = () => {
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(inviteLink);
-                    setSuccessMessage('Link copiado al portapapeles');
-                    setTimeout(() => setSuccessMessage(null), 1500);
+                    toast.success('Link copiado al portapapeles');
                   } catch {
                     toast.error('No se pudo copiar el link. Por favor, intenta nuevamente.');
                   }
@@ -565,8 +561,7 @@ export const CommunitiesPage = () => {
             await groupService.uploadCommunityIcon(group.id, iconFile);
           }
           await queryClient.invalidateQueries({ queryKey: ['myGroups'] });
-          setSuccessMessage('Tu nueva comunidad está lista ✨');
-          setTimeout(() => setSuccessMessage(null), 1500);
+          toast.success('Tu nueva comunidad está lista ✨');
           setCreateDialogOpen(false);
           setIsExploring(false);
           navigate(`/communities/${group.id}`);
@@ -574,32 +569,6 @@ export const CommunitiesPage = () => {
         isLoading={createCommunityMutation.isPending}
       />
 
-      {/* Mensaje de éxito */}
-      <AnimatePresence>
-        {successMessage && (
-          <motion.div
-            key="success-message"
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ 
-              duration: 0.3, 
-              ease: [0.16, 1, 0.3, 1],
-              exit: { duration: 0.25, ease: [0.16, 1, 0.3, 1] }
-            }}
-            className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-2xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
-            style={{ willChange: 'transform, opacity' }}
-          >
-            <p className="text-sm font-medium text-[var(--color-text)] whitespace-nowrap relative z-10">{successMessage}</p>
-            <motion.div
-              initial={{ width: '100%' }}
-              animate={{ width: '0%' }}
-              transition={{ duration: 1.5, ease: 'linear' }}
-              className="absolute bottom-0 left-0 h-1 bg-sena-green"
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
     </DashboardLayout>
   );
 };

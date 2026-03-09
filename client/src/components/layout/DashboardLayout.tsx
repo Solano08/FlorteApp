@@ -49,7 +49,6 @@ export const DashboardLayout = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [isUserInfoModalOpen, setIsUserInfoModalOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const navigation = useMemo(() => {
@@ -57,7 +56,7 @@ export const DashboardLayout = ({
     if (user.role === 'admin') {
       return [
         ...baseNavItems,
-        { to: '/admin', label: 'Moderacion', icon: Shield }
+        { to: '/admin', label: 'Moderación', icon: Shield }
       ];
     }
     return baseNavItems;
@@ -95,11 +94,6 @@ export const DashboardLayout = ({
     navigate('/settings');
   };
 
-  const handleViewUserInfo = () => {
-    setIsProfileMenuOpen(false);
-    setIsUserInfoModalOpen(true);
-  };
-
   const handleLogout = () => {
     setIsProfileMenuOpen(false);
     void logout();
@@ -108,24 +102,30 @@ export const DashboardLayout = ({
   return (
     <div
       className={classNames(
-        'flex bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-black dark:via-black dark:to-black',
+        'flex bg-[var(--color-background)]',
         contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen'
       )}
     >
       <div className={classNames("flex flex-1 flex-col", contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen')}>
-        <header className="sticky top-0 z-40 grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-2.5 glass-liquid transition-[padding] duration-150 md:px-5">
-          <div className="flex items-center gap-2">
-            <img
-              src="/logoFlorte.png"
-              alt="Florte"
-              className="h-9 w-9 object-cover md:h-10 md:w-10"
-            />
-            <span className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)] md:text-base">
-              Florte
-            </span>
-          </div>
-          <nav className="flex justify-center">
-            <div className="flex items-center gap-1 overflow-x-auto rounded-full px-2.5 py-3 sm:gap-1.5 sm:px-3 sm:py-3.5 hide-scrollbar">
+        <header className="nav-glass sticky top-0 z-40 w-full transition-[padding] duration-150">
+          <div className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-2.5 sm:px-6 lg:px-8">
+            {/* Izquierda: logo Florte */}
+            <NavLink
+              to="/dashboard"
+              className="flex shrink-0 items-center gap-2 rounded-lg px-2 py-1 transition hover:bg-white/30 dark:hover:bg-white/5"
+              aria-label="Ir a inicio"
+            >
+              <img
+                src="/logoFlorte.png"
+                alt="Florte"
+                className="h-7 w-7 shrink-0 rounded-md object-cover sm:h-8 sm:w-8"
+              />
+              <span className="hidden truncate text-xs font-semibold uppercase tracking-wide text-[var(--color-text)] sm:inline md:text-sm">
+                Florte
+              </span>
+            </NavLink>
+            {/* Centro: botones de navegación centrados y compactos */}
+            <nav className="flex shrink-0 items-center justify-center gap-1 overflow-x-auto overflow-y-visible hide-scrollbar [contain:layout] sm:gap-1.5 min-w-0" aria-label="Navegación principal">
               {navigation.map(({ to, label, icon: Icon }) => {
                 const isActive = location.pathname === to || (to !== '/dashboard' && location.pathname.startsWith(to));
                 return (
@@ -133,18 +133,16 @@ export const DashboardLayout = ({
                     key={`nav-${to}`}
                     to={to}
                     className={classNames(
-                      'flex items-center gap-1 rounded-2xl px-2 py-1 text-[10px] font-semibold transition-all sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[11px]',
+                      'nav-btn flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] transition-all duration-200 sm:gap-2 sm:px-3 sm:py-2 sm:text-[11px] whitespace-nowrap',
                       isActive
-                        ? 'bg-white text-sena-green shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:bg-[var(--color-accent-soft)] dark:text-sena-green dark:shadow-[0_4px_12px_rgba(0,0,0,0.25)]'
-                        : 'text-[var(--color-muted)] hover:bg-white/60 hover:text-sena-green dark:text-[var(--color-text)] dark:hover:bg-white/15'
+                        ? 'nav-btn-active text-sena-green font-semibold dark:text-sena-green'
+                        : 'text-[var(--color-muted)] font-medium hover:text-sena-green dark:text-[var(--color-text)] dark:hover:text-sena-green'
                     )}
                   >
                     <span
                       className={classNames(
-                        'flex h-6 w-6 items-center justify-center rounded-2xl shadow-[0_4px_8px_rgba(0,0,0,0.12)] sm:h-7 sm:w-7',
-                        isActive
-                          ? 'bg-white/40 text-sena-green dark:bg-sena-green/20 dark:text-sena-green'
-                          : 'bg-white/40 text-sena-green dark:bg-[var(--color-accent-soft)] dark:text-sena-green'
+                        'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sena-green transition-colors sm:h-7 sm:w-7',
+                        isActive ? 'nav-btn-icon-active' : 'nav-btn-icon'
                       )}
                     >
                       <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -153,31 +151,35 @@ export const DashboardLayout = ({
                   </NavLink>
                 );
               })}
-            </div>
-          </nav>
-          <div className="flex items-center justify-end gap-3">
+            </nav>
+            {/* Derecha: notificaciones, tema y perfil */}
+            <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3 justify-self-end">
             <NotificationBell />
             <ThemeToggle />
             <div className="relative hidden lg:block" ref={profileMenuRef}>
               <button
                 type="button"
                 onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                className="flex items-center justify-between gap-2.5 rounded-2xl px-2.5 py-1.5 text-left transition hover:bg-white/20 glass-liquid"
+                className="flex items-center gap-2 rounded-xl pl-1 pr-2 py-1.5 text-left transition-all duration-200 hover:bg-white/60 hover:shadow-sm dark:hover:bg-white/10"
               >
-                <div className="flex flex-1 flex-col items-start justify-center">
-                  <p className="text-xs font-semibold text-[var(--color-text)] leading-tight md:text-sm">
-                    {user?.firstName} {user?.lastName}
-                  </p>
-                </div>
                 {user && (
                   <UserAvatar
                     firstName={user.firstName}
                     lastName={user.lastName}
                     avatarUrl={user.avatarUrl}
-                    size="sm"
-                    className="shadow-[0_6px_14px_rgba(18,55,29,0.14)]"
+                    size="xs"
                   />
                 )}
+                <div className="flex min-w-0 flex-col items-start justify-center overflow-hidden">
+                  <p className="truncate max-w-[120px] text-[11px] font-semibold text-[var(--color-text)] leading-tight md:text-xs">
+                    {user?.firstName} {user?.lastName}
+                  </p>
+                  {user && (
+                    <span className="truncate max-w-[120px] text-[9px] font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                      {roleLabels[user.role]}
+                    </span>
+                  )}
+                </div>
               </button>
               {isProfileMenuOpen && (
                 <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] rounded-2xl p-2.5 text-sm text-[var(--color-text)] glass-frosted">
@@ -189,16 +191,6 @@ export const DashboardLayout = ({
                     <span className="flex items-center gap-2">
                       <User className="h-4 w-4" />
                       Perfil
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800"
-                    onClick={handleViewUserInfo}
-                  >
-                    <span className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Ver información
                     </span>
                   </button>
                   <button
@@ -217,19 +209,20 @@ export const DashboardLayout = ({
                     className="mt-1 flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left text-red-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-neutral-800"
                     onClick={handleLogout}
                   >
-                    <span>Cerrar sesion</span>
+                    <span>Cerrar sesión</span>
                     <LogOut className="h-4 w-4" />
                   </button>
                 </div>
               )}
             </div>
           </div>
+        </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ boxShadow: 'none', WebkitBoxShadow: 'none' }}>
+        <main className="app-main -mt-px flex-1 overflow-y-auto overflow-x-hidden min-h-0 min-h-[50vh] border-t-0" style={{ boxShadow: 'none', WebkitBoxShadow: 'none' }}>
           <div
             className={classNames(
-              'h-full w-full',
+              'h-full min-h-0 w-full',
               // Si hay contentClassName personalizado, no aplicar estilos por defecto
               contentClassName
                 ? contentClassName
@@ -263,7 +256,7 @@ export const DashboardLayout = ({
                 {user?.firstName} {user?.lastName}
               </p>
               {user && (
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[var(--color-accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sena-green">
+                <span className="mt-2 inline-flex items-center gap-1 rounded-2xl bg-[var(--color-accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sena-green">
                   {roleLabels[user.role]}
                 </span>
               )}
@@ -286,98 +279,8 @@ export const DashboardLayout = ({
           </Button>
         </footer>
       </div>
-
-      <GlassDialog
-        open={isUserInfoModalOpen}
-        onClose={() => setIsUserInfoModalOpen(false)}
-        size="md"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-semibold text-[var(--color-text)]">Información del usuario</h3>
-            <p className="text-sm text-[var(--color-muted)]">Detalles de tu cuenta</p>
-          </div>
-          <Button
-            variant="ghost"
-            onClick={() => setIsUserInfoModalOpen(false)}
-            className="self-start rounded-full glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
-          >
-            <X className="h-4 w-4" /> Cerrar
-          </Button>
-        </div>
-
-        <div className="mt-6 space-y-4">
-          <div className="flex items-center gap-4">
-            {user && (
-              <UserAvatar
-                firstName={user.firstName}
-                lastName={user.lastName}
-                avatarUrl={user.avatarUrl}
-                size="xl"
-                className="shadow-lg"
-              />
-            )}
-            <div>
-              <p className="text-lg font-semibold text-[var(--color-text)]">
-                {user?.firstName} {user?.lastName}
-              </p>
-              <p className="text-sm text-[var(--color-muted)]">{user?.email}</p>
-            </div>
-          </div>
-
-          <div className="space-y-3 rounded-2xl glass-liquid p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-[var(--color-text)]">Rol</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-accent-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sena-green">
-                {roleLabels[user?.role ?? 'apprentice']}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-[var(--color-text)]">Estado</span>
-              <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
-                user?.isActive 
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-              }`}>
-                {user?.isActive ? 'Activo' : 'Inactivo'}
-              </span>
-            </div>
-            {user?.headline && (
-              <div>
-                <span className="text-sm font-medium text-[var(--color-text)]">Titular</span>
-                <p className="text-sm text-[var(--color-muted)] mt-1">{user.headline}</p>
-              </div>
-            )}
-            {user?.bio && (
-              <div>
-                <span className="text-sm font-medium text-[var(--color-text)]">Biografía</span>
-                <p className="text-sm text-[var(--color-muted)] mt-1">{user.bio}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-3">
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={() => {
-                setIsUserInfoModalOpen(false);
-                navigate('/profile');
-              }}
-            >
-              Editar perfil
-            </Button>
-            <Button
-              variant="ghost"
-              className="flex-1"
-              onClick={() => setIsUserInfoModalOpen(false)}
-            >
-              Cerrar
-            </Button>
-          </div>
-        </div>
-      </GlassDialog>
     </div>
   );
 };
+
 

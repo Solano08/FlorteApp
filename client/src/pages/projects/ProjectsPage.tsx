@@ -507,7 +507,7 @@ export const ProjectsPage = () => {
                           Actualizado el {new Date(project.updatedAt).toLocaleDateString('es-CO')}
                         </p>
                         <div className="mt-2">
-                          <span className="inline-flex rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand ring-1 ring-brand/20">
+                          <span className="inline-flex rounded-2xl bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand ring-1 ring-brand/20">
                             {statusLabels[project.status]}
                           </span>
                         </div>
@@ -655,7 +655,7 @@ export const ProjectsPage = () => {
       >
         <div className="space-y-6">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
               <Plus className="h-3 w-3" />
               <span>Nuevo Proyecto</span>
             </div>
@@ -790,7 +790,7 @@ export const ProjectsPage = () => {
       >
         <div className="space-y-6">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
               <Edit className="h-3 w-3" />
               <span>Editar Proyecto</span>
             </div>
@@ -927,7 +927,7 @@ export const ProjectsPage = () => {
       >
         <div className="space-y-6">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full bg-red-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-red-500">
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-red-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-red-500">
               <Trash2 className="h-3 w-3" />
               <span>Eliminar Proyecto</span>
             </div>

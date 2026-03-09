@@ -241,7 +241,7 @@ export const ChannelSettingsPage = () => {
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
                     aria-label="Cerrar"
                   >
                     <X className="h-5 w-5" />
@@ -267,7 +267,7 @@ export const ChannelSettingsPage = () => {
                         />
                         <button
                           type="button"
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                          className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
                           aria-label="Emoji"
                         >
                           😊
@@ -327,7 +327,7 @@ export const ChannelSettingsPage = () => {
                         </div>
                         <button
                           type="button"
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                          className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/60 dark:bg-neutral-700/60 hover:bg-white/80 dark:hover:bg-neutral-700/80 transition-colors duration-150 text-[var(--color-muted)] hover:text-[var(--color-text)]"
                           aria-label="Emoji"
                         >
                           😊
@@ -371,7 +371,7 @@ export const ChannelSettingsPage = () => {
                         <button
                           type="button"
                           onClick={() => setAgeRestricted(!ageRestricted)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+                          className={`relative inline-flex h-6 w-11 items-center rounded-2xl transition-colors duration-200 ${
                             ageRestricted
                               ? 'bg-sena-green'
                               : 'bg-slate-300 dark:bg-neutral-600'
@@ -379,7 +379,7 @@ export const ChannelSettingsPage = () => {
                           aria-label="Restricción por edad"
                         >
                           <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                            className={`inline-block h-4 w-4 transform rounded-2xl bg-white transition-transform duration-200 ${
                               ageRestricted ? 'translate-x-6' : 'translate-x-1'
                             }`}
                           />

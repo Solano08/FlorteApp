@@ -386,12 +386,12 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     <>
       <aside
         ref={sidebarRef}
-        className="relative z-10 flex h-full w-96 flex-col bg-gradient-to-b from-white/70 via-white/50 to-white/60 dark:from-neutral-900/70 dark:via-neutral-900/50 dark:to-neutral-900/60 backdrop-blur-xl shadow-[2px_0_24px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_24px_rgba(0,0,0,0.35)]"
+        className="relative z-10 flex h-full w-96 flex-col glass-liquid"
         onContextMenu={handleContextMenu}
       >
         {/* Header con nombre de comunidad */}
         {community && (
-          <div className="relative border-b border-white/10 dark:border-white/5 bg-white/85 dark:bg-neutral-900/90 px-4 py-3 shadow-[0_4px_10px_rgba(15,23,42,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.6)]">
+          <div className="relative border-b border-white/20 dark:border-white/10 glass-liquid px-4 py-3">
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -405,7 +405,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                         e.stopPropagation();
                         setIsCommunityMenuOpen((prev) => !prev);
                       }}
-                      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 transition-colors duration-150"
+                      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 transition-colors duration-150"
                       aria-label="Menú de comunidad"
                     >
                       <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isCommunityMenuOpen ? 'rotate-180' : ''}`} />
@@ -448,7 +448,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                 <button
                   type="button"
                   onClick={onInviteFriends}
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-transparent text-[var(--color-muted)] hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 transition-all duration-200 shadow-none hover:shadow-sm"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-2xl bg-transparent text-[var(--color-muted)] hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 transition-all duration-200 shadow-none hover:shadow-sm"
                   aria-label="Invitar amigos"
                 >
                   <UserPlus className="h-4 w-4" />
@@ -487,7 +487,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                 type="button"
                 onClick={handleCreateCategoryInline}
                 disabled={!newCategoryName.trim()}
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                className="flex h-6 w-6 items-center justify-center rounded-2xl bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
                 aria-label="Crear categoría"
               >
                 <Check className="h-3.5 w-3.5" />
@@ -498,7 +498,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                   setIsCreatingCategory(false);
                   setNewCategoryName('');
                 }}
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
+                className="flex h-6 w-6 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
                 aria-label="Cancelar"
               >
                 <X className="h-3.5 w-3.5" />
@@ -523,7 +523,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                   >
                     {/* Indicador de posición antes */}
                     {dragOverCategory === category.id && dragOverPosition === 'before' && draggedCategory && draggedCategory.id !== category.id && isAdmin && (
-                      <div className="absolute -top-1 left-0 right-0 h-0.5 bg-sena-green rounded-full z-10" />
+                      <div className="absolute -top-1 left-0 right-0 h-0.5 bg-sena-green rounded-2xl z-10" />
                     )}
                     <div 
                       className={`group mb-1.5 flex items-center gap-1 px-1 ${isAdmin ? 'cursor-move' : 'cursor-default'} ${isDraggingCategory ? 'opacity-50' : ''}`}
@@ -628,7 +628,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                               type="button"
                               onClick={() => void handleCreateTextChannelInline()}
                               disabled={!newTextChannelName.trim() || isSubmitting}
-                              className="flex h-6 w-6 items-center justify-center rounded-full bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                              className="flex h-6 w-6 items-center justify-center rounded-2xl bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
                               aria-label="Crear canal"
                             >
                               <Check className="h-3.5 w-3.5" />
@@ -640,7 +640,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                                 setNewTextChannelName('');
                                 setSelectedCategoryId(null);
                               }}
-                              className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
+                              className="flex h-6 w-6 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
                               aria-label="Cancelar"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -672,7 +672,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                               type="button"
                               onClick={() => void handleCreateTextChannelInline()}
                               disabled={!newTextChannelName.trim() || isSubmitting}
-                              className="flex h-6 w-6 items-center justify-center rounded-full bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                              className="flex h-6 w-6 items-center justify-center rounded-2xl bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
                               aria-label="Crear canal"
                             >
                               <Check className="h-3.5 w-3.5" />
@@ -683,7 +683,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                                 setIsCreatingTextChannel(false);
                                 setNewTextChannelName('');
                               }}
-                              className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
+                              className="flex h-6 w-6 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
                               aria-label="Cancelar"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -722,7 +722,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                                 onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
                                 className={`relative flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
                                   isActive
-                                    ? 'bg-white/80 dark:bg-neutral-800/80 text-sena-green dark:text-emerald-400 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 dark:before:bg-emerald-500/60 before:rounded-full'
+                                    ? 'glass-liquid-strong text-sena-green font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 before:rounded-2xl'
                                     : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-neutral-700/50 hover:text-[var(--color-text)]'
                                 }`}
                               >
@@ -731,7 +731,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                                 <button
                                   type="button"
                                   onClick={(e) => handleChannelSettings(channel.id, e)}
-                                  className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
+                                  className="flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
                                   aria-label="Ajustes del canal"
                                   style={{ pointerEvents: hoveredChannel === channel.id ? 'auto' : 'none' }}
                                 >
@@ -770,7 +770,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                           type="button"
                           onClick={() => void handleCreateTextChannelInline()}
                           disabled={!newTextChannelName.trim() || isSubmitting}
-                          className="flex h-6 w-6 items-center justify-center rounded-full bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                          className="flex h-6 w-6 items-center justify-center rounded-2xl bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
                           aria-label="Crear canal"
                         >
                           <Check className="h-3.5 w-3.5" />
@@ -782,7 +782,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             setNewTextChannelName('');
                             setSelectedCategoryId(null);
                           }}
-                          className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
+                          className="flex h-6 w-6 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
                           aria-label="Cancelar"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -791,7 +791,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                     )}
                     {/* Indicador de posición después */}
                     {dragOverCategory === category.id && dragOverPosition === 'after' && draggedCategory && draggedCategory.id !== category.id && (
-                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-sena-green rounded-full z-10" />
+                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-sena-green rounded-2xl z-10" />
                     )}
                   </div>
                 );
@@ -811,7 +811,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                   }}
                 >
                   {dragOverCategory === null && dragOverPosition === 'after' && (
-                    <div className="h-0.5 bg-sena-green rounded-full" />
+                    <div className="h-0.5 bg-sena-green rounded-2xl" />
                   )}
                 </div>
               )}
@@ -833,7 +833,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                         e.stopPropagation();
                         setIsCreatingTextChannel(true);
                       }}
-                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150
+                      className={`flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150
                         ${hoveredCategory === 'voz' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                       aria-label="Crear canal en Voz"
                     >
@@ -854,7 +854,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
                             className={`relative flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
                               isActive
-                                ? 'bg-white/80 dark:bg-neutral-800/80 text-sena-green dark:text-emerald-400 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 dark:before:bg-emerald-500/60 before:rounded-full'
+                                ? 'glass-liquid-strong text-sena-green font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 before:rounded-2xl'
                                 : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-neutral-700/50 hover:text-[var(--color-text)]'
                             }`}
                           >
@@ -863,7 +863,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             <button
                               type="button"
                               onClick={(e) => handleChannelSettings(channel.id, e)}
-                              className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
+                              className="flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
                               aria-label="Ajustes del canal"
                               style={{ pointerEvents: hoveredChannel === channel.id ? 'auto' : 'none' }}
                             >

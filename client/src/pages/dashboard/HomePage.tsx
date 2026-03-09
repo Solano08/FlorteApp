@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
-import { useMenuState } from '../../contexts/MenuStateContext';
 import { Card } from '../../components/ui/Card';
 import { TextArea } from '../../components/ui/TextArea';
 import { Button } from '../../components/ui/Button';
@@ -37,10 +36,8 @@ import {
   Trash2,
   Video,
   X,
-  Users,
-  Users as UsersIcon
+  Users
 } from 'lucide-react';
-import { Chat } from '../../types/chat';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { FeedAttachment, FeedComment, FeedPostAggregate, ReactionType } from '../../types/feed';
@@ -48,12 +45,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { floatingModalContentClass } from '../../utils/modalStyles';
 import { resolveAssetUrl } from '../../utils/media';
 import { compressImageForUpload } from '../../utils/imageCompress';
-
-interface ChatWindowProps {
-  chat: Chat;
-  index: number;
-  onClose: (chatId: string) => void;
-}
 
 const composerIcons = [
   { icon: Image, label: 'Imagen', action: 'image' as const },
@@ -203,12 +194,12 @@ type ReportTarget =
   | { type: 'post'; post: FeedPostAggregate }
   | { type: 'comment'; post: FeedPostAggregate; comment: FeedComment };
 
+const feedQueryKey = ['feed', 'posts'] as const;
+
 export const HomePage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const toast = useToast();
-  const { messagesOpen, setMessagesOpen, setNotificationsOpen } = useMenuState();
-  const [openChatIds, setOpenChatIds] = useState<string[]>([]);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [isStoryViewerOpen, setIsStoryViewerOpen] = useState(false);
   const [isStoryMenuOpen, setIsStoryMenuOpen] = useState(false);
@@ -221,7 +212,6 @@ export const HomePage = () => {
   const storyPanelOriginRef = useRef<{ x: number; y: number }>({ x: 50, y: 100 });
   const [composerContent, setComposerContent] = useState('');
   const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([]);
-  const [composerSuccessMessage, setComposerSuccessMessage] = useState<string | null>(null);
   const [commentsCache, setCommentsCache] = useState<Record<string, FeedComment[]>>({});
   const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
@@ -484,12 +474,6 @@ export const HomePage = () => {
 
 
   useEffect(() => {
-    if (!composerSuccessMessage) return;
-    const timeout = window.setTimeout(() => setComposerSuccessMessage(null), 1500);
-    return () => window.clearTimeout(timeout);
-  }, [composerSuccessMessage]);
-
-  useEffect(() => {
     if (announcementSlides.length <= 1) return;
     const interval = window.setInterval(() => {
       setActiveAnnouncement((prev) => (prev + 1) % announcementSlides.length);
@@ -532,12 +516,14 @@ export const HomePage = () => {
     }
   }, [emojiPickerTarget, commentModalPost]);
 
+  const openComposerHandledRef = useRef(false);
   useEffect(() => {
     const state = location.state as { openComposer?: boolean } | null;
-    if (state?.openComposer) {
+    if (state?.openComposer && !openComposerHandledRef.current) {
+      openComposerHandledRef.current = true;
       window.scrollTo({ top: 0, behavior: 'smooth' });
       window.setTimeout(() => composerInputRef.current?.focus(), 120);
-      navigate(location.pathname, { replace: true });
+      navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location, navigate]);
 
@@ -584,11 +570,6 @@ export const HomePage = () => {
     commentFileInputsRef.current[postId][kind] = element;
   };
 
-  const { data: chats = [] } = useQuery({
-    queryKey: ['chats'],
-    queryFn: chatService.listChats
-  });
-
   const { data: projects = [] } = useQuery({
     queryKey: ['projects', 'me'],
     queryFn: projectService.listMyProjects
@@ -604,10 +585,11 @@ export const HomePage = () => {
     queryFn: libraryService.listResources
   });
 
-  const feedQueryKey = ['feed', 'posts'] as const;
   const { data: feedPosts = [], isFetching: isLoadingFeed } = useQuery({
     queryKey: feedQueryKey,
-    queryFn: () => feedService.listPosts()
+    queryFn: () => feedService.listPosts(),
+    staleTime: 30_000,
+    refetchOnMount: false
   });
 
   const [activeAnnouncement, setActiveAnnouncement] = useState(0);
@@ -624,19 +606,6 @@ export const HomePage = () => {
       if (!existing) return existing;
       return existing.map((post) => (post.id === postId ? updater(post) : post));
     });
-  };
-
-  const handleOpenChat = (chatId: string) => {
-    setOpenChatIds((prev) => {
-      if (prev.includes(chatId)) return prev;
-      const next = [...prev, chatId];
-      return next.slice(-3);
-    });
-    setMessagesOpen(false);
-  };
-
-  const handleCloseChat = (chatId: string) => {
-    setOpenChatIds((prev) => prev.filter((id) => id !== chatId));
   };
 
   const createPostMutation = useMutation({
@@ -656,9 +625,7 @@ export const HomePage = () => {
       void queryClient.invalidateQueries({ queryKey: ['profile', 'recent-posts'] });
       setComposerContent('');
       handleClearAttachments();
-      
-      // Mostrar mensaje de éxito
-      setComposerSuccessMessage('Tu publicacion se ha subido correctamente.');
+      toast.success('Tu publicacion se ha subido correctamente.');
     },
     onError: (error) => {
       toast.error('No fue posible publicar el contenido');
@@ -672,7 +639,7 @@ export const HomePage = () => {
       updatePostInCache(post.id, () => post);
       setEditingPost(null);
       setEditingPostContent('');
-      setComposerSuccessMessage('Tu publicacion se actualizo correctamente.');
+      toast.success('Tu publicacion se actualizo correctamente.');
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
     },
     onError: (error) => {
@@ -686,7 +653,7 @@ export const HomePage = () => {
       queryClient.setQueryData<FeedPostAggregate[]>(feedQueryKey, (existing) =>
         existing ? existing.filter((post) => post.id !== postId) : []
       );
-      setComposerSuccessMessage('Publicacion eliminada correctamente.');
+      toast.success('Publicacion eliminada correctamente.');
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
     },
     onError: (error) => {
@@ -726,7 +693,7 @@ export const HomePage = () => {
         isSaved: metrics.isSaved
       }));
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
-      setComposerSuccessMessage(
+      toast.success(
         metrics.isSaved ? 'Publicacion guardada en tu coleccion.' : 'Publicacion removida de tus guardados.'
       );
     },
@@ -830,7 +797,7 @@ export const HomePage = () => {
       setShareTarget(null);
       setShareMessage('');
       setShareToFriendId(null);
-      setComposerSuccessMessage('La publicacion se compartio con tu comunidad.');
+      toast.success('La publicacion se compartio con tu comunidad.');
       void queryClient.invalidateQueries({ queryKey: feedQueryKey });
     },
     onError: () => {
@@ -879,7 +846,7 @@ export const HomePage = () => {
         commentId: payload.commentId
       }),
     onSuccess: () => {
-      setComposerSuccessMessage('Tu reporte fue enviado al equipo de moderacion.');
+      toast.success('Tu reporte fue enviado al equipo de moderacion.');
       setReportTarget(null);
       setReportDetails('');
       setReportReason(reportReasons[0]);
@@ -1120,9 +1087,9 @@ export const HomePage = () => {
     const url = `${window.location.origin}/dashboard?post=${post.id}`;
     try {
       await navigator.clipboard.writeText(url);
-      setComposerSuccessMessage('Enlace copiado al portapapeles.');
+      toast.success('Enlace copiado al portapapeles.');
     } catch {
-      setComposerSuccessMessage('No fue posible copiar el enlace.');
+      toast.error('No fue posible copiar el enlace.');
     } finally {
       setPostMenuOpenId(null);
     }
@@ -1256,7 +1223,7 @@ export const HomePage = () => {
           <div className="relative" ref={(element) => registerPostMenuRef(post.id, element)}>
             <button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-muted)] transition hover:bg-white/30 hover:text-sena-green"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-2xl text-[var(--color-muted)] transition hover:bg-white/30 hover:text-sena-green"
               aria-haspopup="true"
               aria-expanded={postMenuOpenId === post.id}
               onClick={() => handlePostMenuToggle(post.id)}
@@ -1327,7 +1294,7 @@ export const HomePage = () => {
             {post.tags.map((tag) => (
               <span
                 key={`${post.id}-${tag}`}
-                className="rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold text-sena-green"
+                className="rounded-2xl bg-sena-green/10 px-3 py-1 text-xs font-semibold text-sena-green"
               >
                 {tag}
               </span>
@@ -1439,7 +1406,7 @@ export const HomePage = () => {
                     <button
                       key={type}
                       type="button"
-                      className="flex items-center justify-center rounded-full border border-white/50 bg-white h-8 w-8 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 dark:bg-neutral-900/90"
+                      className="flex h-8 w-8 items-center justify-center rounded-2xl border border-white/50 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 dark:bg-neutral-900/90"
                       onClick={() => handleReactionSelect(post.id, type, post.viewerReaction)}
                       title={label}
                     >
@@ -1568,7 +1535,7 @@ export const HomePage = () => {
                               >
                                 <button
                                   type="button"
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--color-muted)] transition hover:bg-white/30 hover:text-sena-green"
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded-2xl text-[var(--color-muted)] transition hover:bg-white/30 hover:text-sena-green"
                                   aria-haspopup="true"
                                   aria-expanded={commentMenuOpenId === comment.id}
                                   onClick={() =>
@@ -1685,7 +1652,7 @@ export const HomePage = () => {
                     <button
                       type="button"
                       onClick={() => handleClearCommentAttachment(post.id)}
-                      className="rounded-full bg-white/40 p-1 text-[var(--color-text)] hover:bg-white/60"
+                      className="rounded-2xl bg-white/40 p-1 text-[var(--color-text)] hover:bg-white/60"
                       aria-label="Quitar adjunto del comentario"
                     >
                       <X className="h-4 w-4" />
@@ -1901,7 +1868,7 @@ export const HomePage = () => {
       contentClassName="h-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 !pt-0"
     >
 
-      <div className="mx-auto grid w-full max-w-[1920px] items-start gap-3 pt-2 sm:gap-4 md:grid-cols-[1fr_320px] md:gap-4 lg:grid-cols-[280px_1fr_300px] lg:gap-5 xl:grid-cols-[320px_1fr_360px] xl:gap-6 2xl:max-w-[2560px]" style={{ minHeight: 'calc(100vh - 56px)', boxShadow: 'none', WebkitBoxShadow: 'none' }}>
+      <div className="mx-auto grid w-full max-w-[1920px] items-start gap-3 pt-2 sm:gap-4 md:grid-cols-[1fr_320px] md:gap-4 lg:grid-cols-[280px_1fr_300px] lg:gap-5 xl:grid-cols-[320px_1fr_360px] xl:gap-6 2xl:max-w-[2560px] min-h-[50vh]" style={{ minHeight: 'calc(100vh - 56px)', boxShadow: 'none', WebkitBoxShadow: 'none' }}>
         <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)' }}>
           <div className="flex flex-col space-y-6 py-4">
             {/* Top Projects */}
@@ -1969,8 +1936,8 @@ export const HomePage = () => {
 
         <section 
           ref={feedSectionRef}
-          className="feed-section mx-auto flex min-w-0 w-full flex-col gap-3 sm:gap-4 lg:gap-5 pb-16 sm:pb-20 px-3 sm:px-4 relative z-10" 
-          style={{ width: '100%', maxWidth: '100%', overflowX: 'visible', boxShadow: 'none', WebkitBoxShadow: 'none' }}
+          className="feed-section mx-auto flex min-w-0 w-full flex-col gap-3 sm:gap-4 lg:gap-5 pb-16 sm:pb-20 px-3 sm:px-4 relative z-10 overflow-visible" 
+          style={{ width: '100%', maxWidth: '100%', boxShadow: 'none', WebkitBoxShadow: 'none' }}
         >
           <Card padded={false} className="overflow-visible glass-liquid p-3 sm:p-4 lg:p-5 mt-0" style={{ boxShadow: 'none' }}>
             <div className="flex items-center justify-between mb-2">
@@ -1978,7 +1945,7 @@ export const HomePage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="!bg-transparent !text-slate-500 px-2 py-0.5 text-[10px] hover:!text-sena-green hover:shadow-[0_0_12px_rgba(57,169,0,0.25)] transition !border-transparent"
+                className="!rounded-full !bg-transparent !text-slate-500 px-2 py-0.5 text-[10px] hover:!text-sena-green hover:shadow-[0_0_12px_rgba(57,169,0,0.25)] transition !border-transparent"
                 onClick={handleOpenStoryPicker}
               >
                 Subir
@@ -1991,7 +1958,7 @@ export const HomePage = () => {
               className="hidden"
               onChange={handleStoryFileChange}
             />
-            <div className="flex gap-2.5 overflow-x-auto pb-1 hide-scrollbar -mx-1 px-1" style={{ overflow: 'visible' }}>
+            <div className="flex gap-2.5 overflow-x-auto pb-1 hide-scrollbar -mx-1 px-1" style={{ overflow: 'visible' }} data-no-saturate>
               {storiesWithAvatars.map((story) => {
                 const hasStories = story.stories && story.stories.length > 0;
                 const storyPreview = story.stories && story.stories.length > 0 
@@ -2070,7 +2037,7 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          <Card className="relative z-30 overflow-visible glass-liquid p-4 sm:p-5 lg:p-6 mt-0" style={{ boxShadow: 'none' }}>
+          <div className="relative z-30 overflow-visible rounded-2xl border border-slate-200/80 dark:border-white/25 bg-white/95 dark:bg-white/20 backdrop-blur-xl p-4 sm:p-5 lg:p-6 mt-0 shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
             <div className="flex items-start gap-2 sm:gap-3">
               {user && (
                 <UserAvatar
@@ -2088,7 +2055,7 @@ export const HomePage = () => {
                   onChange={(event) => setComposerContent(event.target.value)}
                   disabled={isPublishing}
                   ref={composerInputRef}
-                  className="focus:!border-white/25 focus:!ring-0"
+                  className="focus:!border-sena-green/50 focus:!ring-2 focus:!ring-sena-green/20"
                 />
 
                 <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
@@ -2100,7 +2067,7 @@ export const HomePage = () => {
                         <div key={action} className={classNames('relative overflow-visible', isEmojiAction && 'z-30')}>
                           <button
                             type="button"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-sena-green transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/60 dark:bg-white/10 border border-white/30 dark:border-white/15 text-[var(--color-muted)] hover:text-sena-green hover:bg-sena-green/10 hover:border-sena-green/30 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                             aria-label={label}
                             onClick={() => handleComposerToolClick(action)}
                             disabled={isPublishing}
@@ -2120,7 +2087,7 @@ export const HomePage = () => {
                     size="sm"
                     variant="primary"
                     leftIcon={<Sparkles className="h-4 w-4" />}
-                    className="!bg-sena-light !text-white !border-sena-light/30 hover:!bg-sena-light hover:!text-white hover:!border-sena-light disabled:!bg-white disabled:!text-neutral-700 disabled:!border-slate-200 disabled:hover:!bg-white disabled:hover:!text-neutral-700 disabled:hover:!border-slate-200 px-3 py-2 text-xs"
+                    className="!rounded-full !bg-gradient-to-br !from-sena-green !to-emerald-600 !text-white !border-sena-green/40 hover:!from-sena-green hover:!to-emerald-500 hover:!text-white hover:!border-sena-green/50 disabled:!bg-slate-100 disabled:!text-slate-500 disabled:!border-slate-200 disabled:hover:!bg-slate-100 disabled:hover:!text-slate-500 px-3 py-2 text-xs shadow-md"
                     loading={isPublishing}
                     disabled={isPublishing || !composerContent.trim()}
                     onClick={handleComposerSubmit}
@@ -2141,7 +2108,7 @@ export const HomePage = () => {
                       <button
                         type="button"
                         onClick={handleClearAttachments}
-                        className="rounded-full bg-white/40 p-1 text-[var(--color-text)] hover:bg-white/60"
+                        className="rounded-2xl bg-white/40 p-1 text-[var(--color-text)] hover:bg-white/60"
                         aria-label="Quitar adjuntos"
                         disabled={isPublishing}
                       >
@@ -2158,7 +2125,7 @@ export const HomePage = () => {
                           <button
                             type="button"
                             onClick={() => handleRemoveAttachment(attachment.id)}
-                            className="absolute right-1 top-1 z-10 rounded-full bg-white/60 p-0.5 text-[var(--color-muted)] shadow hover:bg-white"
+                            className="absolute right-1 top-1 z-10 rounded-2xl bg-white/60 p-0.5 text-[var(--color-muted)] shadow hover:bg-white"
                             aria-label="Eliminar adjunto"
                           >
                             <X className="h-3 w-3" />
@@ -2201,7 +2168,7 @@ export const HomePage = () => {
                 />
               </div>
             </div>
-          </Card>
+          </div>
 
           {isLoadingFeed && (
             <Card className="glass-liquid p-4 text-sm text-[var(--color-muted)] sm:p-5" style={{ boxShadow: 'none' }}>
@@ -2225,7 +2192,7 @@ export const HomePage = () => {
               <div className="px-2">
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Anuncios</h3>
               </div>
-              <div className="relative h-40 overflow-hidden rounded-2xl sm:h-44 lg:h-48">
+              <div className="relative h-40 overflow-hidden rounded-2xl sm:h-44 lg:h-48" data-no-saturate>
                 <AnimatePresence initial={false} mode="wait">
                   {announcementSlides.map(
                     (slide, index) =>
@@ -2256,7 +2223,7 @@ export const HomePage = () => {
                     type="button"
                     onClick={() => setActiveAnnouncement(index)}
                     className={classNames(
-                      'h-2 w-8 rounded-full transition-all duration-200 bg-[var(--color-surface)]/40 hover:bg-[var(--color-surface)]/70',
+                      'h-2 w-8 rounded-2xl transition-all duration-200 bg-[var(--color-surface)]/40 hover:bg-[var(--color-surface)]/70',
                       index === activeAnnouncement && 'shadow-sm'
                     )}
                     aria-label={`Mostrar anuncio ${index + 1}`}
@@ -2267,107 +2234,15 @@ export const HomePage = () => {
           </div>
         </aside>
 
-
-
-
-
+        {/* Botón flotante de mensajes */}
         <button
-          onClick={() => {
-            setMessagesOpen(!messagesOpen);
-            setNotificationsOpen(false); // Cerrar notificaciones si están abiertas
-          }}
-          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-surface)]/90 backdrop-blur-xl text-[var(--color-text)] shadow-[0_8px_24px_rgba(0,0,0,0.25)] border border-white/30 transition-all duration-300 hover:scale-105 hover:bg-[var(--color-surface)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.35)] active:scale-95"
-          aria-label="Abrir mensajes"
+          type="button"
+          onClick={() => navigate('/chats')}
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sena-green to-emerald-600 text-white shadow-[0_4px_16px_rgba(57,169,0,0.4)] transition-all hover:scale-105 hover:shadow-[0_6px_20px_rgba(57,169,0,0.5)] active:scale-95 lg:bottom-8 lg:right-8 xl:right-12 2xl:right-16"
+          aria-label="Ir a mensajes"
         >
           <MessageCircle className="h-6 w-6" />
         </button>
-
-        <AnimatePresence>
-          {messagesOpen && (
-            <motion.div
-              key="message-list"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.2 }}
-              className="fixed bottom-24 right-6 z-40 w-80"
-            >
-              <Card padded={false} className="overflow-hidden rounded-2xl glass-liquid-strong">
-                <div className="flex items-center justify-between border-b border-white/20 px-5 py-4">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--color-text)]">Mensajes</p>
-                    <p className="text-xs text-[var(--color-muted)]">{chats.length} conversaciones activas</p>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => setMessagesOpen(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="max-h-72 space-y-2 overflow-y-auto px-4 py-3 hide-scrollbar">
-                  {chats.length === 0 && (
-                    <p className="text-sm text-[var(--color-muted)]">An no tienes conversaciones activas.</p>
-                  )}
-                  {chats.map((chat) => {
-                    // Encontrar el otro usuario del chat (si no es grupo)
-                    const chatOtherUser = chat.isGroup ? null : (() => {
-                      const otherUserId = chat.createdBy === user?.id ? null : chat.createdBy;
-                      if (!otherUserId) return null;
-                      return friends.find((f) => f.id === otherUserId) || null;
-                    })();
-
-                    return (
-                      <button
-                        key={chat.id}
-                        type="button"
-                        onClick={() => handleOpenChat(chat.id)}
-                        className="group relative flex w-full items-center gap-3 rounded-2xl border border-transparent bg-transparent px-3 py-2.5 text-left transition-all duration-300 ease-out hover:border-white/30 hover:bg-gradient-to-r hover:from-white/10 hover:via-white/5 hover:to-transparent hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[0_2px_6px_rgba(0,0,0,0.05)] dark:hover:border-white/20 dark:hover:from-white/8 dark:hover:via-white/4"
-                      >
-                        <div className="relative flex-shrink-0">
-                          {chat.isGroup ? (
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sena-green to-emerald-500 shadow-[0_8px_16px_rgba(57,169,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:ring-2 group-hover:ring-white/20">
-                              <UsersIcon className="h-5 w-5 text-white" />
-                            </div>
-                          ) : chatOtherUser ? (
-                            <div className="transition-transform duration-300 group-hover:scale-110">
-                              <UserAvatar
-                                firstName={chatOtherUser.firstName}
-                                lastName={chatOtherUser.lastName}
-                                avatarUrl={chatOtherUser.avatarUrl}
-                                size="sm"
-                                className="transition-transform duration-300 group-hover:ring-2 group-hover:ring-white/20"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gray-400 to-gray-500 transition-transform duration-300 group-hover:scale-110 group-hover:ring-2 group-hover:ring-white/20">
-                              <UsersIcon className="h-5 w-5 text-white" />
-                            </div>
-                          )}
-                          <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-[var(--color-text)] transition-colors duration-300">{chat.name ?? (chatOtherUser ? `${chatOtherUser.firstName} ${chatOtherUser.lastName}`.trim() : 'Chat sin título')}</p>
-                          <p className="text-xs text-[var(--color-muted)] truncate transition-colors duration-300 group-hover:text-[var(--color-text)]/80">
-                            {chat.lastMessage 
-                              ? (chat.lastMessage.length > 40 ? chat.lastMessage.substring(0, 40) + '...' : chat.lastMessage)
-                              : 'Sin mensajes'}
-                          </p>
-                        </div>
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence mode="popLayout">
-          {openChatIds.map((chatId, index) => {
-            const chat = chats.find((c) => c.id === chatId);
-            if (!chat) return null;
-            return <ChatWindow key={chat.id} chat={chat} index={index} onClose={handleCloseChat} />;
-          })}
-        </AnimatePresence>
 
         {isStoryViewerOpen && selectedStoryUser && selectedStoryUser.stories && selectedStoryUser.stories.length > 0 && (
           <div
@@ -2390,14 +2265,14 @@ export const HomePage = () => {
                     {currentStories.length > 0 && (
                       <button
                         type="button"
-                        className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/65"
+                        className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-black/45 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/65"
                         onClick={(e) => { e.stopPropagation(); goToPrevStory(); }}
                         aria-label="Anterior"
                       >
                         <ChevronLeft className="h-6 w-6" />
                       </button>
                     )}
-                    <div ref={storyImageContainerRef} className="relative flex max-h-[80vh] max-w-[90vw] min-h-[300px] items-center justify-center overflow-hidden rounded-2xl bg-black/50">
+                    <div ref={storyImageContainerRef} className="relative flex max-h-[80vh] max-w-[90vw] min-h-[300px] items-center justify-center overflow-hidden rounded-2xl bg-black/50" data-no-saturate>
                       <img
                         src={(currentStories[currentStoryIndex] as StoryData).mediaUrl}
                         alt="Historia"
@@ -2427,7 +2302,7 @@ export const HomePage = () => {
                                   <button
                                     ref={storyViewsButtonRef}
                                     type="button"
-                                    className="inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-sena-green shadow-lg backdrop-blur transition hover:bg-black/80"
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-black/60 px-3 py-1 text-xs font-semibold text-sena-green shadow-lg backdrop-blur transition hover:bg-black/80"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       const btn = storyViewsButtonRef.current;
@@ -2507,7 +2382,7 @@ export const HomePage = () => {
                         <>
                           <button
                             type="button"
-                            className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/70"
+                            className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-black/55 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/70"
                             onClick={() => setIsStoryMenuOpen((prev) => !prev)}
                           >
                             <MoreHorizontal className="h-5 w-5" />
@@ -2533,7 +2408,7 @@ export const HomePage = () => {
                                 <span
                                   key={`story-dot-${index}`}
                                   className={classNames(
-                                    'h-1.5 w-8 rounded-full transition',
+                                    'h-1.5 w-8 rounded-2xl transition',
                                     index === currentStoryIndex ? 'bg-sena-green' : 'bg-sena-green/40'
                                   )}
                                 />
@@ -2545,7 +2420,7 @@ export const HomePage = () => {
                     {currentStories.length > 0 && (
                         <button
                           type="button"
-                          className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/65"
+                          className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-black/45 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/65"
                           onClick={(e) => { e.stopPropagation(); goToNextStory(); }}
                           aria-label="Siguiente"
                         >
@@ -2590,7 +2465,7 @@ export const HomePage = () => {
                 variant="ghost"
                 onClick={handleCloseShareModal}
                 disabled={isSharing}
-                className="self-start rounded-full glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
+                className="self-start rounded-2xl glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
               >
                 <X className="h-4 w-4" /> Cerrar
               </Button>
@@ -2696,7 +2571,7 @@ export const HomePage = () => {
                 variant="ghost"
                 onClick={handleCloseReportModal}
                 disabled={reportMutation.isPending}
-                className="self-start rounded-full glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
+                className="self-start rounded-2xl glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
               >
                 <X className="h-4 w-4" /> Cerrar
               </Button>
@@ -2728,7 +2603,7 @@ export const HomePage = () => {
                       setReportError(null);
                     }}
                     className={classNames(
-                      'rounded-full px-3 py-1 text-xs font-semibold transition',
+                      'rounded-2xl px-3 py-1 text-xs font-semibold transition',
                       reportReason === reason ? 'bg-rose-500 text-white' : 'glass-liquid text-[var(--color-text)]'
                     )}
                   >
@@ -2907,32 +2782,6 @@ export const HomePage = () => {
           </GlassDialog>
         )}
 
-        {/* Mensaje de éxito */}
-        <AnimatePresence>
-          {composerSuccessMessage && (
-            <motion.div
-              key="success-message"
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ 
-                duration: 0.3, 
-                ease: [0.16, 1, 0.3, 1],
-                exit: { duration: 0.25, ease: [0.16, 1, 0.3, 1] }
-              }}
-              className="fixed bottom-6 left-6 lg:left-8 xl:left-12 2xl:left-16 z-50 flex items-center rounded-2xl glass-liquid-strong px-4 py-3 shadow-lg overflow-hidden max-w-[280px]"
-              style={{ willChange: 'transform, opacity' }}
-            >
-              <p className="text-sm font-medium text-[var(--color-text)] whitespace-nowrap relative z-10">{composerSuccessMessage}</p>
-              <motion.div
-                initial={{ width: '100%' }}
-                animate={{ width: '0%' }}
-                transition={{ duration: 1.5, ease: 'linear' }}
-                className="absolute bottom-0 left-0 h-1 bg-sena-green"
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </DashboardLayout>
   );
@@ -2987,213 +2836,6 @@ function SharedPostPreview({ postId }: { postId: string }) {
     </div>
   );
 }
-
-const ChatWindow = ({ chat, index, onClose }: ChatWindowProps) => {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [message, setMessage] = useState('');
-
-  const { data: messages = [], isLoading } = useQuery({
-    queryKey: ['home', 'chat', chat.id],
-    queryFn: async () => await chatService.listMessages(chat.id),
-    enabled: Boolean(chat.id)
-  });
-
-  // Cargar amigos para obtener nombres de usuarios
-  const { data: friends = [] } = useQuery({
-    queryKey: ['friends'],
-    queryFn: friendService.listFriends
-  });
-
-  const sendMessageMutation = useMutation({
-    mutationFn: (content: string) => chatService.sendMessage(chat.id, { content }),
-    onSuccess: async () => {
-      setMessage('');
-      await queryClient.invalidateQueries({ queryKey: ['home', 'chat', chat.id] });
-    }
-  });
-
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (messages.length > 0 && messagesContainerRef.current && !isLoading) {
-      // Scroll inmediato al final cuando se cargan los mensajes
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-    }
-  }, [messages, isLoading]);
-
-  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
-
-  // Función para obtener el nombre del remitente
-  const getSenderName = (senderId: string) => {
-    if (senderId === user?.id) {
-      return 'Tú';
-    }
-    const friend = friends.find((f) => f.id === senderId);
-    if (friend) {
-      return `${friend.firstName} ${friend.lastName}`.trim() || friend.firstName || 'Usuario';
-    }
-    // Si no se encuentra en amigos, intentar obtener de todos los usuarios
-    return senderId; // Fallback al ID si no se encuentra
-  };
-
-  // Obtener información del otro usuario del chat (solo si no es grupo)
-  const otherUser = useMemo(() => {
-    if (chat.isGroup) return null;
-    // Buscar en los mensajes
-    const otherUserMessage = messages.find((msg) => msg.senderId !== user?.id);
-    if (otherUserMessage) {
-      const friend = friends.find((f) => f.id === otherUserMessage.senderId);
-      if (friend) return friend;
-    }
-    // Si no encontramos en mensajes, usar createdBy
-    if (chat.createdBy !== user?.id) {
-      const friend = friends.find((f) => f.id === chat.createdBy);
-      if (friend) return friend;
-    }
-    return null;
-  }, [chat, messages, friends, user?.id]);
-
-  // Función para navegar al perfil
-  const handleNavigateToProfile = () => {
-    if (chat.isGroup || !otherUser) return;
-    navigate(`/profile/${otherUser.id}`);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20, x: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: 20, x: 20 }}
-      transition={{ 
-        type: 'spring', 
-        stiffness: 300, 
-        damping: 30,
-        opacity: { duration: 0.2 }
-      }}
-      className="fixed bottom-28 z-50 w-80"
-      style={{ right: 24 + index * 320 }}
-    >
-      <Card padded={false} className="flex h-96 flex-col overflow-hidden rounded-2xl glass-liquid-strong">
-        <div className="flex items-center justify-between border-b border-white/20 px-4 py-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            {chat.isGroup ? (
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sena-green to-emerald-500 flex-shrink-0 shadow-[0_8px_16px_rgba(57,169,0,0.15)]">
-                <UsersIcon className="h-5 w-5 text-white" />
-              </div>
-            ) : otherUser ? (
-              <div onClick={handleNavigateToProfile} className="cursor-pointer flex-shrink-0">
-                <UserAvatar
-                  firstName={otherUser.firstName}
-                  lastName={otherUser.lastName}
-                  avatarUrl={otherUser.avatarUrl}
-                  size="sm"
-                />
-              </div>
-            ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex-shrink-0">
-                <UsersIcon className="h-5 w-5 text-white" />
-              </div>
-            )}
-            <div 
-              className="min-w-0 flex-1 cursor-pointer"
-              onClick={handleNavigateToProfile}
-            >
-              <p className="text-sm font-semibold text-[var(--color-text)] truncate hover:text-sena-green transition-colors">
-                {chat.isGroup 
-                  ? (chat.name ?? 'Grupo sin título')
-                  : otherUser
-                    ? `${otherUser.firstName} ${otherUser.lastName}`.trim() || otherUser.firstName || 'Usuario'
-                    : chat.name ?? 'Chat sin título'}
-              </p>
-              <p className="text-xs text-[var(--color-muted)] truncate">
-                {lastMessage 
-                  ? (lastMessage.content.length > 30 ? lastMessage.content.substring(0, 30) + '...' : lastMessage.content)
-                  : chat.lastMessage 
-                    ? (chat.lastMessage.length > 30 ? chat.lastMessage.substring(0, 30) + '...' : chat.lastMessage)
-                    : 'Sin mensajes'}
-              </p>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => onClose(chat.id)}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        <div ref={messagesContainerRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3 hide-scrollbar">
-          {isLoading && <p className="text-xs text-[var(--color-muted)]">Cargando mensajes...</p>}
-          {!isLoading && messages.length === 0 && (
-            <p className="text-xs text-[var(--color-muted)]">An no hay mensajes en este chat.</p>
-          )}
-          {messages.map((msg) => {
-            const isOwn = msg.senderId === user?.id;
-            const senderName = getSenderName(msg.senderId);
-            const messageDate = new Date(msg.createdAt);
-            const formattedTime = messageDate.toLocaleTimeString('es-CO', {
-              hour: '2-digit',
-              minute: '2-digit'
-            });
-            const formattedDate = messageDate.toLocaleDateString('es-CO', {
-              day: '2-digit',
-              month: 'short'
-            });
-
-            return (
-              <div key={msg.id} className="rounded-2xl glass-liquid px-3 py-2 text-sm text-[var(--color-text)]">
-                {chat.isGroup && !isOwn && (
-                  <div className="mb-1 flex items-center gap-2">
-                    <p className="text-xs font-semibold text-[var(--color-text)]">{senderName}</p>
-                    <p className="text-[10px] text-[var(--color-muted)]">
-                      {formattedDate} {formattedTime}
-                    </p>
-                  </div>
-                )}
-                {chat.isGroup && isOwn && (
-                  <div className="mb-1 flex items-center gap-2">
-                    <p className="text-xs font-semibold text-[var(--color-text)]">{senderName}</p>
-                    <p className="text-[10px] text-[var(--color-muted)]">
-                      {formattedDate} {formattedTime}
-                    </p>
-                  </div>
-                )}
-                {msg.content ? <p className="whitespace-pre-wrap">{msg.content}</p> : null}
-                {msg.sharedPostId ? <SharedPostPreview postId={msg.sharedPostId} /> : null}
-                {!chat.isGroup && (
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    {formattedTime}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <form
-          className="border-t border-white/20 px-4 py-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!message.trim()) return;
-            sendMessageMutation.mutate(message.trim());
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <input
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              placeholder="Escribe un mensaje..."
-              className="flex-1 rounded-2xl glass-liquid px-4 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:border-sena-green focus:ring-2 focus:ring-sena-green/30"
-            />
-            <Button type="submit" size="sm" loading={sendMessageMutation.isPending}>
-              Enviar
-            </Button>
-          </div>
-        </form>
-      </Card>
-    </motion.div>
-  );
-};
-
-
-
 
 
 

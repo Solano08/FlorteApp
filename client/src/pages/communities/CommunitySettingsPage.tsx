@@ -204,7 +204,7 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-neutral-900/5 via-neutral-900/3 to-neutral-900/5 px-3 py-2 text-[13px] text-[var(--color-text)] shadow-sm hover:shadow-md hover:bg-white/80 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 transition-all duration-200"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-neutral-900/5 via-neutral-900/3 to-neutral-900/5 px-3 py-2 text-[13px] text-[var(--color-text)] shadow-sm hover:shadow-md hover:bg-white/80 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 transition-all duration-200"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   <span>Volver a la comunidad</span>
@@ -227,7 +227,7 @@ export const CommunitySettingsPage = () => {
                   </p>
                 </div>
                 {(community.memberCount || community.onlineCount) && (
-                  <div className="rounded-full bg-white/70 px-3 py-1 text-[11px] text-[var(--color-muted)] shadow-sm dark:bg-neutral-800/80">
+                  <div className="rounded-2xl bg-white/70 px-3 py-1 text-[11px] text-[var(--color-muted)] shadow-sm dark:bg-neutral-800/80">
                     {typeof community.memberCount === 'number' && (
                       <span>{community.memberCount} miembros</span>
                     )}
