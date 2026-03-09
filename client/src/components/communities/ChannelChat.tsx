@@ -125,10 +125,10 @@ export const ChannelChat: FC<ChannelChatProps> = ({
   const getAvatarColorClasses = (id?: string | null) => {
     const palette = [
       'bg-sena-green/15 text-sena-green',
-      'bg-sky-500/15 text-sky-500',
-      'bg-amber-500/15 text-amber-500',
-      'bg-fuchsia-500/15 text-fuchsia-500',
-      'bg-emerald-500/15 text-emerald-500'
+      'bg-sena-green/20 text-sena-green',
+      'bg-emerald-500/15 text-sena-green',
+      'bg-sena-green/25 text-sena-green',
+      'bg-emerald-500/20 text-sena-green'
     ];
     if (!id) return palette[0];
     let sum = 0;
@@ -262,11 +262,11 @@ export const ChannelChat: FC<ChannelChatProps> = ({
   };
 
   return (
-    <section className="chat-ios flex h-full min-h-0 flex-1 flex-col bg-gradient-to-br from-white/50 via-white/30 to-white/50 dark:from-neutral-900/50 dark:via-neutral-900/30 dark:to-neutral-900/50 backdrop-blur-xl">
+    <section className="chat-ios flex h-full min-h-0 flex-1 flex-col glass-liquid">
       {/* Header del canal */}
       <header className="flex items-center gap-3 border-b border-white/20 dark:border-white/5 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl px-5 py-3.5 shadow-sm">
         <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-sena-green/10 dark:bg-sena-green/20">
-          <Hash className="h-4.5 w-4.5 text-sena-green dark:text-emerald-400" />
+          <Hash className="h-4.5 w-4.5 text-sena-green" />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-sm font-semibold text-[var(--color-text)] truncate">{channelName}</h2>
@@ -279,7 +279,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           <div className="relative">
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white/60 text-[var(--color-muted)] shadow-sm transition-all duration-150 hover:bg-white hover:text-sena-green dark:bg-neutral-800/70 dark:hover:bg-neutral-700"
+              className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-150 hover:text-sena-green"
               onClick={() => setPinnedMenuOpen((prev) => !prev)}
               aria-label="Ver mensajes fijados"
             >
@@ -288,7 +288,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
             {pinnedMenuOpen && (
               <div
                 ref={pinnedMenuRef}
-                className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-white/30 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl p-3 text-sm text-[var(--color-text)] shadow-[0_18px_40px_rgba(15,23,42,0.18)] dark:shadow-[0_18px_40px_rgba(0,0,0,0.4)]"
+                className="absolute right-0 z-50 mt-2 w-72 rounded-2xl glass-liquid-strong p-3 text-sm text-[var(--color-text)]"
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
@@ -296,7 +296,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                   </span>
                   <button
                     type="button"
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-[var(--color-muted)] hover:text-sena-green dark:bg-neutral-800/80 transition-colors"
+                    className="flex h-6 w-6 items-center justify-center rounded-2xl bg-white/80 text-[var(--color-muted)] hover:text-sena-green dark:bg-neutral-800/80 transition-colors"
                     onClick={() => setPinnedMenuOpen(false)}
                   >
                     <X className="h-3.5 w-3.5" />
@@ -313,7 +313,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           </div>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white/60 text-[var(--color-muted)] shadow-sm transition-all duration-150 hover:bg-white hover:text-sena-green dark:bg-neutral-800/70 dark:hover:bg-neutral-700"
+            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-150 hover:text-sena-green"
             onClick={() => setMembersOpen(true)}
             aria-label="Ver miembros del canal"
           >
@@ -321,7 +321,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           </button>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white/60 text-[var(--color-muted)] shadow-sm transition-all duration-150 hover:bg-white hover:text-sena-green dark:bg-neutral-800/70 dark:hover:bg-neutral-700"
+            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-150 hover:text-sena-green"
             onClick={() => setInfoOpen(true)}
             aria-label="Información del canal"
           >
@@ -474,7 +474,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                           <div className="relative">
                             <button
                               type="button"
-                              className={`ml-2 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[var(--color-muted)] transition-all duration-150 hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 ${
+                              className={`ml-2 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-2xl text-[var(--color-muted)] transition-all duration-150 hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 ${
                                 hoveredMessageId === message.id || openMessageMenuId === message.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                               }`}
                               onClick={(e) => {
@@ -758,7 +758,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
               </div>
               <button
                 type="button"
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-[var(--color-muted)] hover:text-sena-green dark:bg-neutral-800/80 transition-colors"
+                className="flex h-7 w-7 items-center justify-center rounded-2xl bg-white/80 text-[var(--color-muted)] hover:text-sena-green dark:bg-neutral-800/80 transition-colors"
                 onClick={() => setMembersOpen(false)}
               >
                 <X className="h-3.5 w-3.5" />
@@ -779,10 +779,10 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                       <img
                         src={resolveAssetUrl(member.avatarUrl) ?? ''}
                         alt={member.name}
-                        className="h-8 w-8 rounded-full object-cover ring-1 ring-white/40 dark:ring-white/15"
+                        className="h-8 w-8 rounded-2xl object-cover ring-1 ring-white/40 dark:ring-white/15"
                       />
                     ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sena-green/15 text-[11px] font-semibold text-sena-green ring-1 ring-white/40 dark:ring-white/15">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-sena-green/15 text-[11px] font-semibold text-sena-green ring-1 ring-white/40 dark:ring-white/15">
                         {member.name.charAt(0).toUpperCase()}
                       </div>
                     )}

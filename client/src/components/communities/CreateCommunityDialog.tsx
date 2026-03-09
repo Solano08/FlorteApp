@@ -127,7 +127,7 @@ export const CreateCommunityDialog = ({
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header con chip y texto descriptivo */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
+          <div className="inline-flex items-center gap-2 rounded-2xl bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
             <span>Comunidad</span>
           </div>
           <h2 className="text-xl font-semibold text-[var(--color-text)]">
@@ -166,7 +166,7 @@ export const CreateCommunityDialog = ({
                   type="button"
                   onClick={handleRemoveImage}
                   disabled={isLoading}
-                  className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 dark:bg-neutral-900/95 text-red-500 shadow-md transition-all duration-200 hover:scale-110 hover:bg-white dark:hover:bg-neutral-900"
+                  className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-2xl bg-white/95 dark:bg-neutral-900/95 text-red-500 shadow-md transition-all duration-200 hover:scale-110 hover:bg-white dark:hover:bg-neutral-900"
                   aria-label="Eliminar imagen"
                 >
                   <X className="h-4 w-4" />

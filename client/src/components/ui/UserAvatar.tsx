@@ -87,19 +87,17 @@ export const UserAvatar: FC<UserAvatarProps> = ({
   return (
     <div className={`relative inline-block ${className}`}>
       {showImage ? (
-        <div className={`${sizeClasses[size]} rounded-full overflow-hidden`} style={{ borderRadius: '9999px' }}>
+        <div className={`${sizeClasses[size]} rounded-full overflow-hidden`}>
           <img
             src={resolvedAvatarUrl}
             alt={displayName}
             className="h-full w-full object-cover"
-            style={{ borderRadius: '9999px' }}
             onError={() => setImgError(true)}
           />
         </div>
       ) : (
         <div
           className={`${sizeClasses[size]} flex items-center justify-center rounded-full bg-gradient-to-br ${avatarColor.from} ${avatarColor.via} ${avatarColor.to} text-white font-semibold shadow-sm`}
-          style={{ borderRadius: '9999px' }}
         >
           {initials}
         </div>

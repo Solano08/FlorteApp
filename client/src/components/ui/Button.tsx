@@ -66,7 +66,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {leftIcon}
         {loading && (
-          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-b-transparent" />
+          <span className="inline-block h-4 w-4 animate-spin rounded-2xl border-2 border-white border-b-transparent" />
         )}
         <span>{children}</span>
         {rightIcon}

@@ -192,17 +192,17 @@ export const UIPlaygroundPage = () => {
             <div>
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Badges SENA</h3>
               <div className="flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand">
+                <span className="inline-flex items-center gap-1 rounded-2xl bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand">
                   <Sparkles className="h-3 w-3" />
                   Activo
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-accent-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand">
+                <span className="inline-flex items-center gap-1 rounded-2xl bg-[var(--color-accent-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand">
                   Aprendiz
                 </span>
-                <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+                <span className="rounded-2xl bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
                   #Innovación
                 </span>
-                <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+                <span className="rounded-2xl bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
                   #Tecnología
                 </span>
               </div>
@@ -211,19 +211,19 @@ export const UIPlaygroundPage = () => {
             <div>
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Estados</h3>
               <div className="flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <span className="inline-flex items-center gap-1 rounded-2xl bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400">
                   <Check className="h-3 w-3" />
                   Activo
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <span className="inline-flex items-center gap-1 rounded-2xl bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                   <AlertCircle className="h-3 w-3" />
                   Pendiente
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                <span className="inline-flex items-center gap-1 rounded-2xl bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400">
                   <X className="h-3 w-3" />
                   Inactivo
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-sena-green/10 px-3 py-1 text-xs font-semibold text-sena-green dark:bg-sena-green/20 dark:text-sena-green">
+                <span className="inline-flex items-center gap-1 rounded-2xl bg-sena-green/10 px-3 py-1 text-xs font-semibold text-sena-green dark:bg-sena-green/20 dark:text-sena-green">
                   <Info className="h-3 w-3" />
                   Información
                 </span>
@@ -313,7 +313,7 @@ export const UIPlaygroundPage = () => {
                 </div>
                 <button
                   onClick={() => setDialogOpen(false)}
-                  className="rounded-full p-2 transition-all hover:bg-white/15 hover:scale-[1.03]"
+                  className="rounded-2xl p-2 transition-all hover:bg-white/15 hover:scale-[1.03]"
                   aria-label="Cerrar diálogo"
                 >
                   <X className="h-5 w-5 text-[var(--color-text)]" />
@@ -537,7 +537,7 @@ export const UIPlaygroundPage = () => {
               <div className="flex flex-wrap gap-4">
                 <Button loading>Cargando...</Button>
                 <div className="flex items-center gap-2 rounded-2xl glass-liquid px-4 py-2">
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-b-transparent" />
+                  <span className="inline-block h-4 w-4 animate-spin rounded-2xl border-2 border-brand border-b-transparent" />
                   <span className="text-sm text-[var(--color-text)]">Spinner personalizado</span>
                 </div>
               </div>

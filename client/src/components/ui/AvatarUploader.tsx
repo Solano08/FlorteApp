@@ -119,7 +119,7 @@ export const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderPro
           <button
             type="button"
             onClick={handleOpenPicker}
-            className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-2xl text-sena-green glass-liquid transition hover:bg-white"
+            className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full text-sena-green glass-liquid transition hover:bg-white"
           >
             <Camera className="h-4 w-4" />
           </button>
