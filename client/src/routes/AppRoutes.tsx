@@ -52,7 +52,6 @@ const PublicRoute = ({ children }: { children: JSX.Element }) => {
 export const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
     <Route
       path="/login"
       element={

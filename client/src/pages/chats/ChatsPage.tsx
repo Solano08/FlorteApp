@@ -1262,7 +1262,7 @@ export const ChatsPage = () => {
 
   return (
     <DashboardLayout fluid contentClassName="h-full p-0 overflow-hidden">
-      <div className="chats-layout flex h-full w-full min-h-0 overflow-hidden rounded-2xl glass-liquid">
+      <div className="chats-layout flex h-full w-full min-h-0 overflow-hidden rounded-t-none rounded-b-2xl glass-liquid">
         <div className="grid h-full w-full flex-1 grid-cols-[320px_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)] gap-0 min-h-0">
         <Card
           padded={false}
@@ -1270,7 +1270,7 @@ export const ChatsPage = () => {
         >
 
           <div className="relative z-10 flex h-full flex-col overflow-hidden min-h-0">
-            <header className="flex items-center justify-between gap-3 border-b border-white/30 dark:border-white/10 glass-liquid px-6 py-5">
+            <header className="flex min-h-[96px] items-center justify-between gap-3 border-b border-white/30 dark:border-white/10 glass-liquid px-6 py-5">
               <div>
                 <h2 className="text-lg font-bold text-sena-green">
                   Chats
@@ -2311,7 +2311,7 @@ export const ChatsPage = () => {
           <div className="relative z-10 flex h-full flex-col min-h-0">
             {activeChat ? (
               <>
-                <header className="flex-shrink-0 flex items-center justify-between gap-4 border-b border-white/30 dark:border-white/10 glass-liquid px-6 py-5">
+                <header className="flex min-h-[96px] flex-shrink-0 flex items-center justify-between gap-4 border-b border-white/30 dark:border-white/10 glass-liquid px-6 py-5">
                   <div className="flex items-center gap-4">
                     <span
                       className={classNames(

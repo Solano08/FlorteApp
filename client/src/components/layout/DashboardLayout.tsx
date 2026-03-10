@@ -1,5 +1,7 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { PAGE_TRANSITION } from '../../utils/transitionConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../ui/Button';
 import { GlassDialog } from '../ui/GlassDialog';
@@ -99,16 +101,19 @@ export const DashboardLayout = ({
     void logout();
   };
 
+  const isChatsPage = location.pathname.startsWith('/chats');
+
   return (
     <div
       className={classNames(
         'flex bg-[var(--color-background)]',
         contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen'
       )}
+      data-page={isChatsPage ? 'chats' : undefined}
     >
       <div className={classNames("flex flex-1 flex-col", contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen')}>
         <header className="nav-glass sticky top-0 z-40 w-full transition-[padding] duration-150">
-          <div className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-2.5 sm:px-6 lg:px-8">
+          <div className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 overflow-visible px-4 py-2.5 sm:px-6 lg:px-8">
             {/* Izquierda: logo Florte */}
             <NavLink
               to="/dashboard"
@@ -125,7 +130,7 @@ export const DashboardLayout = ({
               </span>
             </NavLink>
             {/* Centro: botones de navegación centrados y compactos */}
-            <nav className="flex shrink-0 items-center justify-center gap-1 overflow-x-auto overflow-y-visible hide-scrollbar [contain:layout] sm:gap-1.5 min-w-0" aria-label="Navegación principal">
+            <nav className="relative z-10 flex shrink-0 items-center justify-center gap-1 overflow-x-auto overflow-y-visible hide-scrollbar sm:gap-1.5 min-w-0 py-3 px-4" aria-label="Navegación principal">
               {navigation.map(({ to, label, icon: Icon }) => {
                 const isActive = location.pathname === to || (to !== '/dashboard' && location.pathname.startsWith(to));
                 return (
@@ -133,27 +138,40 @@ export const DashboardLayout = ({
                     key={`nav-${to}`}
                     to={to}
                     className={classNames(
-                      'nav-btn flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] transition-all duration-200 sm:gap-2 sm:px-3 sm:py-2 sm:text-[11px] whitespace-nowrap',
+                      'nav-btn relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] transition-colors duration-200 sm:gap-2 sm:px-3 sm:py-2 sm:text-[11px] whitespace-nowrap',
                       isActive
                         ? 'nav-btn-active text-sena-green font-semibold dark:text-sena-green'
-                        : 'text-[var(--color-muted)] font-medium hover:text-sena-green dark:text-[var(--color-text)] dark:hover:text-sena-green'
+                        : 'text-neutral-600 font-medium hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'
                     )}
                   >
+                    {isActive && (
+                      <motion.div
+                        layoutId="nav-indicator"
+                        layout
+                        className="nav-btn-indicator absolute inset-0 rounded-full z-0"
+                        transition={{
+                          type: 'tween',
+                          duration: PAGE_TRANSITION.duration,
+                          ease: PAGE_TRANSITION.ease
+                        }}
+                      />
+                    )}
                     <span
                       className={classNames(
+                        'relative z-10',
                         'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sena-green transition-colors sm:h-7 sm:w-7',
                         isActive ? 'nav-btn-icon-active' : 'nav-btn-icon'
                       )}
                     >
                       <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </span>
-                    <span>{label}</span>
+                    <span className="relative z-10">{label}</span>
                   </NavLink>
                 );
               })}
             </nav>
             {/* Derecha: notificaciones, tema y perfil */}
-            <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3 justify-self-end">
+            <div className="relative flex shrink-0 items-center justify-end gap-2 overflow-visible sm:gap-3 justify-self-end">
             <NotificationBell />
             <ThemeToggle />
             <div className="relative hidden lg:block" ref={profileMenuRef}>

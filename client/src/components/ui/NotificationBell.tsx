@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell, ChevronRight, MessageSquare, Users, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -15,6 +15,9 @@ import { useToast } from '../../hooks/useToast';
 export const NotificationBell = () => {
   const { notificationsOpen, setNotificationsOpen, setMessagesOpen } = useMenuState();
   const [showAll, setShowAll] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
   const isBrowser = typeof window !== 'undefined';
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -92,6 +95,33 @@ export const NotificationBell = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isBrowser, notificationsOpen, setNotificationsOpen]);
 
+  useEffect(() => {
+    if (notificationsOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right
+      });
+    }
+  }, [notificationsOpen]);
+
+  useEffect(() => {
+    if (!notificationsOpen || showAll) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        buttonRef.current &&
+        !buttonRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
+        setNotificationsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [notificationsOpen, showAll]);
+
   const handleToggle = () => {
     setNotificationsOpen(!notificationsOpen);
     setMessagesOpen(false); // Cerrar mensajes si están abiertos
@@ -103,32 +133,23 @@ export const NotificationBell = () => {
     setShowAll(true);
   };
 
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={handleToggle}
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-text)] transition-all duration-200 hover:bg-white/60 hover:shadow-sm dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sena-green/30"
-        aria-label="Notificaciones"
+  const dropdownContent = notificationsOpen && !showAll ? (
+    <AnimatePresence>
+      <motion.div
+        ref={dropdownRef}
+        key="notifications-dropdown"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.2 }}
+        className="fixed z-[9999] min-w-[190px] w-80 max-w-[320px]"
+        style={{
+          top: dropdownPosition.top,
+          right: dropdownPosition.right,
+          left: 'auto'
+        }}
       >
-        <Bell className="h-4 w-4" />
-        {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-semibold text-white shadow-md">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
-
-      <AnimatePresence>
-        {notificationsOpen && !showAll && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] w-80 max-w-[320px]"
-          >
-            <div className="rounded-2xl p-2.5 text-sm text-[var(--color-text)] bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+        <div className="rounded-2xl p-2.5 text-sm text-[var(--color-text)] bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:bg-neutral-800 dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
               <div className="flex items-center justify-between gap-2 pb-2">
                 <p className="text-sm font-semibold text-[var(--color-text)]">Notificaciones</p>
                 <div className="flex items-center gap-1">
@@ -151,7 +172,7 @@ export const NotificationBell = () => {
                 </div>
               </div>
 
-              <div className="my-1 h-px bg-slate-200 dark:bg-neutral-700" />
+              <div className="my-1 h-px bg-sena-green/60 dark:bg-sena-green/50" />
 
               <div className="max-h-72 space-y-1 overflow-y-auto hide-scrollbar">
                 {pendingReceivedRequests.length > 0 && (
@@ -225,7 +246,7 @@ export const NotificationBell = () => {
 
               {notifications.length + pendingReceivedRequests.length > 0 && (
                 <>
-                  <div className="my-1 h-px bg-slate-200 dark:bg-neutral-700" />
+                  <div className="my-1 h-px bg-sena-green/60 dark:bg-sena-green/50" />
                   <button
                     type="button"
                     className="mt-1 flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800"
@@ -236,10 +257,31 @@ export const NotificationBell = () => {
                   </button>
                 </>
               )}
-            </div>
-          </motion.div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  ) : null;
+
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={handleToggle}
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-text)] transition-all duration-200 hover:bg-white/60 hover:shadow-sm dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sena-green/30"
+        aria-label="Notificaciones"
+      >
+        <Bell className="h-4 w-4" />
+        {unreadCount > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-semibold text-white shadow-md">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
         )}
-      </AnimatePresence>
+      </button>
+
+      {isBrowser &&
+        dropdownContent &&
+        createPortal(dropdownContent, document.body)}
 
       {isBrowser &&
         createPortal(
