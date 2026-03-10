@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { GlassDialog } from '../../components/ui/GlassDialog';
 import { EmojiPicker } from '../../components/ui/EmojiPicker';
 import { UserAvatar } from '../../components/ui/UserAvatar';
+import { FloatingMessagesButton } from '../../components/ui/FloatingMessagesButton';
 import classNames from 'classnames';
 import { chatService } from '../../services/chatService';
 import { projectService } from '../../services/projectService';
@@ -1936,10 +1937,10 @@ export const HomePage = () => {
 
         <section 
           ref={feedSectionRef}
-          className="feed-section mx-auto flex min-w-0 w-full flex-col gap-3 sm:gap-4 lg:gap-5 pb-16 sm:pb-20 px-3 sm:px-4 relative z-10 overflow-visible" 
+          className="feed-section mx-auto flex min-w-0 w-full flex-col gap-3 sm:gap-4 lg:gap-5 pb-16 sm:pb-20 px-3 sm:px-4 relative z-[80] overflow-visible" 
           style={{ width: '100%', maxWidth: '100%', boxShadow: 'none', WebkitBoxShadow: 'none' }}
         >
-          <Card padded={false} className="overflow-visible glass-liquid p-3 sm:p-4 lg:p-5 mt-0" style={{ boxShadow: 'none' }}>
+          <Card padded={false} className="post-composer-shadow overflow-visible glass-liquid p-3 sm:p-4 lg:p-5 mt-0">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-semibold text-[var(--color-text)] sm:text-sm">Historias</h2>
               <Button
@@ -2037,7 +2038,7 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          <div className="relative z-30 overflow-visible rounded-2xl border border-slate-200/80 dark:border-white/25 bg-white/95 dark:bg-white/20 backdrop-blur-xl p-4 sm:p-5 lg:p-6 mt-0 shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+          <div className="post-composer-shadow relative z-[120] overflow-visible rounded-2xl bg-white/95 dark:bg-white/20 backdrop-blur-xl p-4 sm:p-5 lg:p-6 mt-0">
             <div className="flex items-start gap-2 sm:gap-3">
               {user && (
                 <UserAvatar
@@ -2047,27 +2048,32 @@ export const HomePage = () => {
                   size="md"
                 />
               )}
-              <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
-                <TextArea
-                  placeholder="Comparte un nuevo avance, recurso o proyecto..."
-                  rows={3}
-                  value={composerContent}
-                  onChange={(event) => setComposerContent(event.target.value)}
-                  disabled={isPublishing}
-                  ref={composerInputRef}
-                  className="focus:!border-sena-green/50 focus:!ring-2 focus:!ring-sena-green/20"
-                />
+              <div className="flex-1 min-w-0 space-y-2 sm:space-y-3 overflow-visible">
+                <div className="relative z-[140] overflow-visible mr-2">
+                  <TextArea
+                    placeholder="Comparte un nuevo avance, recurso o proyecto..."
+                    rows={3}
+                    value={composerContent}
+                    onChange={(event) => setComposerContent(event.target.value)}
+                    disabled={isPublishing}
+                    ref={composerInputRef}
+                    className="composer-textarea-focus focus:!border-white/25 focus:!ring-0 dark:focus:!border-white/15"
+                  />
+                </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
-                  <div className="flex gap-1.5 sm:gap-2">
-                    {composerIcons.map(({ icon: Icon, label, action }) => {
+                <div className="relative z-[140] flex flex-wrap items-center justify-between gap-2 overflow-visible sm:gap-3">
+                  <div className="relative z-[140] flex gap-1.5 overflow-visible pl-1 sm:gap-2 sm:pl-1.5">
+                    {composerIcons.map(({ icon: Icon, label, action }, index) => {
                       const isEmojiAction = action === 'emoji';
                       const isEmojiOpen = emojiPickerTarget?.type === 'composer' && isEmojiAction;
                       return (
-                        <div key={action} className={classNames('relative overflow-visible', isEmojiAction && 'z-30')}>
+                        <div key={action} className={classNames('relative z-[150] overflow-visible', isEmojiAction && 'z-[160]')}>
                           <button
                             type="button"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/60 dark:bg-white/10 border border-white/30 dark:border-white/15 text-[var(--color-muted)] hover:text-sena-green hover:bg-sena-green/10 hover:border-sena-green/30 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            className={classNames(
+                              'composer-icon-btn relative z-[150] inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-sena-green border border-transparent transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50',
+                              index === 0 && 'ml-0.5'
+                            )}
                             aria-label={label}
                             onClick={() => handleComposerToolClick(action)}
                             disabled={isPublishing}
@@ -2075,7 +2081,7 @@ export const HomePage = () => {
                             <Icon className="h-4 w-4" />
                           </button>
                           {isEmojiAction && isEmojiOpen && (
-                            <div className="absolute right-0 top-full z-[80] mt-3" ref={emojiPickerRef}>
+                            <div className="absolute right-0 top-full z-[200] mt-3" ref={emojiPickerRef}>
                               <EmojiPicker onEmojiSelect={handleEmojiSelect} onClose={closeEmojiPicker} />
                             </div>
                           )}
@@ -2087,7 +2093,12 @@ export const HomePage = () => {
                     size="sm"
                     variant="primary"
                     leftIcon={<Sparkles className="h-4 w-4" />}
-                    className="!rounded-full !bg-gradient-to-br !from-sena-green !to-emerald-600 !text-white !border-sena-green/40 hover:!from-sena-green hover:!to-emerald-500 hover:!text-white hover:!border-sena-green/50 disabled:!bg-slate-100 disabled:!text-slate-500 disabled:!border-slate-200 disabled:hover:!bg-slate-100 disabled:hover:!text-slate-500 px-3 py-2 text-xs shadow-md"
+                    className={classNames(
+                      'composer-publish-btn-shadow relative z-[150] !rounded-full px-3 py-2 text-xs transition-all duration-200 mr-2',
+                      composerContent.trim()
+                        ? 'composer-publish-btn-active !text-white !border-transparent hover:!text-white hover:!border-transparent'
+                        : '!bg-white dark:!bg-white !text-sena-green dark:!text-sena-green !border-transparent !opacity-100'
+                    )}
                     loading={isPublishing}
                     disabled={isPublishing || !composerContent.trim()}
                     onClick={handleComposerSubmit}
@@ -2186,13 +2197,13 @@ export const HomePage = () => {
         </section>
 
         <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden' }}>
-          <div className="flex flex-col space-y-6 py-4 px-4">
+          <div className="flex flex-col items-end space-y-6 py-4 px-4">
             {/* Anuncios */}
-            <div className="space-y-2">
+            <div className="w-[300px] max-w-full space-y-2">
               <div className="px-2">
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Anuncios</h3>
               </div>
-              <div className="relative h-40 overflow-hidden rounded-2xl sm:h-44 lg:h-48" data-no-saturate>
+              <div className="relative h-44 overflow-hidden rounded-2xl sm:h-48 lg:h-52" data-no-saturate>
                 <AnimatePresence initial={false} mode="wait">
                   {announcementSlides.map(
                     (slide, index) =>
@@ -2234,15 +2245,7 @@ export const HomePage = () => {
           </div>
         </aside>
 
-        {/* Botón flotante de mensajes */}
-        <button
-          type="button"
-          onClick={() => navigate('/chats')}
-          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sena-green to-emerald-600 text-white shadow-[0_4px_16px_rgba(57,169,0,0.4)] transition-all hover:scale-105 hover:shadow-[0_6px_20px_rgba(57,169,0,0.5)] active:scale-95 lg:bottom-8 lg:right-8 xl:right-12 2xl:right-16"
-          aria-label="Ir a mensajes"
-        >
-          <MessageCircle className="h-6 w-6" />
-        </button>
+        <FloatingMessagesButton />
 
         {isStoryViewerOpen && selectedStoryUser && selectedStoryUser.stories && selectedStoryUser.stories.length > 0 && (
           <div
