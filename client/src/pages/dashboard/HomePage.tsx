@@ -82,6 +82,22 @@ const reportReasons = [
   'Otro'
 ];
 
+function ImageWithFallback({ src, alt, className }: { src: string; alt?: string; className?: string }) {
+  const [errored, setErrored] = useState(false);
+  if (errored) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+        className={classNames('flex min-h-[120px] items-center justify-center rounded-2xl bg-white/10 dark:bg-neutral-700/30 p-4 text-center', className)}
+      >
+        <p className="text-xs text-[var(--color-muted)]">No se pudo cargar la imagen</p>
+      </motion.div>
+    );
+  }
+  return <img src={src} alt={alt ?? ''} className={className} onError={() => setErrored(true)} loading="lazy" />;
+}
 
 const announcementSlides = [
   {
@@ -165,9 +181,22 @@ const getAttachmentLabel = (attachment: AnyAttachment): string => {
 
 const renderAttachmentMedia = (attachment: AnyAttachment, className?: string) => {
   const url = getAttachmentUrl(attachment);
+  if (!url || url === 'undefined' || url === 'null') {
+    return (
+      <div className={classNames('flex min-h-[120px] items-center justify-center rounded-2xl bg-white/10 dark:bg-neutral-700/30 p-4 text-center', className)}>
+        <p className="text-xs text-[var(--color-muted)]">No se pudo cargar el archivo</p>
+      </div>
+    );
+  }
   const mediaType = detectMediaType(url);
   if (mediaType === 'image') {
-    return <img src={url} alt={getAttachmentLabel(attachment)} className={classNames('h-full w-full object-cover', className)} />;
+    return (
+      <ImageWithFallback
+        src={url}
+        alt={getAttachmentLabel(attachment)}
+        className={classNames('h-full w-full object-cover', className)}
+      />
+    );
   }
   if (mediaType === 'video') {
     return (
@@ -586,11 +615,12 @@ export const HomePage = () => {
     queryFn: libraryService.listResources
   });
 
-  const { data: feedPosts = [], isFetching: isLoadingFeed } = useQuery({
+  const { data: feedPosts = [], isLoading: isLoadingFeed } = useQuery({
     queryKey: feedQueryKey,
     queryFn: () => feedService.listPosts(),
     staleTime: 30_000,
-    refetchOnMount: false
+    refetchOnMount: false,
+    refetchOnWindowFocus: false
   });
 
   const [activeAnnouncement, setActiveAnnouncement] = useState(0);
@@ -1276,17 +1306,22 @@ export const HomePage = () => {
 
         {attachmentsFromPost.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
-            {attachmentsFromPost.map((attachment) => (
-              <div
-                key={attachment.id}
-                className={classNames(
-                  'relative overflow-hidden rounded-2xl glass-liquid',
-                  attachmentsFromPost.length === 1 ? 'w-full' : 'w-full sm:w-[calc(50%-4px)]'
-                )}
-              >
-                {renderAttachmentMedia(attachment, 'h-full w-full')}
-              </div>
-            ))}
+            {attachmentsFromPost.map((attachment) => {
+              const url = getAttachmentUrl(attachment);
+              const isMedia = url && detectMediaType(url) !== 'pdf' && detectMediaType(url) !== 'other';
+              return (
+                <div
+                  key={attachment.id}
+                  className={classNames(
+                    'relative overflow-hidden rounded-2xl glass-liquid min-h-[120px]',
+                    attachmentsFromPost.length === 1 ? 'w-full' : 'w-full sm:w-[calc(50%-4px)]',
+                    isMedia && 'aspect-video min-h-0'
+                  )}
+                >
+                  {renderAttachmentMedia(attachment, 'h-full w-full')}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1407,7 +1442,7 @@ export const HomePage = () => {
                     <button
                       key={type}
                       type="button"
-                      className="flex h-8 w-8 items-center justify-center rounded-2xl border border-white/50 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 dark:bg-neutral-900/90"
+                      className="flex h-8 w-8 items-center justify-center rounded-2xl border border-white/50 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 dark:bg-neutral-800/90 dark:border-neutral-600/50"
                       onClick={() => handleReactionSelect(post.id, type, post.viewerReaction)}
                       title={label}
                     >
@@ -1653,7 +1688,7 @@ export const HomePage = () => {
                     <button
                       type="button"
                       onClick={() => handleClearCommentAttachment(post.id)}
-                      className="rounded-2xl bg-white/40 p-1 text-[var(--color-text)] hover:bg-white/60"
+                      className="rounded-2xl bg-white/40 dark:bg-neutral-700/60 p-1 text-[var(--color-text)] hover:bg-white/60 dark:hover:bg-neutral-600/70"
                       aria-label="Quitar adjunto del comentario"
                     >
                       <X className="h-4 w-4" />
@@ -1675,7 +1710,7 @@ export const HomePage = () => {
                     />
                   )}
                   {commentAttachment.kind === 'document' && (
-                    <div className="flex items-center gap-2 rounded-2xl bg-white/70 px-3 py-2 text-[var(--color-text)]">
+                    <div className="flex items-center gap-2 rounded-2xl bg-white/70 dark:bg-neutral-700/70 px-3 py-2 text-[var(--color-text)]">
                       <FileText className="h-5 w-5 text-sena-green" />
                       <div className="min-w-0">
                         <p className="text-sm font-semibold">
@@ -1887,9 +1922,9 @@ export const HomePage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                      className="top-highlights-card group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-300 hover:bg-white active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-neutral-700/60 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-neutral-600/70 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1917,9 +1952,9 @@ export const HomePage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                      className="top-highlights-card group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-300 hover:bg-white active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-neutral-700/60 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-neutral-600/70 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -2038,7 +2073,7 @@ export const HomePage = () => {
             </div>
           </Card>
 
-          <div className="post-composer-shadow relative z-[120] overflow-visible rounded-2xl bg-white/95 dark:bg-white/20 backdrop-blur-xl p-4 sm:p-5 lg:p-6 mt-0">
+          <div className="post-composer-shadow relative z-[120] overflow-visible rounded-2xl bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl p-4 sm:p-5 lg:p-6 mt-0">
             <div className="flex items-start gap-2 sm:gap-3">
               {user && (
                 <UserAvatar
@@ -2071,7 +2106,7 @@ export const HomePage = () => {
                           <button
                             type="button"
                             className={classNames(
-                              'composer-icon-btn relative z-[150] inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-sena-green border border-transparent transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50',
+                              'composer-icon-btn relative z-[150] inline-flex h-9 w-9 items-center justify-center rounded-full bg-white dark:bg-neutral-800/90 text-sena-green border border-transparent transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50',
                               index === 0 && 'ml-0.5'
                             )}
                             aria-label={label}
@@ -2097,7 +2132,7 @@ export const HomePage = () => {
                       'composer-publish-btn-shadow relative z-[150] !rounded-full px-3 py-2 text-xs transition-all duration-200 mr-2',
                       composerContent.trim()
                         ? 'composer-publish-btn-active !text-white !border-transparent hover:!text-white hover:!border-transparent'
-                        : '!bg-white dark:!bg-white !text-sena-green dark:!text-sena-green !border-transparent !opacity-100'
+                        : '!bg-white dark:!bg-neutral-800/90 !text-sena-green dark:!text-sena-green !border-transparent !opacity-100'
                     )}
                     loading={isPublishing}
                     disabled={isPublishing || !composerContent.trim()}
@@ -2119,7 +2154,7 @@ export const HomePage = () => {
                       <button
                         type="button"
                         onClick={handleClearAttachments}
-                        className="rounded-2xl bg-white/40 p-1 text-[var(--color-text)] hover:bg-white/60"
+                        className="rounded-2xl bg-white/40 dark:bg-neutral-700/60 p-1 text-[var(--color-text)] hover:bg-white/60 dark:hover:bg-neutral-600/70"
                         aria-label="Quitar adjuntos"
                         disabled={isPublishing}
                       >
@@ -2136,7 +2171,7 @@ export const HomePage = () => {
                           <button
                             type="button"
                             onClick={() => handleRemoveAttachment(attachment.id)}
-                            className="absolute right-1 top-1 z-10 rounded-2xl bg-white/60 p-0.5 text-[var(--color-muted)] shadow hover:bg-white"
+                            className="absolute right-1 top-1 z-10 rounded-2xl bg-white/60 dark:bg-neutral-700/70 p-0.5 text-[var(--color-muted)] shadow hover:bg-white dark:hover:bg-neutral-600/80"
                             aria-label="Eliminar adjunto"
                           >
                             <X className="h-3 w-3" />
