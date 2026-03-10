@@ -414,7 +414,7 @@ export const FloatingMessagesButton = () => {
       ref={buttonRef}
       type="button"
       onClick={() => setOpen(!open)}
-      className="floating-messages-btn fixed bottom-6 right-6 z-40 flex h-12 items-center gap-2.5 rounded-2xl bg-white border border-transparent px-4 text-[var(--color-text)] transition-all hover:scale-[1.02] hover:text-sena-green active:scale-[0.98] lg:bottom-8 lg:right-8 xl:right-12 2xl:right-16"
+      className="floating-messages-btn fixed bottom-6 right-6 z-40 flex h-12 items-center gap-2.5 rounded-2xl bg-white dark:bg-neutral-800 dark:border-neutral-600/50 border border-transparent px-4 text-[var(--color-text)] transition-all hover:scale-[1.02] hover:text-sena-green dark:hover:bg-neutral-700 active:scale-[0.98] lg:bottom-8 lg:right-8 xl:right-12 2xl:right-16"
       aria-label={open ? 'Cerrar mensajes' : 'Abrir mensajes'}
     >
       <MessageCircle className="h-5 w-5 shrink-0" />

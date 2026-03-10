@@ -93,9 +93,25 @@ html {
   -webkit-box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
 }
 
+/* Tarjetas Top projects y Avances: fondo blanco en light, mismo que publicaciones en dark */
+.top-highlights-card {
+  background: #ffffff !important;
+  border: 1px solid transparent !important;
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1) !important;
+  -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1) !important;
+}
+.dark .top-highlights-card {
+  background: linear-gradient(120deg, rgba(40, 40, 40, 0.4) 0%, rgba(25, 25, 25, 0.2) 100%) !important;
+  border: 1px solid transparent !important;
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
+  -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
+}
+.dark .top-highlights-card:hover {
+  background: linear-gradient(120deg, rgba(45, 45, 45, 0.5) 0%, rgba(30, 30, 30, 0.3) 100%) !important;
+}
 /* Boton Publicar activo: degradado Sena animado */
 .composer-publish-btn-active {
-  background: linear-gradient(125deg, #39a900 0%, #4cae1a 32%, #2f8f2a 62%, #63bf2f 100%) !important;
+  background: linear-gradient(135deg, rgba(57, 169, 0, 0.8) 0%, rgba(5, 150, 105, 0.7) 100%) !important;
   background-size: 280% 280% !important;
   animation: composerPublishGradientMove 2.4s linear infinite;
 }
@@ -144,13 +160,14 @@ body {
   filter: saturate(0.834); /* Contrarresta el 1.2 del app-main para dejar saturación normal */
 }
 
-/* Barra de navegación: solo sombra inferior */
+/* Barra de navegación: fondo sólido y sombra inferior */
 .nav-glass {
-  background: transparent !important;
+  background: #ffffff !important;
   box-shadow: 0 12px 40px -6px rgba(0, 12, 40, 0.14), 0 6px 20px -4px rgba(0, 12, 40, 0.09) !important;
   -webkit-box-shadow: 0 12px 40px -6px rgba(0, 12, 40, 0.14), 0 6px 20px -4px rgba(0, 12, 40, 0.09) !important;
 }
 .dark .nav-glass {
+  background: #0f0f0f !important;
   box-shadow: 0 12px 44px -6px rgba(0, 12, 40, 0.4), 0 6px 22px -4px rgba(0, 12, 40, 0.25) !important;
   -webkit-box-shadow: 0 12px 44px -6px rgba(0, 12, 40, 0.4), 0 6px 22px -4px rgba(0, 12, 40, 0.25) !important;
 }
@@ -161,7 +178,7 @@ body {
   -webkit-box-shadow: 0 12px 44px -6px rgba(20, 60, 0, 0.4), 0 6px 22px -4px rgba(20, 60, 0, 0.25) !important;
 }
 
-/* Botones de navegación: sin borde verde, delante para mostrar sombra */
+/* Botones de navegación: modo claro blanco, modo oscuro gris */
 .nav-btn {
   position: relative;
   z-index: 10;
@@ -173,7 +190,7 @@ body {
   background: rgba(0, 0, 0, 0.04) !important;
 }
 .dark .nav-btn {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(23 23 23);
 }
 .nav-btn.nav-btn-active {
   background: #ffffff !important;
@@ -189,20 +206,20 @@ body {
   -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1);
 }
 .dark .nav-btn-indicator {
-  background: #ffffff;
+  background: rgb(23 23 23);
   box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3);
   -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3);
 }
 .dark .nav-btn:hover:not(.nav-btn-active) {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: rgb(35 35 35) !important;
 }
 .dark .nav-btn.nav-btn-active {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: rgb(23 23 23) !important;
+  background-color: rgb(23 23 23) !important;
   box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
   -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
 }
-/* Iconos: fondo blanco con sombra */
+/* Iconos: fondo blanco con sombra en modo claro, gris en modo oscuro */
 .nav-btn-icon-active,
 .nav-btn-icon {
   background: white !important;
@@ -211,7 +228,7 @@ body {
 }
 .dark .nav-btn-icon-active,
 .dark .nav-btn-icon {
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: rgb(38 38 38) !important;
   box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.3), 0 1px 3px -1px rgba(0, 0, 0, 0.2) !important;
   -webkit-box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.3), 0 1px 3px -1px rgba(0, 0, 0, 0.2) !important;
 }
@@ -293,25 +310,21 @@ body {
     backface-visibility: hidden;
   }
 
-  /* Glassmorphism en la barra de navegación principal */
+  /* Barra de navegación principal: sin gradiente ni blur */
   .nav-glass {
     position: relative;
     isolation: isolate;
     transform: translateZ(0);
-    backdrop-filter: blur(24px) saturate(1.6) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(1.6) !important;
-  background: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.06) 100%) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   }
   .dark .nav-glass {
-    backdrop-filter: blur(28px) saturate(1.5) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(1.5) !important;
-    background: linear-gradient(135deg,
-        rgba(50, 50, 50, 0.4) 0%,
-        rgba(30, 30, 30, 0.25) 50%,
-        rgba(20, 20, 20, 0.12) 100%) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #0f0f0f !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .glass-liquid {
