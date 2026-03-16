@@ -1,14 +1,18 @@
 import { FC, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Hash, Send, MoreVertical, Plus, Smile, Info, Users, Pin, X, Reply, Copy, Forward, Star, Flag, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChannelMessage } from '../../types/channel';
+import { channelService } from '../../services/channelService';
 import { Button } from '../ui/Button';
 import { GlassDialog } from '../ui/GlassDialog';
 import { EmojiPicker } from '../ui/EmojiPicker';
 import { resolveAssetUrl } from '../../utils/media';
 import { useAuthContext } from '../../contexts/AuthContext';
+import { useToast } from '../../hooks/useToast';
 
 interface ChannelChatProps {
+  channelId: string;
   channelName: string;
   channelDescription?: string | null;
   messages: ChannelMessage[];
@@ -17,6 +21,7 @@ interface ChannelChatProps {
 }
 
 export const ChannelChat: FC<ChannelChatProps> = ({
+  channelId,
   channelName,
   channelDescription,
   messages,
@@ -24,6 +29,67 @@ export const ChannelChat: FC<ChannelChatProps> = ({
   onSendMessage
 }) => {
   const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [deleteTarget, setDeleteTarget] = useState<ChannelMessage | null>(null);
+  const [reportTarget, setReportTarget] = useState<ChannelMessage | null>(null);
+  const [reportReason, setReportReason] = useState('Contenido inapropiado');
+  const [reportDetails, setReportDetails] = useState('');
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: (messageId: string) => channelService.deleteMessage(messageId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['channelMessages', channelId] });
+      setDeleteTarget(null);
+      toast.success('Mensaje eliminado');
+    },
+    onError: () => {
+      toast.error('No se pudo eliminar el mensaje');
+    }
+  });
+
+  const reportReasons = [
+    'Contenido inapropiado',
+    'Informacion falsa',
+    'Discurso danino o spam',
+    'Violacion de derechos',
+    'Otro'
+  ];
+
+  const reportMessageMutation = useMutation({
+    mutationFn: ({ messageId, reason, details }: { messageId: string; reason: string; details?: string }) =>
+      channelService.reportMessage(messageId, { reason, details: details || undefined }),
+    onSuccess: () => {
+      setReportTarget(null);
+      setReportDetails('');
+      toast.success('Reporte enviado');
+    },
+    onError: () => {
+      toast.error('No se pudo enviar el reporte');
+    }
+  });
+
+  const starMessageMutation = useMutation({
+    mutationFn: (messageId: string) => channelService.toggleStarMessage(messageId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['channelMessages', channelId] });
+      toast.success('Mensaje actualizado');
+    },
+    onError: () => {
+      toast.error('No se pudo actualizar el mensaje');
+    }
+  });
+
+  const pinMessageMutation = useMutation({
+    mutationFn: (messageId: string) => channelService.togglePinMessage(messageId),
+    onSuccess: (_, messageId) => {
+      void queryClient.invalidateQueries({ queryKey: ['channelMessages', channelId] });
+      toast.success('Mensaje actualizado');
+    },
+    onError: () => {
+      toast.error('No se pudo actualizar el mensaje');
+    }
+  });
   const navigate = useNavigate();
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
@@ -404,6 +470,9 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                         >
                           {message.sender?.firstName} {message.sender?.lastName}
                         </button>
+                        {message.isPinned && (
+                          <Pin className="h-3 w-3 text-sena-green flex-shrink-0" aria-label="Mensaje fijado" />
+                        )}
                         <span className="text-[10px] text-[var(--color-muted)]">
                           {new Date(message.createdAt).toLocaleTimeString('es-CO', {
                             hour: '2-digit',
@@ -529,27 +598,29 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    // TODO: Implementar fijar mensaje
+                                    pinMessageMutation.mutate(message.id);
                                     setOpenMessageMenuId(null);
                                   }}
                                   className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                                 >
-                                  <Pin className="h-4 w-4 text-sena-green" /> Fijar
+                                  <Pin className="h-4 w-4 text-sena-green" /> {message.isPinned ? 'Desfijar' : 'Fijar'}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    // TODO: Implementar destacar mensaje
+                                    starMessageMutation.mutate(message.id);
                                     setOpenMessageMenuId(null);
                                   }}
                                   className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
                                 >
-                                  <Star className="h-4 w-4 text-sena-green" /> Destacar
+                                  <Star className={`h-4 w-4 ${message.viewerStarred ? 'fill-amber-400 text-amber-500' : 'text-sena-green'}`} /> {message.viewerStarred ? 'Quitar destacado' : 'Destacar'}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    // TODO: Implementar reportar mensaje
+                                    setReportTarget(message);
+                                    setReportReason('Contenido inapropiado');
+                                    setReportDetails('');
                                     setOpenMessageMenuId(null);
                                   }}
                                   className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
@@ -560,7 +631,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      // TODO: Implementar eliminar mensaje
+                                      setDeleteTarget(message);
                                       setOpenMessageMenuId(null);
                                     }}
                                     className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
@@ -573,6 +644,9 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                           </div>
                         </div>
                         <div className={`mt-1 flex items-center text-[10px] text-[var(--color-muted)] ${isOwn ? 'justify-end' : 'justify-start'} gap-2`}>
+                          {message.isPinned && isOwn && (
+                            <Pin className="h-3 w-3 text-sena-green flex-shrink-0" aria-label="Mensaje fijado" />
+                          )}
                           <span>
                             {new Date(message.createdAt).toLocaleTimeString('es-CO', {
                               hour: '2-digit',
@@ -794,6 +868,126 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           </aside>
         </>
       )}
+
+      {/* Diálogo reportar mensaje */}
+      <GlassDialog
+        open={!!reportTarget}
+        onClose={() => (!reportMessageMutation.isPending ? setReportTarget(null) : undefined)}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--color-text)]">Reportar mensaje</h2>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Indica el motivo del reporte. Un moderador revisará el mensaje.
+            </p>
+            {reportTarget && (
+              <div className="mt-3 rounded-2xl bg-white/80 dark:bg-neutral-900/80 px-3 py-2 text-sm text-[var(--color-text)] border border-white/30 dark:border-white/10">
+                {reportTarget.content ? (
+                  <p className="line-clamp-3">{reportTarget.content}</p>
+                ) : (
+                  <p className="text-[var(--color-muted)] italic">Mensaje con adjunto</p>
+                )}
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-[var(--color-muted)] mb-2">Motivo</p>
+            <div className="flex flex-wrap gap-2">
+              {reportReasons.map((reason) => (
+                <button
+                  key={reason}
+                  type="button"
+                  onClick={() => setReportReason(reason)}
+                  className={`rounded-2xl px-3 py-1.5 text-xs transition ${
+                    reportReason === reason
+                      ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-400/40'
+                      : 'bg-white/60 dark:bg-neutral-800/60 text-[var(--color-text)] hover:bg-white/80 dark:hover:bg-neutral-700/80'
+                  }`}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-[var(--color-muted)] mb-1">Detalles adicionales (opcional)</p>
+            <textarea
+              value={reportDetails}
+              onChange={(e) => setReportDetails(e.target.value)}
+              placeholder="Explica brevemente..."
+              rows={2}
+              className="w-full rounded-2xl border border-white/30 dark:border-white/10 bg-white/80 dark:bg-neutral-900/80 px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-sena-green/50 resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setReportTarget(null)}
+              disabled={reportMessageMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              className="bg-rose-500/90 hover:bg-rose-600/90 text-white"
+              onClick={() =>
+                reportTarget &&
+                reportMessageMutation.mutate({ messageId: reportTarget.id, reason: reportReason, details: reportDetails })
+              }
+              loading={reportMessageMutation.isPending}
+            >
+              Enviar reporte
+            </Button>
+          </div>
+        </div>
+      </GlassDialog>
+
+      {/* Diálogo confirmar eliminar mensaje */}
+      <GlassDialog
+        open={!!deleteTarget}
+        onClose={() => (!deleteMessageMutation.isPending ? setDeleteTarget(null) : undefined)}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--color-text)]">Eliminar mensaje</h2>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              ¿Seguro que quieres eliminar este mensaje? Esta acción no se puede deshacer.
+            </p>
+            {deleteTarget && (
+              <div className="mt-3 rounded-2xl bg-white/80 dark:bg-neutral-900/80 px-3 py-2 text-sm text-[var(--color-text)] border border-white/30 dark:border-white/10">
+                {deleteTarget.content ? (
+                  <p className="line-clamp-3">{deleteTarget.content}</p>
+                ) : (
+                  <p className="text-[var(--color-muted)] italic">Mensaje con adjunto</p>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleteMessageMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              className="bg-rose-500/90 hover:bg-rose-600/90 text-white border-rose-400/30"
+              onClick={() => deleteTarget && deleteMessageMutation.mutate(deleteTarget.id)}
+              loading={deleteMessageMutation.isPending}
+            >
+              Eliminar
+            </Button>
+          </div>
+        </div>
+      </GlassDialog>
 
     </section>
   );

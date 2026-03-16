@@ -2341,6 +2341,54 @@ const swaggerDocument = {
           404: { description: 'Canal no encontrado' },
         },
       },
+      patch: {
+        summary: 'Actualizar un canal',
+        tags: ['Groups'],
+        security: [{ JWTAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', maxLength: 100 },
+                  description: { type: 'string', nullable: true, maxLength: 500 },
+                  type: { type: 'string', enum: ['text', 'voice'] },
+                  position: { type: 'integer' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Canal actualizado',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    channel: { $ref: '#/components/schemas/Channel' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Datos inválidos' },
+          401: { description: 'No autenticado' },
+          404: { description: 'Canal no encontrado' },
+        },
+      },
       delete: {
         summary: 'Eliminar un canal',
         tags: ['Groups'],

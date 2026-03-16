@@ -31,19 +31,6 @@ const getInitials = (label: string) => {
   return parts.map((p) => p.charAt(0).toUpperCase()).join('') || '??';
 };
 
-const avatarGradients = [
-  'from-sena-green/90 to-emerald-500/80',
-  'from-sena-green/80 to-emerald-600/70',
-  'from-emerald-500/90 to-sena-green/80',
-  'from-emerald-600/80 to-sena-green/70'
-];
-
-const getGradient = (seed: string) => {
-  let hash = 0;
-  for (const c of seed) hash = (hash + c.charCodeAt(0) * 17) % 2048;
-  return avatarGradients[hash % avatarGradients.length];
-};
-
 const formatTime = (iso: string) => {
   const d = new Date(iso);
   const now = new Date();
@@ -370,8 +357,14 @@ export const FloatingMessagesButton = () => {
               <ul className="space-y-0.5">
                 {sortedChats.map((chat) => {
                   const label = getChatDisplayName(chat, friends, user?.id);
+                  const chatProfile = chat.isGroup
+                    ? null
+                    : friends.find((friend) => {
+                        if (friend.id === chat.createdBy && friend.id !== user?.id) return true;
+                        const fullName = `${friend.firstName} ${friend.lastName}`.trim().toLowerCase();
+                        return fullName.length > 0 && fullName === label.trim().toLowerCase();
+                      }) ?? null;
                   const initials = getInitials(label);
-                  const gradient = getGradient(chat.id);
                   const time = formatTime(chat.lastMessageAt ?? chat.createdAt);
 
                   return (
@@ -381,11 +374,18 @@ export const FloatingMessagesButton = () => {
                         onClick={() => handleChatClick(chat.id)}
                         className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-neutral-700/60 rounded-xl mx-2"
                       >
-                        <span
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white bg-gradient-to-br ${gradient}`}
-                        >
-                          {initials}
-                        </span>
+                        {chatProfile ? (
+                          <UserAvatar
+                            firstName={chatProfile.firstName}
+                            lastName={chatProfile.lastName}
+                            avatarUrl={chatProfile.avatarUrl}
+                            size="sm"
+                          />
+                        ) : (
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white bg-sena-green">
+                            {initials}
+                          </span>
+                        )}
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-[var(--color-text)]">{label}</p>
                           {chat.lastMessage && (

@@ -2,6 +2,7 @@ import { apiClient } from './apiClient';
 import { Profile } from '../types/profile';
 import { UserRole } from '../types/auth';
 import { FeedReport, ReportStatus } from '../types/feed';
+import { ChannelMessageReport } from '../types/channel';
 import { normalizeFeedReport } from '../utils/media';
 
 export const adminService = {
@@ -58,5 +59,18 @@ export const adminService = {
       { status }
     );
     return normalizeFeedReport(data.report);
+  },
+
+  async listChannelReports(): Promise<ChannelMessageReport[]> {
+    const { data } = await apiClient.get<{ success: boolean; reports: ChannelMessageReport[] }>('/admin/channel-reports');
+    return data.reports;
+  },
+
+  async updateChannelReportStatus(reportId: string, status: ReportStatus): Promise<ChannelMessageReport> {
+    const { data } = await apiClient.patch<{ success: boolean; report: ChannelMessageReport }>(
+      `/admin/channel-reports/${reportId}/status`,
+      { status }
+    );
+    return data.report;
   }
 };

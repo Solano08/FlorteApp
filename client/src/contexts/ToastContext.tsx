@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useContext, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence } from 'framer-motion';
 import { Toast, ToastType } from '../components/ui/Toast';
 import { ToastComponent } from '../components/ui/Toast';
 
@@ -61,9 +62,11 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
       {typeof window !== 'undefined' &&
         createPortal(
           <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-md">
-            {toasts.map((toast) => (
-              <ToastComponent key={toast.id} toast={toast} onClose={removeToast} />
-            ))}
+            <AnimatePresence initial={false} mode="popLayout">
+              {toasts.map((toast) => (
+                <ToastComponent key={toast.id} toast={toast} onClose={removeToast} />
+              ))}
+            </AnimatePresence>
           </div>,
           document.body
         )}

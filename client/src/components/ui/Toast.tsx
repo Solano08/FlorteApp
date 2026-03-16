@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import classNames from 'classnames';
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -16,24 +15,10 @@ interface ToastProps {
   onClose: (id: string) => void;
 }
 
-const toastIcons = {
-  success: CheckCircle,
-  error: AlertCircle,
-  warning: AlertTriangle,
-  info: Info
-};
-
-const toastStyles = {
-  success:
-    'bg-gradient-to-r from-sena-green to-emerald-500 text-white border-white/25 shadow-[0_12px_30px_rgba(16,185,129,0.35)]',
-  error: 'bg-red-500/15 text-red-500 border-red-500/30',
-  warning: 'bg-yellow-500/15 text-yellow-500 border-yellow-500/30',
-  info: 'bg-sena-green/15 text-sena-green border-sena-green/30'
-};
-
 export const ToastComponent = ({ toast, onClose }: ToastProps) => {
-  const Icon = toastIcons[toast.type];
-  const duration = toast.duration ?? 5000;
+  const duration = toast.duration ?? 3000;
+  const offscreenSlideX = 420;
+  const isDeleteNotification = /elimin/i.test(toast.message);
 
   useEffect(() => {
     if (duration > 0) {
@@ -45,22 +30,27 @@ export const ToastComponent = ({ toast, onClose }: ToastProps) => {
   }, [toast.id, duration, onClose]);
 
   return (
-    <div
-      className={classNames(
-        'flex items-center gap-3 rounded-2xl border px-4 py-3 backdrop-blur-xl transition-all duration-300 ease-out toast-enter',
-        toastStyles[toast.type]
-      )}
+    <motion.div
+      layout
+      initial={{ x: offscreenSlideX, opacity: 1 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: offscreenSlideX, opacity: 1 }}
+      transition={{
+        layout: { duration: 0.28, ease: [0.2, 0.9, 0.2, 1] },
+        x: { duration: 0.62, ease: [0.22, 0.61, 0.36, 1] },
+        opacity: { duration: 0.62, ease: [0.22, 0.61, 0.36, 1] }
+      }}
+      className="relative flex items-center justify-center rounded-2xl bg-white dark:bg-neutral-800 text-[var(--color-text)] px-4 py-3 overflow-hidden max-w-[320px] shadow-[0_10px_24px_rgba(15,23,42,0.16)] dark:shadow-[0_10px_24px_rgba(0,0,0,0.45)]"
+      style={{ transformOrigin: 'right center', willChange: 'transform, opacity' }}
     >
-      <Icon className="h-5 w-5 flex-shrink-0" />
-      <p className="flex-1 text-sm font-medium">{toast.message}</p>
-      <button
-        onClick={() => onClose(toast.id)}
-        className="flex-shrink-0 rounded-2xl p-1 transition-colors hover:bg-white/10"
-        aria-label="Cerrar notificación"
+      <p
+        className={`text-sm font-medium text-center leading-tight translate-y-[1px] relative z-10 ${
+          isDeleteNotification ? 'text-red-600 dark:text-red-400' : 'text-[var(--color-text)]'
+        }`}
       >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
+        {toast.message}
+      </p>
+    </motion.div>
   );
 };
 

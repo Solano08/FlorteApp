@@ -71,8 +71,10 @@ export const ChannelSettingsPage = () => {
   const updateChannelMutation = useMutation({
     mutationFn: (data: { name: string; description?: string }) => {
       if (!channelId) throw new Error('No se ha seleccionado un canal');
-      // TODO: Implementar servicio de actualización de canal
-      return Promise.resolve();
+      return channelService.updateChannel(channelId, {
+        name: data.name,
+        description: data.description ?? null
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channels', communityId] }).catch(() => {});

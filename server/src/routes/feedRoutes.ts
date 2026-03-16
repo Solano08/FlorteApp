@@ -8,6 +8,7 @@ router.get('/', requireAuth, feedController.listFeed.bind(feedController));
 router.post('/', requireAuth, feedController.createPost.bind(feedController));
 router.get('/saved', requireAuth, feedController.listSavedPosts.bind(feedController));
 router.post('/:postId/reactions', requireAuth, feedController.reactToPost.bind(feedController));
+router.get('/:postId/reactions', requireAuth, feedController.listPostReactions.bind(feedController));
 router.post('/:postId/comments', requireAuth, feedController.commentOnPost.bind(feedController));
 router.get('/:postId/comments', requireAuth, feedController.listComments.bind(feedController));
 router.patch(

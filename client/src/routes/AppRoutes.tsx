@@ -1,22 +1,24 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { LoginPage } from '../pages/auth/LoginPage';
-import { RegisterPage } from '../pages/auth/RegisterPage';
-import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
-import { HomePage } from '../pages/dashboard/HomePage';
-import { ProfilePage } from '../pages/profile/ProfilePage';
-import { PublicProfilePage } from '../pages/profile/PublicProfilePage';
-import { ChatsPage } from '../pages/chats/ChatsPage';
-import { LibraryPage } from '../pages/library/LibraryPage';
-import { CommunitiesPage } from '../pages/communities/CommunitiesPage';
-import { ChannelSettingsPage } from '../pages/communities/ChannelSettingsPage';
-import { CommunitySettingsPage } from '../pages/communities/CommunitySettingsPage';
-import { ProjectsPage } from '../pages/projects/ProjectsPage';
-import { AdminModerationPage } from '../pages/admin/AdminModerationPage';
-import { SettingsPage } from '../pages/settings/SettingsPage';
-import { UIPlaygroundPage } from '../pages/ui/UIPlaygroundPage';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingScreen';
 import { UserRole } from '../types/auth';
+
+const LoginPage = lazy(() => import('../pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('../pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
+const HomePage = lazy(() => import('../pages/dashboard/HomePage').then((m) => ({ default: m.HomePage })));
+const ProfilePage = lazy(() => import('../pages/profile/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const PublicProfilePage = lazy(() => import('../pages/profile/PublicProfilePage').then((m) => ({ default: m.PublicProfilePage })));
+const ChatsPage = lazy(() => import('../pages/chats/ChatsPage').then((m) => ({ default: m.ChatsPage })));
+const LibraryPage = lazy(() => import('../pages/library/LibraryPage').then((m) => ({ default: m.LibraryPage })));
+const CommunitiesPage = lazy(() => import('../pages/communities/CommunitiesPage').then((m) => ({ default: m.CommunitiesPage })));
+const ChannelSettingsPage = lazy(() => import('../pages/communities/ChannelSettingsPage').then((m) => ({ default: m.ChannelSettingsPage })));
+const CommunitySettingsPage = lazy(() => import('../pages/communities/CommunitySettingsPage').then((m) => ({ default: m.CommunitySettingsPage })));
+const ProjectsPage = lazy(() => import('../pages/projects/ProjectsPage').then((m) => ({ default: m.ProjectsPage })));
+const AdminModerationPage = lazy(() => import('../pages/admin/AdminModerationPage').then((m) => ({ default: m.AdminModerationPage })));
+const SettingsPage = lazy(() => import('../pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const UIPlaygroundPage = lazy(() => import('../pages/ui/UIPlaygroundPage').then((m) => ({ default: m.UIPlaygroundPage })));
 
 const ProtectedRoute = ({
   children,
@@ -50,7 +52,8 @@ const PublicRoute = ({ children }: { children: JSX.Element }) => {
 };
 
 export const AppRoutes = () => (
-  <Routes>
+  <Suspense fallback={<LoadingScreen />}>
+    <Routes>
     <Route path="/" element={<Navigate to="/dashboard" replace />} />
     <Route
       path="/login"
@@ -191,4 +194,5 @@ export const AppRoutes = () => (
     />
     <Route path="*" element={<Navigate to="/dashboard" replace />} />
   </Routes>
+  </Suspense>
 );

@@ -28,6 +28,17 @@ export const channelService = {
     return data.channel;
   },
 
+  async updateChannel(channelId: string, payload: { name?: string; description?: string | null; type?: 'text' | 'voice'; position?: number }): Promise<Channel> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      return await mockDataService.updateChannel(channelId, payload);
+    }
+    const { data } = await apiClient.patch<{ success: boolean; channel: Channel }>(
+      `/groups/channels/${channelId}`,
+      payload
+    );
+    return data.channel;
+  },
+
   async deleteChannel(channelId: string): Promise<void> {
     await apiClient.delete(`/groups/channels/${channelId}`);
   },
@@ -58,6 +69,33 @@ export const channelService = {
       payload
     );
     return data.message;
+  },
+
+  async toggleStarMessage(messageId: string): Promise<{ starred: boolean }> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      return await mockDataService.toggleStarMessage(messageId);
+    }
+    const { data } = await apiClient.post<{ success: boolean; starred: boolean }>(
+      `/groups/channels/messages/${messageId}/star`
+    );
+    return { starred: data.starred };
+  },
+
+  async togglePinMessage(messageId: string): Promise<ChannelMessage> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      return await mockDataService.togglePinMessage(messageId);
+    }
+    const { data } = await apiClient.patch<{ success: boolean; message: ChannelMessage }>(
+      `/groups/channels/messages/${messageId}/pin`
+    );
+    return data.message;
+  },
+
+  async reportMessage(messageId: string, payload: { reason: string; details?: string }): Promise<void> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      return; // Mock: no-op, could add local state
+    }
+    await apiClient.post(`/groups/channels/messages/${messageId}/report`, payload);
   },
 
   async deleteMessage(messageId: string): Promise<void> {
