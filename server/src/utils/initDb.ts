@@ -311,6 +311,67 @@ export const initDb = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+        // Study groups table (comunidades)
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS study_groups (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        cover_image VARCHAR(500) NULL,
+        icon_url VARCHAR(500) NULL,
+        created_by CHAR(36) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Group members table (miembros de comunidades)
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS group_members (
+        group_id CHAR(36) NOT NULL,
+        user_id CHAR(36) NOT NULL,
+        role ENUM('admin', 'member') NOT NULL DEFAULT 'member',
+        joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (group_id, user_id),
+        FOREIGN KEY (group_id) REFERENCES study_groups(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Channels table (canales de comunidades)
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS channels (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        community_id CHAR(36) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        type ENUM('text', 'voice') NOT NULL DEFAULT 'text',
+        position INT NOT NULL DEFAULT 0,
+        created_by CHAR(36) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (community_id) REFERENCES study_groups(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+        // Channel messages table (mensajes en canales)
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS channel_messages (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        channel_id CHAR(36) NOT NULL,
+        sender_id CHAR(36) NOT NULL,
+        content TEXT NULL,
+        attachment_url VARCHAR(500) NULL,
+        is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+        pinned_at TIMESTAMP NULL,
+        pinned_by CHAR(36) NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (pinned_by) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
         // User login activity (para actividad de perfil)
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS user_login_activity (
@@ -338,6 +399,14 @@ export const initDb = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+        const [channelMessagesTableRows] = await pool.query(`
+      SELECT TABLE_NAME
+      FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'channel_messages'
+    `);
+        const hasChannelMessagesTable = Array.isArray(channelMessagesTableRows) && channelMessagesTableRows.length > 0;
+
         // Migración: columnas de fijado en channel_messages (si la tabla existe)
         for (const sql of [
             'ALTER TABLE channel_messages ADD COLUMN is_pinned BOOLEAN NOT NULL DEFAULT FALSE',
@@ -345,7 +414,9 @@ export const initDb = async (): Promise<void> => {
             'ALTER TABLE channel_messages ADD COLUMN pinned_by CHAR(36) NULL',
         ]) {
             try {
-                await pool.execute(sql);
+                if (hasChannelMessagesTable) {
+                    await pool.execute(sql);
+                }
             } catch (err: unknown) {
                 const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
                 if (msg !== 'ER_DUP_FIELDNAME' && msg !== 'ER_NO_SUCH_TABLE') throw err;
@@ -354,7 +425,8 @@ export const initDb = async (): Promise<void> => {
 
         // Tabla channel_message_stars (destacar / favoritos)
         try {
-            await pool.execute(`
+            if (hasChannelMessagesTable) {
+                await pool.execute(`
                 CREATE TABLE IF NOT EXISTS channel_message_stars (
                     message_id CHAR(36) NOT NULL,
                     user_id CHAR(36) NOT NULL,
@@ -364,14 +436,18 @@ export const initDb = async (): Promise<void> => {
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             `);
+            } else {
+                logger.warn('Skipping channel_message_stars initialization because channel_messages table is missing');
+            }
         } catch (err: unknown) {
             const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
-            if (msg !== 'ER_NO_SUCH_TABLE' && msg !== 'ER_FK_NO_INDEX_PARENT') throw err;
+            if (msg !== 'ER_NO_SUCH_TABLE' && msg !== 'ER_FK_NO_INDEX_PARENT' && msg !== 'ER_FK_CANNOT_OPEN_PARENT') throw err;
         }
 
         // Tabla channel_message_reports
         try {
-            await pool.execute(`
+            if (hasChannelMessagesTable) {
+                await pool.execute(`
                 CREATE TABLE IF NOT EXISTS channel_message_reports (
                     id CHAR(36) NOT NULL PRIMARY KEY,
                     message_id CHAR(36) NOT NULL,
@@ -385,9 +461,12 @@ export const initDb = async (): Promise<void> => {
                     FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             `);
+            } else {
+                logger.warn('Skipping channel_message_reports initialization because channel_messages table is missing');
+            }
         } catch (err: unknown) {
             const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
-            if (msg !== 'ER_NO_SUCH_TABLE' && msg !== 'ER_FK_NO_INDEX_PARENT') throw err;
+            if (msg !== 'ER_NO_SUCH_TABLE' && msg !== 'ER_FK_NO_INDEX_PARENT' && msg !== 'ER_FK_CANNOT_OPEN_PARENT') throw err;
         }
 
         logger.info('Database initialized successfully');
