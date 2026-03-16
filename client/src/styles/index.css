@@ -115,6 +115,12 @@ html {
   background-size: 280% 280% !important;
   animation: composerPublishGradientMove 2.4s linear infinite;
 }
+.composer-publish-btn-active:hover {
+  background: #ffffff !important;
+  color: #39A900 !important;
+  border-color: transparent !important;
+  animation: none !important;
+}
 
 /* Boton Publicar: misma sombra que textarea */
 .composer-publish-btn-shadow {
@@ -427,18 +433,65 @@ body {
   }
 
   /* Diálogo de eliminar */
+  .delete-post-overlay-warning {
+    background: rgba(0, 0, 0, 0.18) !important;
+    backdrop-filter: blur(10px) grayscale(1) saturate(0.2) contrast(0.95) !important;
+    -webkit-backdrop-filter: blur(10px) grayscale(1) saturate(0.2) contrast(0.95) !important;
+    position: fixed;
+    inset: 0;
+    isolation: isolate;
+  }
+
+  .delete-post-overlay-warning::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at center, rgba(0, 0, 0, 0) 42%, rgba(0, 0, 0, 0.46) 100%),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0) 78%, rgba(0, 0, 0, 0.42));
+    z-index: 0;
+  }
+
+  .story-viewer-overlay-warning {
+    background: rgba(0, 0, 0, 0.22) !important;
+    backdrop-filter: blur(12px) grayscale(1) saturate(0.18) contrast(0.95) !important;
+    -webkit-backdrop-filter: blur(12px) grayscale(1) saturate(0.18) contrast(0.95) !important;
+    position: fixed;
+    inset: 0;
+    isolation: isolate;
+  }
+
+  .story-viewer-overlay-warning::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at center, rgba(0, 0, 0, 0) 38%, rgba(0, 0, 0, 0.5) 100%),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0) 78%, rgba(0, 0, 0, 0.38));
+    z-index: 0;
+  }
+
   .glass-dialog-delete {
     @apply backdrop-blur-[0px] saturate-[1.4];
     background: 
       linear-gradient(135deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.38) 100%),
       radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.12), transparent 70%);
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    box-shadow:
+      0 20px 48px -12px rgba(69, 10, 10, 0.58),
+      0 10px 24px -8px rgba(69, 10, 10, 0.44),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 -1px 1px 0 rgba(255, 255, 255, 0.12) !important;
     position: relative;
+    isolation: isolate;
   }
 
   .glass-dialog-delete::before {
     display: none;
   }
+
 
   .dark .glass-dialog-delete {
     @apply backdrop-blur-[0px] saturate-[1.5];
@@ -447,12 +500,13 @@ body {
       radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), transparent 70%);
     border: 1px solid rgba(255, 255, 255, 0.22) !important;
     box-shadow:
-      0 28px 80px -12px rgba(239, 68, 68, 0.45),
-      0 16px 40px -8px rgba(239, 68, 68, 0.35),
+      0 24px 56px -12px rgba(69, 10, 10, 0.76),
+      0 12px 28px -8px rgba(69, 10, 10, 0.6),
       inset 0 1px 1px 0 rgba(255, 255, 255, 0.2),
       inset 0 -1px 1px 0 rgba(255, 255, 255, 0.08) !important;
     position: relative;
   }
+
 
   /* Dropdown de notificaciones con más desenfoque y sin sombra verde */
   .glass-notification-dropdown {
@@ -835,17 +889,18 @@ body {
 
 @keyframes toastSlideIn {
   from {
-    opacity: 0;
-    transform: translateY(-20px);
+    opacity: 1;
+    transform: translateX(28px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 
 .toast-enter {
-  animation: toastSlideIn 0.3s ease-out forwards;
+  animation: toastSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform;
 }
 
 /* Limpieza: eliminar líneas y brillos no deseados en toda la app */

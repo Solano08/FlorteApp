@@ -84,6 +84,16 @@ export const feedController = {
     res.json({ success: true, metrics });
   },
 
+  async listPostReactions(req: Request, res: Response) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError('Autenticacion requerida', 401);
+    }
+    const { postId } = req.params;
+    const reactions = await feedService.listPostReactions(postId);
+    res.json({ success: true, reactions });
+  },
+
   async commentOnPost(req: Request, res: Response) {
     const userId = req.user?.userId;
     if (!userId) {

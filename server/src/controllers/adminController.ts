@@ -1,6 +1,7 @@
-﻿import { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { adminService } from '../services/adminService';
 import { feedService } from '../services/feedService';
+import { channelService } from '../services/channelService';
 import { AppError } from '../utils/appError';
 import {
   adminUpdateUserSchema,
@@ -51,6 +52,18 @@ export const adminController = {
     const { reportId } = req.params;
     const { status } = updateReportStatusSchema.parse(req.body);
     const report = await feedService.updateReportStatus(reportId, status);
+    res.json({ success: true, report });
+  },
+
+  listChannelReports: async (_req: Request, res: Response) => {
+    const reports = await channelService.listChannelMessageReports();
+    res.json({ success: true, reports });
+  },
+
+  updateChannelReportStatus: async (req: Request, res: Response) => {
+    const { reportId } = req.params;
+    const { status } = updateReportStatusSchema.parse(req.body);
+    const report = await channelService.updateChannelReportStatus(reportId, status);
     res.json({ success: true, report });
   }
 };

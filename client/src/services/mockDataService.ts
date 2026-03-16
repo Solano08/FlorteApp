@@ -1,7 +1,7 @@
 import { Profile } from '../types/profile';
 import { Group } from '../types/group';
 import { Chat, Message } from '../types/chat';
-import { FeedPostAggregate, FeedComment, ReactionType } from '../types/feed';
+import { FeedPostAggregate, FeedComment, FeedPostReactionUser, ReactionType } from '../types/feed';
 import { Channel, ChannelMessage } from '../types/channel';
 import { storage } from '../utils/storage';
 
@@ -253,6 +253,9 @@ const mockChannels: Channel[] = [
     createdAt: daysAgo(50)
   }
 ];
+
+const mockPinnedMessageIds = new Set<string>();
+const mockStarredMessageIds = new Set<string>();
 
 const mockChannelMessages: ChannelMessage[] = [
   {
@@ -916,10 +919,66 @@ export const mockDataService = {
     return mockChannels.filter((c) => c.communityId === communityId);
   },
 
+  // Actualizar canal (mock)
+  async updateChannel(channelId: string, payload: { name?: string; description?: string | null; type?: 'text' | 'voice'; position?: number }): Promise<Channel> {
+    await delay(100);
+    const channel = mockChannels.find((c) => c.id === channelId);
+    if (!channel) {
+      throw new Error('Canal no encontrado');
+    }
+    if (payload.name !== undefined) channel.name = payload.name;
+    if (payload.description !== undefined) channel.description = payload.description ?? undefined;
+    if (payload.type !== undefined) channel.type = payload.type;
+    if (payload.position !== undefined) channel.position = payload.position;
+    return channel;
+  },
+
   // Obtener mensajes de un canal
   async getChannelMessages(channelId: string): Promise<ChannelMessage[]> {
     await delay(120);
-    return mockChannelMessages.filter((m) => m.channelId === channelId);
+    const msgs = mockChannelMessages.filter((m) => m.channelId === channelId);
+    const currentUserId = this.getCurrentUserId();
+    return msgs
+      .map((m) => ({
+        ...m,
+        isPinned: mockPinnedMessageIds.has(m.id),
+        viewerStarred: mockStarredMessageIds.has(`${m.id}:${currentUserId}`)
+      }))
+      .sort((a, b) => {
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+  },
+
+  // Alternar destacar de mensaje (mock)
+  async toggleStarMessage(messageId: string): Promise<{ starred: boolean }> {
+    await delay(100);
+    const message = mockChannelMessages.find((m) => m.id === messageId);
+    if (!message) throw new Error('Mensaje no encontrado');
+    const key = `${messageId}:${this.getCurrentUserId()}`;
+    const starred = mockStarredMessageIds.has(key);
+    if (starred) {
+      mockStarredMessageIds.delete(key);
+      return { starred: false };
+    } else {
+      mockStarredMessageIds.add(key);
+      return { starred: true };
+    }
+  },
+
+  // Alternar fijado de mensaje (mock)
+  async togglePinMessage(messageId: string): Promise<ChannelMessage> {
+    await delay(100);
+    const message = mockChannelMessages.find((m) => m.id === messageId);
+    if (!message) throw new Error('Mensaje no encontrado');
+    const otherInChannel = mockChannelMessages.filter((m) => m.channelId === message.channelId && m.id !== messageId);
+    if (mockPinnedMessageIds.has(messageId)) {
+      mockPinnedMessageIds.delete(messageId);
+    } else {
+      otherInChannel.forEach((m) => mockPinnedMessageIds.delete(m.id));
+      mockPinnedMessageIds.add(messageId);
+    }
+    return { ...message, isPinned: mockPinnedMessageIds.has(messageId) };
   },
 
   // Obtener todos los chats
@@ -949,6 +1008,44 @@ export const mockDataService = {
   async getPostComments(postId: string): Promise<FeedComment[]> {
     await delay(100);
     return mockComments.filter((c) => c.postId === postId);
+  },
+
+  // Obtener reacciones de una publicación
+  async getPostReactions(postId: string): Promise<FeedPostReactionUser[]> {
+    await delay(100);
+    const post = mockPosts.find((p) => p.id === postId);
+    if (!post || post.reactionCount <= 0) {
+      return [];
+    }
+
+    const usersPool = mockUsers.filter((user) => user.id !== post.authorId);
+    if (usersPool.length === 0) return [];
+
+    const reactionSequence: ReactionType[] = [];
+    if (post.reactionBreakdown?.length) {
+      post.reactionBreakdown.forEach((entry) => {
+        for (let i = 0; i < entry.count; i += 1) {
+          reactionSequence.push(entry.type);
+        }
+      });
+    }
+    while (reactionSequence.length < post.reactionCount) {
+      reactionSequence.push('like');
+    }
+
+    const result: FeedPostReactionUser[] = [];
+    for (let i = 0; i < post.reactionCount; i += 1) {
+      const user = usersPool[i % usersPool.length];
+      result.push({
+        userId: user.id,
+        fullName: `${user.firstName} ${user.lastName}`.trim(),
+        avatarUrl: user.avatarUrl ?? null,
+        reactionType: reactionSequence[i] ?? 'like',
+        reactedAt: minutesAgo(5 + i * 3)
+      });
+    }
+
+    return result;
   },
 
   // Obtener amigos del usuario actual

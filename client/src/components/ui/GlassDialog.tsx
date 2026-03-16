@@ -1,6 +1,7 @@
 import { ReactNode, useEffect } from 'react';
 import { AnimatePresence, motion, type HTMLMotionProps } from 'framer-motion';
 import classNames from 'classnames';
+import { createPortal } from 'react-dom';
 
 type GlassDialogSize = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -69,58 +70,66 @@ export const GlassDialog = ({
 
   const { className: motionClassName, ...motionRest } = contentMotionProps ?? {};
 
-  if (!open) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className={classNames(
-        'fixed inset-0 z-[120] flex items-center justify-center bg-neutral-900/8 dark:bg-neutral-900/12 backdrop-blur-[12px]',
-        overlayClassName
-      )}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        margin: 0,
-        padding: 0
-      }}
-      onClick={handleOverlayClick}
-    >
-      <div className="overflow-y-auto w-full h-full flex items-center justify-center py-10">
+  return createPortal(
+    <AnimatePresence>
+      {open && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 32 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 170, damping: 24 }}
-          {...motionRest}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.24, ease: 'easeOut' }}
           className={classNames(
-            'relative w-full overflow-hidden',
-            frameless
-              ? 'rounded-none border-none bg-transparent p-0 shadow-none backdrop-blur-none'
-              : contentClassName?.includes('glass-dialog-delete')
-                ? `rounded-2xl p-6`
-                : 'rounded-2xl p-6 glass-liquid-deep',
-            frameless ? '' : sizeClasses[size],
-            contentClassName,
-            motionClassName
+            'fixed inset-0 z-[10000] flex items-center justify-center bg-neutral-900/8 dark:bg-neutral-900/12 backdrop-blur-[12px]',
+            overlayClassName
           )}
-          onClick={(event) => event.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            margin: 0,
+            padding: 0
+          }}
+          onClick={handleOverlayClick}
         >
-          {/* Efectos de luz adicionales para glass-liquid-deep */}
-          {(size === 'lg' || size === 'xl') && !frameless && (
-            <>
-              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_30%_20%,_rgba(255,255,255,0.25),_transparent_50%)] opacity-60 dark:opacity-20 mix-blend-overlay z-[1]" />
-              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_70%_80%,_rgba(255,255,255,0.15),_transparent_50%)] opacity-50 dark:opacity-12 mix-blend-overlay z-[1]" />
-              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-70 dark:opacity-25 z-[1]" />
-            </>
-          )}
-          <div className="relative z-10 space-y-6">{children}</div>
+          <div className="overflow-y-auto w-full h-full flex items-center justify-center py-10">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 32 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: 16 }}
+              transition={{ type: 'spring', stiffness: 170, damping: 24 }}
+              {...motionRest}
+              className={classNames(
+                'relative w-full overflow-hidden',
+                frameless
+                  ? 'rounded-none border-none bg-transparent p-0 shadow-none backdrop-blur-none'
+                  : contentClassName?.includes('glass-dialog-delete')
+                    ? `rounded-2xl p-6`
+                    : 'rounded-2xl p-6 glass-liquid-deep',
+                frameless ? '' : sizeClasses[size],
+                contentClassName,
+                motionClassName
+              )}
+              onClick={(event) => event.stopPropagation()}
+            >
+              {/* Efectos de luz adicionales para glass-liquid-deep */}
+              {(size === 'lg' || size === 'xl') && !frameless && (
+                <>
+                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_30%_20%,_rgba(255,255,255,0.25),_transparent_50%)] opacity-60 dark:opacity-20 mix-blend-overlay z-[1]" />
+                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_70%_80%,_rgba(255,255,255,0.15),_transparent_50%)] opacity-50 dark:opacity-12 mix-blend-overlay z-[1]" />
+                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-70 dark:opacity-25 z-[1]" />
+                </>
+              )}
+              <div className="relative z-10 space-y-6">{children}</div>
+            </motion.div>
+          </div>
         </motion.div>
-      </div>
-    </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 };
 

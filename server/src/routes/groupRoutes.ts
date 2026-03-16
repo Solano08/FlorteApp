@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { groupController } from '../controllers/groupController';
 import { channelController } from '../controllers/channelController';
-import { requireAuth } from '../middleware/authMiddleware';
+import { requireAuth, attachUserIfPresent } from '../middleware/authMiddleware';
 import { communityIconUpload, communityCoverUpload } from '../config/storage';
 
 const router = Router();
@@ -18,11 +18,15 @@ router.delete('/:id', requireAuth, groupController.delete);
 router.get('/:communityId/channels', channelController.list);
 router.post('/:communityId/channels', requireAuth, channelController.create);
 router.get('/channels/:id', channelController.get);
+router.patch('/channels/:id', requireAuth, channelController.update);
 router.delete('/channels/:id', requireAuth, channelController.delete);
 
 // Channel messages routes
-router.get('/channels/:channelId/messages', channelController.listMessages);
+router.get('/channels/:channelId/messages', attachUserIfPresent, channelController.listMessages);
 router.post('/channels/:channelId/messages', requireAuth, channelController.createMessage);
+router.post('/channels/messages/:id/report', requireAuth, channelController.reportMessage);
+router.post('/channels/messages/:id/star', requireAuth, channelController.toggleStarMessage);
+router.patch('/channels/messages/:id/pin', requireAuth, channelController.togglePinMessage);
 router.delete('/channels/messages/:id', requireAuth, channelController.deleteMessage);
 
 // Join community

@@ -2,6 +2,7 @@ import { apiClient } from './apiClient';
 import {
   FeedComment,
   FeedPostAggregate,
+  FeedPostReactionUser,
   FeedReport,
   PostMetrics,
   ProfileFeedPost,
@@ -50,6 +51,11 @@ interface GetPostResponse {
 interface ReactionResponse {
   success: boolean;
   metrics: PostMetrics;
+}
+
+interface ReactionsListResponse {
+  success: boolean;
+  reactions: FeedPostReactionUser[];
 }
 
 interface CommentResponse {
@@ -161,6 +167,14 @@ export const feedService = {
   async react(postId: string, reactionType: ReactionType): Promise<PostMetrics> {
     const { data } = await apiClient.post<ReactionResponse>(`/feed/${postId}/reactions`, { reactionType });
     return data.metrics;
+  },
+
+  async listPostReactions(postId: string): Promise<FeedPostReactionUser[]> {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+      return await mockDataService.getPostReactions(postId);
+    }
+    const { data } = await apiClient.get<ReactionsListResponse>(`/feed/${postId}/reactions`);
+    return data.reactions;
   },
 
   async comment(postId: string, payload: { content: string; attachmentUrl?: string | null }): Promise<CommentResponse> {

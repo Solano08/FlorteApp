@@ -12,5 +12,7 @@ router.patch('/users/:userId/role', adminController.updateRole);
 router.patch('/users/:userId/status', adminController.updateStatus);
 router.get('/reports', adminController.listReports);
 router.patch('/reports/:reportId/status', adminController.updateReportStatus);
+router.get('/channel-reports', adminController.listChannelReports);
+router.patch('/channel-reports/:reportId/status', adminController.updateChannelReportStatus);
 
 export default router;

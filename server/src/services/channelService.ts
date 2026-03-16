@@ -1,7 +1,7 @@
 import { channelRepository } from '../repositories/channelRepository';
 import { groupRepository } from '../repositories/groupRepository';
 import { AppError } from '../utils/appError';
-import { Channel, ChannelMessage, CreateChannelInput, CreateChannelMessageInput } from '../types/channel';
+import { Channel, ChannelMessage, ChannelMessageReport, CreateChannelInput, CreateChannelMessageInput } from '../types/channel';
 
 export const channelService = {
   async createChannel(input: CreateChannelInput): Promise<Channel> {
@@ -31,6 +31,30 @@ export const channelService = {
 
   async getChannel(id: string): Promise<Channel | null> {
     return await channelRepository.findById(id);
+  },
+
+  async updateChannel(id: string, input: { name?: string; description?: string | null; type?: 'text' | 'voice'; position?: number }): Promise<Channel> {
+    const channel = await channelRepository.findById(id);
+    if (!channel) {
+      throw new AppError('Canal no encontrado', 404);
+    }
+    if (input.name !== undefined && input.name.trim() === '') {
+      throw new AppError('El nombre del canal no puede estar vacío', 400);
+    }
+    if (input.name !== undefined) {
+      const existingChannels = await channelRepository.listByCommunity(channel.communityId);
+      const nameExists = existingChannels.some(
+        c => c.id !== id && c.name.toLowerCase() === input.name!.toLowerCase()
+      );
+      if (nameExists) {
+        throw new AppError('Ya existe un canal con ese nombre en esta comunidad', 400);
+      }
+    }
+    const updated = await channelRepository.updateChannel(id, input);
+    if (!updated) {
+      throw new AppError('No se pudo actualizar el canal', 500);
+    }
+    return updated;
   },
 
   async deleteChannel(id: string): Promise<void> {
@@ -63,14 +87,54 @@ export const channelService = {
     });
   },
 
-  async listMessages(channelId: string, limit: number = 100, offset: number = 0): Promise<ChannelMessage[]> {
+  async listMessages(channelId: string, limit: number = 100, offset: number = 0, viewerId?: string): Promise<ChannelMessage[]> {
     // Verificar que el canal existe
     const channel = await channelRepository.findById(channelId);
     if (!channel) {
       throw new AppError('Canal no encontrado', 404);
     }
 
-    return await channelRepository.listMessages(channelId, limit, offset);
+    return await channelRepository.listMessages(channelId, limit, offset, viewerId);
+  },
+
+  async reportMessage(messageId: string, reporterId: string, reason: string, details?: string): Promise<ChannelMessageReport> {
+    const message = await channelRepository.findMessageById(messageId);
+    if (!message) {
+      throw new AppError('Mensaje no encontrado', 404);
+    }
+    return await channelRepository.reportMessage(messageId, reporterId, reason, details);
+  },
+
+  async listChannelMessageReports(): Promise<ChannelMessageReport[]> {
+    return await channelRepository.listChannelMessageReports();
+  },
+
+  async updateChannelReportStatus(reportId: string, status: 'pending' | 'reviewed'): Promise<ChannelMessageReport> {
+    const updated = await channelRepository.updateChannelReportStatus(reportId, status);
+    if (!updated) {
+      throw new AppError('Reporte no encontrado', 404);
+    }
+    return updated;
+  },
+
+  async toggleStarMessage(messageId: string, userId: string): Promise<{ starred: boolean }> {
+    const message = await channelRepository.findMessageById(messageId);
+    if (!message) {
+      throw new AppError('Mensaje no encontrado', 404);
+    }
+    return await channelRepository.toggleStarMessage(messageId, userId);
+  },
+
+  async togglePinMessage(messageId: string, userId: string): Promise<ChannelMessage> {
+    const message = await channelRepository.findMessageById(messageId);
+    if (!message) {
+      throw new AppError('Mensaje no encontrado', 404);
+    }
+    const updated = await channelRepository.togglePinMessage(messageId, userId);
+    if (!updated) {
+      throw new AppError('No se pudo actualizar el mensaje', 500);
+    }
+    return updated;
   },
 
   async deleteMessage(id: string): Promise<void> {

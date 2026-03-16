@@ -338,6 +338,58 @@ export const initDb = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+        // Migración: columnas de fijado en channel_messages (si la tabla existe)
+        for (const sql of [
+            'ALTER TABLE channel_messages ADD COLUMN is_pinned BOOLEAN NOT NULL DEFAULT FALSE',
+            'ALTER TABLE channel_messages ADD COLUMN pinned_at TIMESTAMP NULL',
+            'ALTER TABLE channel_messages ADD COLUMN pinned_by CHAR(36) NULL',
+        ]) {
+            try {
+                await pool.execute(sql);
+            } catch (err: unknown) {
+                const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
+                if (msg !== 'ER_DUP_FIELDNAME' && msg !== 'ER_NO_SUCH_TABLE') throw err;
+            }
+        }
+
+        // Tabla channel_message_stars (destacar / favoritos)
+        try {
+            await pool.execute(`
+                CREATE TABLE IF NOT EXISTS channel_message_stars (
+                    message_id CHAR(36) NOT NULL,
+                    user_id CHAR(36) NOT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (message_id, user_id),
+                    FOREIGN KEY (message_id) REFERENCES channel_messages(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
+        } catch (err: unknown) {
+            const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
+            if (msg !== 'ER_NO_SUCH_TABLE' && msg !== 'ER_FK_NO_INDEX_PARENT') throw err;
+        }
+
+        // Tabla channel_message_reports
+        try {
+            await pool.execute(`
+                CREATE TABLE IF NOT EXISTS channel_message_reports (
+                    id CHAR(36) NOT NULL PRIMARY KEY,
+                    message_id CHAR(36) NOT NULL,
+                    reporter_id CHAR(36) NOT NULL,
+                    reason VARCHAR(255) NOT NULL,
+                    details TEXT NULL,
+                    status ENUM('pending','reviewed') NOT NULL DEFAULT 'pending',
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    resolved_at TIMESTAMP NULL DEFAULT NULL,
+                    FOREIGN KEY (message_id) REFERENCES channel_messages(id) ON DELETE CASCADE,
+                    FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
+        } catch (err: unknown) {
+            const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
+            if (msg !== 'ER_NO_SUCH_TABLE' && msg !== 'ER_FK_NO_INDEX_PARENT') throw err;
+        }
+
         logger.info('Database initialized successfully');
     } catch (error) {
         logger.error('Failed to initialize database', { error });

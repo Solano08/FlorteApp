@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
@@ -41,7 +42,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import { FeedAttachment, FeedComment, FeedPostAggregate, ReactionType } from '../../types/feed';
+import { FeedAttachment, FeedComment, FeedPostAggregate, FeedPostReactionUser, ReactionType } from '../../types/feed';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { floatingModalContentClass } from '../../utils/modalStyles';
 import { resolveAssetUrl } from '../../utils/media';
@@ -265,6 +266,7 @@ export const HomePage = () => {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
   const [emojiPickerTarget, setEmojiPickerTarget] = useState<{ type: 'composer' } | { type: 'comment'; postId: string } | null>(null);
+  const [reactionUsersPost, setReactionUsersPost] = useState<FeedPostAggregate | null>(null);
   const [deletePostTarget, setDeletePostTarget] = useState<FeedPostAggregate | null>(null);
   const [deleteCommentTarget, setDeleteCommentTarget] = useState<{ postId: string; commentId: string } | null>(null);
   const [commentModalPost, setCommentModalPost] = useState<FeedPostAggregate | null>(null);
@@ -419,6 +421,15 @@ export const HomePage = () => {
       }
     };
   }, [isStoryViewerOpen, selectedStoryUser?.userId, selectedStoryUser?.stories, currentStoryIndex]);
+
+  useEffect(() => {
+    if (!isStoryViewerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isStoryViewerOpen]);
 
   const triggerCommentFileInput = (postId: string, kind: AttachmentKind) => {
     commentFileInputsRef.current[postId]?.[kind]?.click();
@@ -621,6 +632,12 @@ export const HomePage = () => {
     staleTime: 30_000,
     refetchOnMount: false,
     refetchOnWindowFocus: false
+  });
+
+  const { data: reactionUsers = [], isLoading: isLoadingReactionUsers } = useQuery<FeedPostReactionUser[]>({
+    queryKey: ['feed', 'post-reactions', reactionUsersPost?.id],
+    queryFn: () => feedService.listPostReactions(reactionUsersPost!.id),
+    enabled: Boolean(reactionUsersPost?.id)
   });
 
   const [activeAnnouncement, setActiveAnnouncement] = useState(0);
@@ -902,6 +919,19 @@ export const HomePage = () => {
         ? composerAttachments.map(({ dataUrl, mimeType }) => ({ url: dataUrl, mimeType }))
         : undefined
     });
+  };
+
+  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Permite salto de línea con Shift+Enter o durante composición IME.
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
+    }
+    const canSubmitByEnter = !isPublishing && Boolean(composerContent.trim());
+    if (!canSubmitByEnter) {
+      return;
+    }
+    event.preventDefault();
+    handleComposerSubmit();
   };
 
   const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>, kind: AttachmentKind) => {
@@ -1254,49 +1284,57 @@ export const HomePage = () => {
           <div className="relative" ref={(element) => registerPostMenuRef(post.id, element)}>
             <button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-2xl text-[var(--color-muted)] transition hover:bg-white/30 hover:text-sena-green"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-2xl text-[var(--color-muted)] transition hover:bg-white/30 dark:hover:bg-[#0E0F0F] hover:text-sena-green"
               aria-haspopup="true"
               aria-expanded={postMenuOpenId === post.id}
               onClick={() => handlePostMenuToggle(post.id)}
             >
               <MoreHorizontal className="h-5 w-5" />
             </button>
-            {postMenuOpenId === post.id && (
-              <div className="absolute right-0 top-9 z-20 w-48 rounded-2xl glass-frosted p-2 text-sm text-[var(--color-text)]">
-                {canManagePost && (
+            <AnimatePresence>
+              {postMenuOpenId === post.id && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="absolute right-0 top-9 z-20 w-48 rounded-2xl bg-white dark:bg-neutral-900 border border-slate-200/90 dark:border-neutral-700/90 shadow-[0_10px_28px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.45)] p-2 text-sm text-[var(--color-text)]"
+                >
+                  {canManagePost && (
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditPost(post)}
+                      className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-black/5 dark:hover:bg-neutral-800"
+                    >
+                      <FileText className="h-4 w-4 text-sena-green" /> Editar publicacion
+                    </button>
+                  )}
+                  {canManagePost && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePost(post)}
+                      className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm text-red-500 dark:text-red-400 transition hover:bg-rose-50 dark:hover:bg-rose-900/25 hover:text-red-600 dark:hover:text-red-300"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" /> Eliminar
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => handleStartEditPost(post)}
-                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                    onClick={() => handleOpenReportForPost(post)}
+                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-black/5 dark:hover:bg-neutral-800"
                   >
-                    <FileText className="h-4 w-4 text-sena-green" /> Editar publicacion
+                    <Flag className="h-4 w-4 text-sena-green" /> Reportar publicacion
                   </button>
-                )}
-                {canManagePost && (
                   <button
                     type="button"
-                    onClick={() => handleDeletePost(post)}
-                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                    onClick={() => handleCopyPostLink(post)}
+                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-black/5 dark:hover:bg-neutral-800"
                   >
-                    <Trash2 className="h-4 w-4 text-rose-500" /> Eliminar
+                    <Share2 className="h-4 w-4 text-sena-green" /> Copiar enlace
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleOpenReportForPost(post)}
-                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
-                >
-                  <Flag className="h-4 w-4 text-rose-500" /> Reportar publicacion
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCopyPostLink(post)}
-                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
-                >
-                  <Share2 className="h-4 w-4 text-sena-green" /> Copiar enlace
-                </button>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -1341,7 +1379,11 @@ export const HomePage = () => {
         {showStatsRow && (
           <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-muted)] sm:text-sm">
             {hasReactions && (
-              <div className="flex items-center gap-2 text-[var(--color-text)]">
+              <button
+                type="button"
+                onClick={() => setReactionUsersPost(post)}
+                className="flex items-center gap-2 text-[var(--color-text)] transition hover:text-sena-green"
+              >
                 {post.reactionBreakdown && post.reactionBreakdown.length > 0 ? (
                   <div className="flex items-center gap-1.5">
                     {post.reactionBreakdown.slice(0, 3).map((reaction) => {
@@ -1365,7 +1407,7 @@ export const HomePage = () => {
                     </span>
                   </>
                 )}
-              </div>
+              </button>
             )}
             {(hasComments || hasShares) && (
               <div className="ml-auto flex items-center gap-4 text-[var(--color-text)]">
@@ -1398,13 +1440,15 @@ export const HomePage = () => {
               variant="ghost"
               className={classNames(
                 'post-action-btn w-full justify-center gap-2 text-xs sm:text-sm min-h-[38px] min-w-[110px] transition-colors',
-                viewerHasReaction && 'text-sena-green hover:text-sena-green hover:bg-sena-green/10'
+                viewerHasReaction && 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-neutral-800/70'
               )}
               onMouseEnter={() => handleReactionHover(post.id)}
               onClick={() => {
                 if (viewerHasReaction) {
                   reactionMutation.mutate({ postId: post.id, reactionType: post.viewerReaction! });
+                  return;
                 }
+                reactionMutation.mutate({ postId: post.id, reactionType: 'like' });
               }}
               disabled={isReacting}
               loading={isReacting}
@@ -1425,7 +1469,7 @@ export const HomePage = () => {
               <span
                 className={classNames(
                   viewerHasReaction
-                    ? (selectedReaction?.color ?? 'text-sena-green')
+                    ? (selectedReaction?.type === 'love' ? 'text-rose-500' : 'text-sena-green')
                     : 'text-[var(--color-text)]'
                 )}
               >
@@ -1442,7 +1486,7 @@ export const HomePage = () => {
                     <button
                       key={type}
                       type="button"
-                      className="flex h-8 w-8 items-center justify-center rounded-2xl border border-white/50 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 dark:bg-neutral-800/90 dark:border-neutral-600/50"
+                      className="flex h-8 w-8 items-center justify-center rounded-2xl border border-transparent bg-transparent shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:scale-105"
                       onClick={() => handleReactionSelect(post.id, type, post.viewerReaction)}
                       title={label}
                     >
@@ -2090,6 +2134,7 @@ export const HomePage = () => {
                     rows={3}
                     value={composerContent}
                     onChange={(event) => setComposerContent(event.target.value)}
+                    onKeyDown={handleComposerKeyDown}
                     disabled={isPublishing}
                     ref={composerInputRef}
                     className="composer-textarea-focus focus:!border-white/25 focus:!ring-0 dark:focus:!border-white/15"
@@ -2131,7 +2176,7 @@ export const HomePage = () => {
                     className={classNames(
                       'composer-publish-btn-shadow relative z-[150] !rounded-full px-3 py-2 text-xs transition-all duration-200 mr-2',
                       composerContent.trim()
-                        ? 'composer-publish-btn-active !text-white !border-transparent hover:!text-white hover:!border-transparent'
+                        ? 'composer-publish-btn-active !text-white !border-transparent hover:!bg-white hover:!text-sena-green hover:!border-transparent'
                         : '!bg-white dark:!bg-neutral-800/90 !text-sena-green dark:!text-sena-green !border-transparent !opacity-100'
                     )}
                     loading={isPublishing}
@@ -2282,9 +2327,10 @@ export const HomePage = () => {
 
         <FloatingMessagesButton />
 
-        {isStoryViewerOpen && selectedStoryUser && selectedStoryUser.stories && selectedStoryUser.stories.length > 0 && (
+        {isStoryViewerOpen && selectedStoryUser && selectedStoryUser.stories && selectedStoryUser.stories.length > 0 && typeof document !== 'undefined' &&
+          createPortal(
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+            className="story-viewer-overlay-warning fixed inset-0 z-[10000] flex items-center justify-center"
             onClick={() => {
               if (selectedStoryUser.userId && selectedStoryUser.userId !== user?.id) {
                 setViewedStoryUserIds((prev) => new Set(prev).add(selectedStoryUser.userId));
@@ -2303,7 +2349,7 @@ export const HomePage = () => {
                     {currentStories.length > 0 && (
                       <button
                         type="button"
-                        className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-black/45 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/65"
+                        className="absolute -left-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
                         onClick={(e) => { e.stopPropagation(); goToPrevStory(); }}
                         aria-label="Anterior"
                       >
@@ -2340,7 +2386,7 @@ export const HomePage = () => {
                                   <button
                                     ref={storyViewsButtonRef}
                                     type="button"
-                                    className="inline-flex items-center gap-2 rounded-2xl bg-black/60 px-3 py-1 text-xs font-semibold text-sena-green shadow-lg backdrop-blur transition hover:bg-black/80"
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-black/60 px-3 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/80"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       const btn = storyViewsButtonRef.current;
@@ -2420,7 +2466,7 @@ export const HomePage = () => {
                         <>
                           <button
                             type="button"
-                            className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-black/55 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/70"
+                            className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-black/55 text-white shadow-lg backdrop-blur transition hover:bg-black/70"
                             onClick={() => setIsStoryMenuOpen((prev) => !prev)}
                           >
                             <MoreHorizontal className="h-5 w-5" />
@@ -2429,10 +2475,10 @@ export const HomePage = () => {
                             <div className="absolute right-3 top-14 z-10 w-44 rounded-2xl glass-frosted px-3 py-2 text-sm text-white">
                               <button
                                 type="button"
-                                className="flex w-full items-center gap-2 rounded-2xl px-2 py-2 text-left text-red-500 transition hover:bg-white/10"
+                                className="flex w-full items-center gap-2 rounded-2xl px-2 py-2 text-left text-red-500 dark:text-red-400 transition hover:bg-black/5 dark:hover:bg-white/10 hover:text-red-600 dark:hover:text-red-300"
                                 onClick={handleDeleteStory}
                               >
-                                <Trash2 className="h-4 w-4 text-red-500" /> Eliminar historia
+                                <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" /> Eliminar historia
                               </button>
                             </div>
                           )}
@@ -2458,7 +2504,7 @@ export const HomePage = () => {
                     {currentStories.length > 0 && (
                         <button
                           type="button"
-                          className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-black/45 text-sena-green shadow-lg backdrop-blur transition hover:bg-black/65"
+                          className="absolute -right-14 z-10 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-black/45 text-white shadow-lg backdrop-blur transition hover:bg-black/65"
                           onClick={(e) => { e.stopPropagation(); goToNextStory(); }}
                           aria-label="Siguiente"
                         >
@@ -2481,8 +2527,64 @@ export const HomePage = () => {
                 );
               })()}
             </div>
-          </div>
+          </div>,
+          document.body
         )}
+
+        <GlassDialog
+          open={Boolean(reactionUsersPost)}
+          onClose={() => setReactionUsersPost(null)}
+          size="sm"
+        >
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-[var(--color-text)]">Personas que reaccionaron</h3>
+              {reactionUsersPost && (
+                <p className="text-xs text-[var(--color-muted)]">
+                  {reactionUsersPost.reactionCount} {reactionUsersPost.reactionCount === 1 ? 'reaccion' : 'reacciones'}
+                </p>
+              )}
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
+              {isLoadingReactionUsers ? (
+                <p className="text-sm text-[var(--color-muted)]">Cargando reacciones...</p>
+              ) : reactionUsers.length === 0 ? (
+                <p className="text-sm text-[var(--color-muted)]">Aun no hay reacciones registradas.</p>
+              ) : (
+                reactionUsers.map((reactionUser) => {
+                  const reactionInfo = reactionOptions.find((option) => option.type === reactionUser.reactionType);
+                  const reactionEmoji = reactionInfo?.emoji ?? '❤️';
+                  const reactionLabel = reactionInfo?.label ?? 'Reaccion';
+                  return (
+                    <div key={`${reactionUser.userId}-${reactionUser.reactedAt}`} className="flex items-center justify-between gap-3 rounded-2xl bg-white/40 dark:bg-neutral-700/40 px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <UserAvatar
+                          fullName={reactionUser.fullName}
+                          avatarUrl={resolveAssetUrl(reactionUser.avatarUrl) ?? reactionUser.avatarUrl}
+                          size="sm"
+                        />
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReactionUsersPost(null);
+                              handleNavigateToProfile(reactionUser.userId);
+                            }}
+                            className="truncate text-sm font-semibold text-[var(--color-text)] transition hover:text-sena-green"
+                          >
+                            {reactionUser.fullName}
+                          </button>
+                          <p className="text-[11px] text-[var(--color-muted)]">{reactionLabel}</p>
+                        </div>
+                      </div>
+                      <span className="text-lg leading-none" aria-hidden>{reactionEmoji}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </GlassDialog>
 
         {shareTarget && (
           <GlassDialog
@@ -2739,45 +2841,44 @@ export const HomePage = () => {
         )}
 
         {/* Modal de confirmación eliminar publicación */}
-        {deletePostTarget && (
-          <GlassDialog
-            open={Boolean(deletePostTarget)}
-            onClose={() => setDeletePostTarget(null)}
-            size="sm"
-            preventCloseOnBackdrop={deletePostMutation.isPending}
-            contentClassName="glass-dialog-delete"
-          >
-            <div className="space-y-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
-                    ¿Eliminar publicación? 🗑️
-                  </h2>
-                  <p className="text-base leading-relaxed text-[var(--color-text)]">
-                    Esta acción no se puede deshacer. ¿Estás seguro de que quieres eliminar esta publicación?
-                  </p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setDeletePostTarget(null)}
-                  disabled={deletePostMutation.isPending}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleConfirmDeletePost}
-                  loading={deletePostMutation.isPending}
-                  disabled={deletePostMutation.isPending}
-                  className="!bg-rose-500 hover:!bg-rose-600 !text-white focus:!ring-rose-500/50 active:!bg-rose-700 !shadow-[0_4px_14px_rgba(239,68,68,0.4)] hover:!shadow-[0_6px_20px_rgba(239,68,68,0.5)] active:!shadow-[0_2px_8px_rgba(239,68,68,0.4)] border-rose-400/30"
-                >
-                  Sí, eliminar
-                </Button>
+        <GlassDialog
+          open={Boolean(deletePostTarget)}
+          onClose={() => setDeletePostTarget(null)}
+          size="sm"
+          preventCloseOnBackdrop={deletePostMutation.isPending}
+          overlayClassName="delete-post-overlay-warning"
+          contentClassName="glass-dialog-delete"
+        >
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
+                  ¿Eliminar publicación? 🗑️
+                </h2>
+                <p className="text-base leading-relaxed text-[var(--color-text)]">
+                  Esta acción no se puede deshacer. ¿Estás seguro de que quieres eliminar esta publicación?
+                </p>
               </div>
             </div>
-          </GlassDialog>
-        )}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setDeletePostTarget(null)}
+                disabled={deletePostMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmDeletePost}
+                loading={deletePostMutation.isPending}
+                disabled={deletePostMutation.isPending}
+                className="!bg-red-700 hover:!bg-red-800 !text-white focus:!ring-red-700/55 active:!bg-red-900 !shadow-[0_5px_16px_rgba(127,29,29,0.55)] hover:!shadow-[0_8px_24px_rgba(127,29,29,0.7)] active:!shadow-[0_3px_10px_rgba(127,29,29,0.5)] !border-red-500/45"
+              >
+                Sí, eliminar
+              </Button>
+            </div>
+          </div>
+        </GlassDialog>
 
         {/* Modal de confirmación eliminar comentario */}
         {deleteCommentTarget && (

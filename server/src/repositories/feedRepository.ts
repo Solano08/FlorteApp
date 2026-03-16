@@ -9,6 +9,7 @@ import {
   FeedComment,
   FeedPost,
   FeedPostAggregate,
+  FeedPostReactionUser,
   FeedReport,
   ProfilePostSource,
   ProfileFeedPost,
@@ -691,6 +692,31 @@ export const feedRepository = {
     }
 
     return await fetchPostMetrics(postId, userId);
+  },
+
+  async listPostReactions(postId: string): Promise<FeedPostReactionUser[]> {
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      `SELECT
+         r.user_id,
+         r.reaction_type,
+         r.created_at,
+         u.first_name,
+         u.last_name,
+         u.avatar_url
+       FROM feed_post_reactions r
+       INNER JOIN users u ON u.id = r.user_id
+       WHERE r.post_id = :postId
+       ORDER BY r.created_at DESC`,
+      { postId }
+    );
+
+    return rows.map((row) => ({
+      userId: row.user_id,
+      fullName: `${row.first_name} ${row.last_name}`.trim() || 'Usuario',
+      avatarUrl: row.avatar_url ?? null,
+      reactionType: row.reaction_type as ReactionType,
+      reactedAt: row.created_at
+    }));
   },
 
   async toggleSave(postId: string, userId: string) {

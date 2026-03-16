@@ -41,6 +41,14 @@ export interface ReactionBreakdown {
   count: number;
 }
 
+export interface FeedPostReactionUser {
+  userId: string;
+  fullName: string;
+  avatarUrl: string | null;
+  reactionType: ReactionType;
+  reactedAt: string;
+}
+
 export interface FeedPostAggregate extends FeedPost {
   author: FeedAuthor;
   reactionCount: number;

@@ -200,35 +200,30 @@ export const DashboardLayout = ({
                 </div>
               </button>
               {isProfileMenuOpen && (
-                <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[190px] rounded-2xl p-2.5 text-sm text-[var(--color-text)] glass-frosted">
+                <div className="absolute right-0 top-[calc(100%+0.5rem)] z-20 w-48 rounded-2xl bg-white dark:bg-neutral-900 border border-slate-200/90 dark:border-neutral-700/90 shadow-[0_10px_28px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.45)] p-2 text-sm text-[var(--color-text)]">
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800"
+                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-black/5 dark:hover:bg-neutral-800"
                     onClick={handleNavigateProfile}
                   >
-                    <span className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Perfil
-                    </span>
+                    <User className="h-4 w-4 text-sena-green" />
+                    Perfil
                   </button>
                   <button
                     type="button"
-                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left transition hover:bg-slate-50 hover:text-sena-green dark:hover:bg-neutral-800"
+                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-black/5 dark:hover:bg-neutral-800"
                     onClick={handleNavigateSettings}
                   >
-                    <span className="flex items-center gap-2">
-                      <Settings className="h-4 w-4" />
-                      Ajustes
-                    </span>
+                    <Settings className="h-4 w-4 text-sena-green" />
+                    Ajustes
                   </button>
-                  <div className="my-1 h-px bg-slate-200 dark:bg-neutral-700" />
                   <button
                     type="button"
-                    className="mt-1 flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left text-red-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-neutral-800"
+                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm text-red-500 dark:text-red-400 transition hover:bg-rose-50 dark:hover:bg-rose-900/25 hover:text-red-600 dark:hover:text-red-300"
                     onClick={handleLogout}
                   >
-                    <span>Cerrar sesión</span>
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="h-4 w-4 text-red-500 dark:text-red-400" />
+                    Cerrar sesión
                   </button>
                 </div>
               )}

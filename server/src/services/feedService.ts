@@ -7,6 +7,7 @@ import {
   CreatePostInput,
   FeedComment,
   FeedPostAggregate,
+  FeedPostReactionUser,
   FeedReport,
   PostMetrics,
   ProfileFeedPost,
@@ -183,6 +184,10 @@ export const feedService = {
 
   async toggleReaction(postId: string, userId: string, reactionType: ReactionType) {
     return await feedRepository.toggleReaction(postId, userId, reactionType);
+  },
+
+  async listPostReactions(postId: string): Promise<FeedPostReactionUser[]> {
+    return await feedRepository.listPostReactions(postId);
   },
 
   async toggleSave(postId: string, userId: string) {

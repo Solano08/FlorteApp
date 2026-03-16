@@ -15,6 +15,7 @@ import { GlassDialog } from '../../components/ui/GlassDialog';
 import { UserRole } from '../../types/auth';
 import { Profile } from '../../types/profile';
 import { FeedPostAggregate, FeedReport, ReportStatus } from '../../types/feed';
+import { ChannelMessageReport } from '../../types/channel';
 import { Shield, ShieldCheck, ShieldHalf, X } from 'lucide-react';
 import { floatingModalContentClass } from '../../utils/modalStyles';
 import { resolveAssetUrl } from '../../utils/media';
@@ -87,6 +88,7 @@ export const AdminModerationPage = () => {
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [activeReport, setActiveReport] = useState<FeedReport | null>(null);
+  const [reportTab, setReportTab] = useState<'feed' | 'channel'>('feed');
   const [activeReportPost, setActiveReportPost] = useState<FeedPostAggregate | null>(null);
   const [isReportPostLoading, setReportPostLoading] = useState(false);
   const [reportPostError, setReportPostError] = useState<string | null>(null);
@@ -126,6 +128,11 @@ export const AdminModerationPage = () => {
     queryFn: adminService.listReports
   });
 
+  const { data: channelReports = [], isLoading: isLoadingChannelReports } = useQuery({
+    queryKey: ['admin', 'channel-reports'],
+    queryFn: adminService.listChannelReports
+  });
+
   const updateRoleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: UserRole }) => adminService.updateRole(userId, role),
     onSuccess: () => {
@@ -146,6 +153,14 @@ export const AdminModerationPage = () => {
       adminService.updateReportStatus(reportId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] }).catch(() => { });
+    }
+  });
+
+  const updateChannelReportStatusMutation = useMutation({
+    mutationFn: ({ reportId, status }: { reportId: string; status: ReportStatus }) =>
+      adminService.updateChannelReportStatus(reportId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'channel-reports'] }).catch(() => { });
     }
   });
 
@@ -232,6 +247,10 @@ export const AdminModerationPage = () => {
   }, [users]);
 
   const pendingReports = useMemo(() => reports.filter((report) => report.status === 'pending'), [reports]);
+  const pendingChannelReports = useMemo(
+    () => channelReports.filter((r) => r.status === 'pending'),
+    [channelReports]
+  );
 
   useEffect(() => {
     if (editingUser) {
@@ -471,17 +490,46 @@ export const AdminModerationPage = () => {
         <Card className="p-4 glass-liquid-strong">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="text-base font-semibold text-[var(--color-text)]">Moderacion de publicaciones</h3>
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Moderación de contenido</h3>
               <p className="text-xs text-[var(--color-muted)]">
                 Gestiona los reportes enviados por la comunidad.
               </p>
             </div>
-            <span className="rounded-2xl bg-rose-100/80 px-3 py-1 text-[11px] font-semibold text-rose-600">
-              {pendingReports.length} pendientes
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-2xl bg-rose-100/80 px-3 py-1 text-[11px] font-semibold text-rose-600">
+                {pendingReports.length + pendingChannelReports.length} pendientes
+              </span>
+            </div>
           </div>
 
-          {isLoadingReports ? (
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setReportTab('feed')}
+              className={classNames(
+                'rounded-2xl px-3 py-1.5 text-xs font-semibold transition',
+                reportTab === 'feed'
+                  ? 'bg-sena-green/20 text-sena-green border border-sena-green/40'
+                  : 'bg-white/60 dark:bg-neutral-800/60 text-[var(--color-muted)] hover:bg-white/80'
+              )}
+            >
+              Publicaciones
+            </button>
+            <button
+              type="button"
+              onClick={() => setReportTab('channel')}
+              className={classNames(
+                'rounded-2xl px-3 py-1.5 text-xs font-semibold transition',
+                reportTab === 'channel'
+                  ? 'bg-sena-green/20 text-sena-green border border-sena-green/40'
+                  : 'bg-white/60 dark:bg-neutral-800/60 text-[var(--color-muted)] hover:bg-white/80'
+              )}
+            >
+              Mensajes de canal
+            </button>
+          </div>
+
+          {reportTab === 'feed' && (isLoadingReports ? (
             <p className="mt-4 text-xs text-[var(--color-muted)]">Cargando reportes...</p>
           ) : reports.length === 0 ? (
             <p className="mt-4 text-xs text-[var(--color-muted)]">No hay reportes recientes.</p>
@@ -557,7 +605,70 @@ export const AdminModerationPage = () => {
                 </div>
               ))}
             </div>
-          )}
+          ))}
+
+          {reportTab === 'channel' && (isLoadingChannelReports ? (
+            <p className="mt-4 text-xs text-[var(--color-muted)]">Cargando reportes...</p>
+          ) : channelReports.length === 0 ? (
+            <p className="mt-4 text-xs text-[var(--color-muted)]">No hay reportes de mensajes.</p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {channelReports.map((report: ChannelMessageReport) => (
+                <div
+                  key={report.id}
+                  className="rounded-2xl glass-liquid px-4 py-3 text-sm text-[var(--color-text)]"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">
+                        {report.reporter?.firstName} {report.reporter?.lastName}
+                      </p>
+                      <p className="text-[11px] text-[var(--color-muted)]">
+                        Reportó mensaje · {new Date(report.createdAt).toLocaleString('es-CO')}
+                      </p>
+                    </div>
+                    <span
+                      className={classNames(
+                        'rounded-2xl px-3 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                        report.status === 'pending'
+                          ? 'bg-rose-100/80 text-rose-600'
+                          : 'bg-emerald-100/80 text-emerald-600'
+                      )}
+                    >
+                      {report.status === 'pending' ? 'Pendiente' : 'Revisado'}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold">Motivo: {report.reason}</p>
+                  {report.details && (
+                    <p className="mt-1 text-xs italic text-[var(--color-muted)]">&quot;{report.details}&quot;</p>
+                  )}
+                  {report.message && (
+                    <p className="mt-2 text-xs text-[var(--color-muted)]">
+                      Mensaje: {report.message.content ? report.message.content.slice(0, 140) : 'Con adjunto'}
+                    </p>
+                  )}
+                  <div className="mt-3 flex flex-wrap justify-end gap-2">
+                    {report.status === 'pending' ? (
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          updateChannelReportStatusMutation.mutate({ reportId: report.id, status: 'reviewed' })
+                        }
+                        loading={updateChannelReportStatusMutation.isPending}
+                        className="px-2.5 text-[11px]"
+                      >
+                        Marcar como leído
+                      </Button>
+                    ) : (
+                      <p className="text-[11px] text-[var(--color-muted)]">
+                        Revisado el {report.resolvedAt ? new Date(report.resolvedAt).toLocaleDateString('es-CO') : '-'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
         </Card>
       </div>
 

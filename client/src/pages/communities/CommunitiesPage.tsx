@@ -352,6 +352,7 @@ export const CommunitiesPage = () => {
 
             {channelId && selectedChannel ? (
               <ChannelChat
+                channelId={channelId}
                 channelName={selectedChannel.name}
                 channelDescription={selectedChannel.description}
                 messages={messages}

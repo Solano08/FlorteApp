@@ -61,6 +61,14 @@ export interface PostMetrics {
   reactionBreakdown?: ReactionBreakdown[];
 }
 
+export interface FeedPostReactionUser {
+  userId: string;
+  fullName: string;
+  avatarUrl: string | null;
+  reactionType: ReactionType;
+  reactedAt: Date;
+}
+
 export interface CreatePostInput {
   authorId: string;
   content: string;

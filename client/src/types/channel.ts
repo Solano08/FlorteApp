@@ -22,6 +22,10 @@ export interface ChannelMessage {
   content: string;
   attachmentUrl?: string | null;
   createdAt: string;
+  isPinned?: boolean;
+  pinnedAt?: string | null;
+  pinnedBy?: string | null;
+  viewerStarred?: boolean;
 }
 
 export interface CreateChannelPayload {
@@ -35,5 +39,18 @@ export interface CreateChannelPayload {
 export interface CreateChannelMessagePayload {
   content?: string;
   attachmentUrl?: string;
+}
+
+export interface ChannelMessageReport {
+  id: string;
+  messageId: string;
+  reporterId: string;
+  reason: string;
+  details?: string | null;
+  status: 'pending' | 'reviewed';
+  createdAt: string;
+  resolvedAt?: string | null;
+  message?: ChannelMessage;
+  reporter?: { id: string; firstName: string; lastName: string; avatarUrl?: string | null };
 }
 
