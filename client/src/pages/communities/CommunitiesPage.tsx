@@ -14,6 +14,7 @@ import { ChannelChat } from '../../components/communities/ChannelChat';
 import { EmptyCommunitiesView } from '../../components/communities/EmptyCommunitiesView';
 import { CreateChannelMessagePayload } from '../../types/channel';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../hooks/useAuth';
 import { GlassDialog } from '../../components/ui/GlassDialog';
 import { CreateCommunityDialog } from '../../components/communities/CreateCommunityDialog';
 import { ExploreCommunitiesView } from '../../components/communities/ExploreCommunitiesView';
@@ -32,6 +33,7 @@ export const CommunitiesPage = () => {
   const [isExploring, setIsExploring] = useState(false);
   const [exploreSearch, setExploreSearch] = useState('');
   const toast = useToast();
+  const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Comunidades del usuario (sidebar tipo Discord)
@@ -204,6 +206,11 @@ export const CommunitiesPage = () => {
 
   const handleLeaveCommunity = () => {
     if (!communityId) return;
+    const isOwner = Boolean(user?.id && community?.createdBy && community.createdBy === user.id);
+    if (isOwner) {
+      navigate(`/communities/${communityId}/settings#eliminar-comunidad`);
+      return;
+    }
     setLeaveDialogOpen(true);
   };
 

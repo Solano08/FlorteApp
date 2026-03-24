@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useLayoutEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
@@ -17,6 +17,7 @@ type CommunitySection = 'general' | 'privacy' | 'members' | 'danger';
 export const CommunitySettingsPage = () => {
   const { communityId } = useParams<{ communityId?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -50,6 +51,25 @@ export const CommunitySettingsPage = () => {
       setDescription(community.description ?? '');
     }
   }, [community]);
+
+  useEffect(() => {
+    const raw = location.hash.replace(/^#/, '');
+    if (raw === 'eliminar-comunidad' || raw === 'danger') {
+      setActiveSection('danger');
+    }
+  }, [location.hash]);
+
+  useLayoutEffect(() => {
+    if (activeSection !== 'danger') return;
+    const raw = location.hash.replace(/^#/, '');
+    if (raw !== 'eliminar-comunidad' && raw !== 'danger') return;
+    requestAnimationFrame(() => {
+      document.getElementById('eliminar-comunidad')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    });
+  }, [activeSection, location.hash]);
 
   const updateCommunityMutation = useMutation({
     mutationFn: async () => {
@@ -304,7 +324,7 @@ export const CommunitySettingsPage = () => {
                 )}
 
                 {activeSection === 'danger' && (
-                  <div className="max-w-2xl space-y-6">
+                  <div id="eliminar-comunidad" className="max-w-2xl space-y-6 scroll-mt-24">
                     <div className="rounded-2xl border border-red-200/70 dark:border-red-500/30 bg-red-50/70 dark:bg-red-950/30 px-5 py-4">
                       <h3 className="text-sm font-semibold text-red-600 dark:text-red-400">
                         Eliminar comunidad
