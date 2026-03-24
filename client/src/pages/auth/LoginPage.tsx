@@ -1,4 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,7 +7,6 @@ import { AuthLayout } from '../../components/layout/AuthLayout';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { useState } from 'react';
 
 const loginSchema = z.object({
   email: z.string().email('Ingresa un correo válido'),
@@ -18,7 +18,17 @@ type LoginValues = z.infer<typeof loginSchema>;
 export const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [resetFlash, setResetFlash] = useState<string | null>(null);
+
+  useEffect(() => {
+    const state = location.state as { passwordResetOk?: boolean } | undefined;
+    if (state?.passwordResetOk) {
+      setResetFlash('Tu contraseña se actualizó correctamente. Ya puedes iniciar sesión.');
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   const {
     register,
@@ -64,6 +74,7 @@ export const LoginPage = () => {
           {...register('password')}
         />
 
+        {resetFlash && <p className="rounded-2xl bg-emerald-100 px-3 py-2 text-sm text-emerald-600">{resetFlash}</p>}
         {serverError && <p className="rounded-2xl bg-red-100 px-3 py-2 text-sm text-red-500">{serverError}</p>}
 
         <Button type="submit" className="w-full" loading={isSubmitting}>

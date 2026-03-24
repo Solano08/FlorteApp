@@ -104,14 +104,28 @@ export const authService = {
     storage.clear();
   },
 
-  async forgotPassword(email: string): Promise<string> {
-    const { data } = await apiClient.post<{ success: boolean; message: string }>('/auth/forgot-password', { email });
-    return data.message;
+  async forgotPassword(email: string): Promise<{ message: string; devToken?: string }> {
+    try {
+      const { data } = await apiClient.post<{ success: boolean; message: string; token?: string }>(
+        '/auth/forgot-password',
+        { email }
+      );
+      return { message: data.message, devToken: data.token };
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
   },
 
   async resetPassword(token: string, password: string): Promise<string> {
-    const { data } = await apiClient.post<{ success: boolean; message: string }>('/auth/reset-password', { token, password });
-    return data.message;
+    try {
+      const { data } = await apiClient.post<{ success: boolean; message: string }>('/auth/reset-password', {
+        token,
+        password
+      });
+      return data.message;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
   },
 
   restoreSession(): AuthUser | null {

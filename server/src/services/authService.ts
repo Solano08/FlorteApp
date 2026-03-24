@@ -8,7 +8,8 @@ import { passwordResetRepository } from '../repositories/passwordResetRepository
 import { hashPassword, verifyPassword } from '../utils/password';
 import { AppError } from '../utils/appError';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
-import { env } from '../config/env';
+import { env, getPrimaryClientUrl } from '../config/env';
+import { isSmtpConfigured, sendPasswordResetEmail } from './emailService';
 import { AuthResult, AuthUser, TokenPayload } from '../types/auth';
 import { logger } from '../utils/logger';
 import { User } from '../types/user';
@@ -200,9 +201,12 @@ export const authService = {
   },
 
   async requestPasswordReset(email: string): Promise<{ message: string; token?: string }> {
+    const genericMessage =
+      'Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña.';
+
     const user = await userRepository.findByEmail(email);
     if (!user) {
-      return { message: 'Si el correo existe, recibiras instrucciones para recuperar la contrasena' };
+      return { message: genericMessage };
     }
 
     await passwordResetRepository.deleteByUser(user.id);
@@ -214,10 +218,36 @@ export const authService = {
     await passwordResetRepository.create(user.id, tokenHash, expiresAt);
     logger.info('Password reset token generated', { userId: user.id });
 
-    return {
-      message: 'Revisa tu correo para completar el proceso de recuperacion',
-      token: env.nodeEnv === 'development' ? token : undefined
-    };
+    const base = getPrimaryClientUrl().replace(/\/$/, '');
+    const resetUrl = `${base}/reset-password?token=${encodeURIComponent(token)}`;
+
+    if (isSmtpConfigured()) {
+      try {
+        await sendPasswordResetEmail(user.email, user.firstName, resetUrl);
+      } catch (error) {
+        logger.error('Failed to send password reset email', { userId: user.id, error });
+        throw new AppError('No pudimos enviar el correo. Intenta de nuevo más tarde.', 500);
+      }
+      return {
+        message:
+          'Te enviamos un correo con un enlace para restablecer tu contraseña. Revisa también la carpeta de spam.'
+      };
+    }
+
+    if (env.nodeEnv === 'development') {
+      logger.info('Password reset URL (SMTP no configurado)', { resetUrl });
+      return {
+        message:
+          'Modo desarrollo: no hay SMTP configurado. Usa el enlace de prueba que aparece abajo o revisa la consola del servidor.',
+        token
+      };
+    }
+
+    logger.error('Password reset requested but SMTP is not configured', { userId: user.id });
+    throw new AppError(
+      'La recuperación de contraseña no está disponible. Contacta al administrador.',
+      503
+    );
   },
 
   async resetPassword(token: string, newPassword: string): Promise<void> {

@@ -66,5 +66,19 @@ export const env = {
   },
   storage: {
     cdnBaseUrl: process.env.CDN_BASE_URL ?? ''
+  },
+  smtp: {
+    host: process.env.SMTP_HOST ?? '',
+    port: parseInt(process.env.SMTP_PORT ?? '587', 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER ?? '',
+    pass: process.env.SMTP_PASS ?? '',
+    from: process.env.SMTP_FROM?.trim() || process.env.SMTP_USER || ''
   }
+};
+
+/** Primera URL del cliente (para enlaces en correos cuando CLIENT_URL es una lista). */
+export const getPrimaryClientUrl = (): string => {
+  const u = env.clientUrl;
+  return Array.isArray(u) ? u[0] : u;
 };

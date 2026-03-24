@@ -616,13 +616,15 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     setCategories(parsedCategories);
 
     const validCustomCategoryIds = new Set(parsedCategories.map((c) => c.id));
+    // "texto" y "voz" son categorías fijas de la UI; no están en categories_${id} pero sí en channelCategories.
+    const validBuiltinCategoryIds = new Set(['texto', 'voz']);
     const storedRelations = localStorage.getItem(`channelCategories_${communityId}`);
     const parsedRelations: Record<string, string> = storedRelations ? JSON.parse(storedRelations) : {};
 
     // Quitar canales apuntando a categorías borradas (localStorage huérfano); vuelven a "Texto".
     const sanitizedRelations: Record<string, string> = {};
     for (const [chId, catId] of Object.entries(parsedRelations)) {
-      if (validCustomCategoryIds.has(catId)) {
+      if (validCustomCategoryIds.has(catId) || validBuiltinCategoryIds.has(catId)) {
         sanitizedRelations[chId] = catId;
       }
     }

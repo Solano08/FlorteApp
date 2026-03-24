@@ -7,6 +7,7 @@ import { UserRole } from '../types/auth';
 const LoginPage = lazy(() => import('../pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('../pages/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
 const HomePage = lazy(() => import('../pages/dashboard/HomePage').then((m) => ({ default: m.HomePage })));
 const ProfilePage = lazy(() => import('../pages/profile/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const PublicProfilePage = lazy(() => import('../pages/profile/PublicProfilePage').then((m) => ({ default: m.PublicProfilePage })));
@@ -89,6 +90,14 @@ export const AppRoutes = () => (
       element={
         <PublicRoute>
           <ForgotPasswordPage />
+        </PublicRoute>
+      }
+    />
+    <Route
+      path="/reset-password"
+      element={
+        <PublicRoute>
+          <ResetPasswordPage />
         </PublicRoute>
       }
     />

@@ -17,6 +17,7 @@ type ForgotValues = z.infer<typeof schema>;
 export const ForgotPasswordPage = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [devResetUrl, setDevResetUrl] = useState<string | null>(null);
 
   const {
     register,
@@ -30,11 +31,16 @@ export const ForgotPasswordPage = () => {
   const onSubmit = async (values: ForgotValues) => {
     setMessage(null);
     setError(null);
+    setDevResetUrl(null);
     try {
-      const msg = await authService.forgotPassword(values.email);
+      const { message: msg, devToken } = await authService.forgotPassword(values.email);
       setMessage(msg);
+      if (devToken) {
+        setDevResetUrl(`/reset-password?token=${encodeURIComponent(devToken)}`);
+      }
     } catch (err) {
-      setError('No pudimos enviar el correo. Intenta nuevamente.');
+      const text = err instanceof Error ? err.message : 'No pudimos completar la solicitud. Intenta nuevamente.';
+      setError(text);
     }
   };
 
@@ -53,6 +59,14 @@ export const ForgotPasswordPage = () => {
         />
 
         {message && <p className="rounded-2xl bg-emerald-100 px-3 py-2 text-sm text-emerald-600">{message}</p>}
+        {devResetUrl && (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <span className="font-medium">Solo desarrollo:</span>{' '}
+            <Link to={devResetUrl} className="break-all underline">
+              Abrir restablecimiento de contraseña
+            </Link>
+          </p>
+        )}
         {error && <p className="rounded-2xl bg-red-100 px-3 py-2 text-sm text-red-500">{error}</p>}
 
         <Button type="submit" className="w-full" loading={isSubmitting}>
