@@ -156,7 +156,7 @@ export const initDb = async (): Promise<void> => {
       CREATE TABLE IF NOT EXISTS feed_post_reactions (
         post_id CHAR(36) NOT NULL,
         user_id CHAR(36) NOT NULL,
-        reaction_type ENUM('like', 'love', 'haha', 'wow', 'sad', 'angry') NOT NULL,
+        reaction_type ENUM('like', 'celebrate', 'love', 'insightful', 'support') NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (post_id, user_id),
         FOREIGN KEY (post_id) REFERENCES feed_posts(id) ON DELETE CASCADE,
@@ -467,6 +467,63 @@ export const initDb = async (): Promise<void> => {
         } catch (err: unknown) {
             const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
             if (msg !== 'ER_NO_SUCH_TABLE' && msg !== 'ER_FK_NO_INDEX_PARENT' && msg !== 'ER_FK_CANNOT_OPEN_PARENT') throw err;
+        }
+
+        // Migración: feed_post_reactions.reaction_type debe coincidir con ReactionType de la API
+        // (antes: like/love/haha/wow/sad/angry — la app usa celebrate/insightful/support)
+        const [feedReactionsTableRows] = await pool.query(`
+      SELECT TABLE_NAME
+      FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'feed_post_reactions'
+    `);
+        const hasFeedPostReactions =
+            Array.isArray(feedReactionsTableRows) && feedReactionsTableRows.length > 0;
+        if (hasFeedPostReactions) {
+            const [colMeta] = await pool.query(
+                `SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'feed_post_reactions'
+           AND COLUMN_NAME = 'reaction_type'`
+            );
+            const columnType =
+                Array.isArray(colMeta) &&
+                colMeta[0] &&
+                typeof colMeta[0] === 'object' &&
+                'COLUMN_TYPE' in colMeta[0]
+                    ? String((colMeta[0] as { COLUMN_TYPE: string }).COLUMN_TYPE)
+                    : '';
+            const reactionsSchemaOk =
+                columnType.includes('insightful') && columnType.includes('celebrate');
+            if (!reactionsSchemaOk) {
+                try {
+                    await pool.execute(`
+            ALTER TABLE feed_post_reactions
+            MODIFY COLUMN reaction_type VARCHAR(32) NOT NULL
+          `);
+                } catch (err: unknown) {
+                    const msg =
+                        err && typeof err === 'object' && 'code' in err
+                            ? String((err as { code: string }).code)
+                            : '';
+                    if (msg !== 'ER_NO_SUCH_TABLE') throw err;
+                }
+                await pool.execute(`
+          UPDATE feed_post_reactions SET reaction_type = 'celebrate' WHERE reaction_type = 'haha'
+        `);
+                await pool.execute(`
+          UPDATE feed_post_reactions SET reaction_type = 'insightful' WHERE reaction_type = 'wow'
+        `);
+                await pool.execute(`
+          UPDATE feed_post_reactions SET reaction_type = 'support' WHERE reaction_type IN ('sad', 'angry')
+        `);
+                await pool.execute(`
+          ALTER TABLE feed_post_reactions
+          MODIFY COLUMN reaction_type ENUM(
+            'like', 'celebrate', 'love', 'insightful', 'support'
+          ) NOT NULL
+        `);
+            }
         }
 
         logger.info('Database initialized successfully');

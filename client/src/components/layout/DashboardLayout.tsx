@@ -1,4 +1,5 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { PAGE_TRANSITION } from '../../utils/transitionConfig';
@@ -49,7 +50,10 @@ export const DashboardLayout = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const profileButtonRef = useRef<HTMLButtonElement | null>(null);
+  const profileMenuPortalRef = useRef<HTMLDivElement | null>(null);
+  const [profileMenuPos, setProfileMenuPos] = useState({ top: 0, right: 0 });
+  const isBrowser = typeof document !== 'undefined';
 
   const navigation = useMemo(() => {
     if (!user) return baseNavItems;
@@ -62,12 +66,34 @@ export const DashboardLayout = ({
     return baseNavItems;
   }, [user]);
 
+  useLayoutEffect(() => {
+    if (!isProfileMenuOpen || !profileButtonRef.current) return;
+    const updatePosition = () => {
+      const el = profileButtonRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setProfileMenuPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right
+      });
+    };
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isProfileMenuOpen]);
+
   useEffect(() => {
+    if (!isProfileMenuOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (!profileMenuRef.current) return;
-      if (!profileMenuRef.current.contains(event.target as Node)) {
-        setIsProfileMenuOpen(false);
+      const t = event.target as Node;
+      if (profileButtonRef.current?.contains(t) || profileMenuPortalRef.current?.contains(t)) {
+        return;
       }
+      setIsProfileMenuOpen(false);
     };
 
     const handleEscape = (event: KeyboardEvent) => {
@@ -82,7 +108,7 @@ export const DashboardLayout = ({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, []);
+  }, [isProfileMenuOpen]);
 
   const handleNavigateProfile = () => {
     setIsProfileMenuOpen(false);
@@ -110,7 +136,7 @@ export const DashboardLayout = ({
       data-page={isChatsPage ? 'chats' : undefined}
     >
       <div className={classNames("flex flex-1 flex-col", contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen')}>
-        <header className="nav-glass sticky top-0 z-40 w-full transition-[padding] duration-ui">
+        <header className="nav-glass sticky top-0 z-[100] w-full transition-[padding] duration-ui">
           <div className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 overflow-visible px-4 py-2.5 sm:px-6 lg:px-8">
             {/* Izquierda: logo Florte */}
             <NavLink
@@ -171,8 +197,9 @@ export const DashboardLayout = ({
             {/* Derecha: notificaciones y perfil */}
             <div className="relative flex shrink-0 items-center justify-end gap-2 overflow-visible sm:gap-3 justify-self-end">
             <NotificationBell />
-            <div className="relative hidden lg:block" ref={profileMenuRef}>
+            <div className="relative hidden lg:block">
               <button
+                ref={profileButtonRef}
                 type="button"
                 onClick={() => setIsProfileMenuOpen((prev) => !prev)}
                 className="flex items-center gap-2 rounded-xl pl-1 pr-2 py-1.5 text-left transition-all duration-ui hover:bg-white/60 hover:shadow-sm dark:hover:bg-white/10"
@@ -196,14 +223,26 @@ export const DashboardLayout = ({
                   )}
                 </div>
               </button>
-              {isProfileMenuOpen && (
-                <div className="absolute right-0 top-[calc(100%+0.5rem)] z-20 w-48 rounded-2xl bg-white dark:bg-neutral-900 border border-slate-200/90 dark:border-neutral-700/90 shadow-[0_10px_28px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.45)] p-2 text-sm text-[var(--color-text)]">
+            </div>
+            {isBrowser &&
+              isProfileMenuOpen &&
+              createPortal(
+                <div
+                  ref={profileMenuPortalRef}
+                  className="fixed z-[10025] w-48 rounded-2xl border border-slate-200/90 bg-white p-2 text-sm text-[var(--color-text)] shadow-[0_10px_28px_rgba(15,23,42,0.18)] dark:border-neutral-700/90 dark:bg-neutral-900 dark:shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+                  style={{
+                    top: profileMenuPos.top,
+                    right: profileMenuPos.right,
+                    left: 'auto'
+                  }}
+                  role="menu"
+                >
                   <button
                     type="button"
                     className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-black/5 dark:hover:bg-neutral-800"
                     onClick={handleNavigateProfile}
                   >
-                    <User className="h-4 w-4 text-sena-green" />
+                    <User className="h-4 w-4 shrink-0 text-sena-green" />
                     Perfil
                   </button>
                   <button
@@ -211,20 +250,20 @@ export const DashboardLayout = ({
                     className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-black/5 dark:hover:bg-neutral-800"
                     onClick={handleNavigateSettings}
                   >
-                    <Settings className="h-4 w-4 text-sena-green" />
+                    <Settings className="h-4 w-4 shrink-0 text-sena-green" />
                     Ajustes
                   </button>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm text-red-500 dark:text-red-400 transition hover:bg-rose-50 dark:hover:bg-rose-900/25 hover:text-red-600 dark:hover:text-red-300"
+                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm text-red-500 transition hover:bg-rose-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-rose-900/25 dark:hover:text-red-300"
                     onClick={handleLogout}
                   >
-                    <LogOut className="h-4 w-4 text-red-500 dark:text-red-400" />
+                    <LogOut className="h-4 w-4 shrink-0 text-red-500 dark:text-red-400" />
                     Cerrar sesión
                   </button>
-                </div>
+                </div>,
+                document.body
               )}
-            </div>
           </div>
         </div>
         </header>
