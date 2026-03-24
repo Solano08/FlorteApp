@@ -5,7 +5,7 @@ import { UI_MENU_TRANSITION, UI_MOTION_DURATION_S, UI_MOTION_EASE } from '../../
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import {
   ProjectWorkspaceNotesEditor,
@@ -34,6 +34,7 @@ import {
   ArrowUpRight,
   Filter,
   Plus,
+  X,
   MoreHorizontal,
   Edit,
   Trash2,
@@ -177,11 +178,22 @@ type InlineDraftState = {
   coverPreviewUrl: string | null;
 };
 
+type ProjectsListScope = 'mine' | 'community';
+
+/** Misma política de caché/refetch que Inicio (`HomePage`) para `listProjects` */
+const projectsGlobalListQueryOptions = {
+  staleTime: 0,
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
+  refetchInterval: 30_000,
+  refetchIntervalInBackground: false
+} as const;
+
 export const ProjectsPage = () => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const [listScope, setListScope] = useState<ProjectsListScope>('mine');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'in_progress' | 'completed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<ProjectCategory>('all');
@@ -224,10 +236,31 @@ export const ProjectsPage = () => {
     setViewingProjectId((prev) => (prev === id ? prev : id));
   }, [searchParams]);
 
-  const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['projects'],
-    queryFn: projectService.listProjects
+  const { data: myProjects = [], isLoading: isLoadingMine } = useQuery({
+    queryKey: ['projects', 'mine'],
+    queryFn: projectService.listMyProjects,
+    enabled: Boolean(user?.id)
   });
+
+  /** Lista global: misma clave que Inicio (`['projects']`) para compartir caché y el mismo “top” */
+  const { data: allProjectsGlobal = [], isLoading: isLoadingAllProjects } = useQuery({
+    queryKey: ['projects'],
+    queryFn: projectService.listProjects,
+    enabled: listScope === 'community',
+    ...projectsGlobalListQueryOptions
+  });
+
+  const myProjectIds = useMemo(() => new Set(myProjects.map((p) => p.id)), [myProjects]);
+
+  const projects = useMemo(() => {
+    if (listScope === 'mine') return myProjects;
+    return allProjectsGlobal.filter((p) => !myProjectIds.has(p.id));
+  }, [listScope, myProjects, allProjectsGlobal, myProjectIds]);
+
+  const isLoading =
+    listScope === 'mine'
+      ? isLoadingMine
+      : isLoadingAllProjects || (Boolean(user?.id) && isLoadingMine);
 
   const {
     data: projectPanel,
@@ -260,7 +293,7 @@ export const ProjectsPage = () => {
     mutationFn: projectService.createProject,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
-      queryClient.invalidateQueries({ queryKey: ['projects', 'me'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['projects', 'mine'] }).catch(() => {});
     }
   });
 
@@ -269,7 +302,7 @@ export const ProjectsPage = () => {
       projectService.updateProject(id, { status }),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
-      queryClient.invalidateQueries({ queryKey: ['projects', 'me'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['projects', 'mine'] }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['projects', 'panel', vars.id] }).catch(() => {});
     }
   });
@@ -349,7 +382,7 @@ export const ProjectsPage = () => {
     },
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
-      queryClient.invalidateQueries({ queryKey: ['projects', 'me'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['projects', 'mine'] }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['projects', 'panel', vars.id] }).catch(() => {});
       setEditCoverPreviewUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev);
@@ -366,7 +399,7 @@ export const ProjectsPage = () => {
     mutationFn: (id: string) => projectService.deleteProject(id),
     onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
-      queryClient.invalidateQueries({ queryKey: ['projects', 'me'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['projects', 'mine'] }).catch(() => {});
       setProjectToDelete(null);
       setViewingProjectId((v) => (v === deletedId ? null : v));
       setSearchParams(
@@ -506,15 +539,25 @@ export const ProjectsPage = () => {
     [projects]
   );
 
-  // Proyectos destacados para el sidebar
+  // Sidebar comunidad: idéntico a Inicio — lista completa, orden por updatedAt, top 3
   const learningHighlights = useMemo(() => {
+    if (listScope === 'community') {
+      return [...allProjectsGlobal]
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, 3);
+    }
     return projects.slice(0, 3);
-  }, [projects]);
+  }, [listScope, allProjectsGlobal, projects]);
 
-  const activeProject = useMemo(
-    () => (viewingProjectId ? projects.find((p) => p.id === viewingProjectId) ?? null : null),
-    [projects, viewingProjectId]
-  );
+  const activeProject = useMemo(() => {
+    if (!viewingProjectId) return null;
+    const fromList = projects.find((p) => p.id === viewingProjectId) ?? null;
+    if (fromList) return fromList;
+    if (listScope === 'community') {
+      return myProjects.find((p) => p.id === viewingProjectId) ?? null;
+    }
+    return null;
+  }, [projects, viewingProjectId, listScope, myProjects]);
 
   const panelForbidden =
     isPanelError && isAxiosError(panelQueryError) && panelQueryError.response?.status === 403;
@@ -618,7 +661,7 @@ export const ProjectsPage = () => {
       setInlineDraft(null);
       if (draftCoverInputRef.current) draftCoverInputRef.current.value = '';
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
-      await queryClient.invalidateQueries({ queryKey: ['projects', 'me'] });
+      await queryClient.invalidateQueries({ queryKey: ['projects', 'mine'] });
     } catch {
       // Errores de red / API: el usuario puede reintentar
     } finally {
@@ -640,6 +683,37 @@ export const ProjectsPage = () => {
     });
   }, []);
 
+  const showCommunityProjects = useCallback(() => {
+    discardInlineDraft();
+    setListScope('community');
+    setProjectView(null);
+  }, [discardInlineDraft, setProjectView]);
+
+  const showMyProjects = useCallback(() => {
+    discardInlineDraft();
+    setListScope('mine');
+    setProjectView(null);
+  }, [discardInlineDraft, setProjectView]);
+
+  /** Encabezado del área principal (lista completa) */
+  const mainProjectsHeading =
+    listScope === 'community' ? 'Proyectos de la comunidad' : 'Tus proyectos';
+  /** Panel lateral: en exploración comunidad muestra solo el top 3 */
+  const sidebarProjectsHeading =
+    listScope === 'community' ? 'Top proyectos' : 'Tus proyectos';
+  const projectsListSubtitle =
+    listScope === 'community'
+      ? 'Explora proyectos de otros aprendices. Los tuyos no se muestran aquí; vuelve con «Mis proyectos» para verlos.'
+      : 'Gestiona y organiza todos tus proyectos en un solo lugar.';
+  const sidebarProjectsEmptyMessage =
+    listScope === 'community'
+      ? 'Aún no hay proyectos destacados.'
+      : 'Registra tus proyectos para seguir tu progreso.';
+  const mainListEmptyMessage =
+    listScope === 'community'
+      ? 'No hay proyectos en la plataforma todavía o ninguno coincide con los filtros.'
+      : 'No hay proyectos en este estado todavia. Crea uno nuevo o cambia el filtro.';
+
   return (
     <DashboardLayout
       fluid
@@ -657,40 +731,58 @@ export const ProjectsPage = () => {
               </div>
               <div className="space-y-1.5">
                 <button
-                  onClick={() => navigate('/explore')}
-                  className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white/10 active:scale-[0.98] ${sidebarRowClass}`}
+                  type="button"
+                  onClick={listScope === 'community' ? showMyProjects : showCommunityProjects}
+                  className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white/10 active:scale-[0.98] ${sidebarRowClass} ${
+                    listScope === 'community' ? 'ring-2 ring-brand/40' : ''
+                  }`}
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-ui group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
-                    <ArrowUpRight className="h-5 w-5" />
+                    {listScope === 'community' ? (
+                      <FolderKanban className="h-5 w-5" />
+                    ) : (
+                      <ArrowUpRight className="h-5 w-5" />
+                    )}
                   </div>
-                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Explorar proyectos</span>
+                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">
+                    {listScope === 'community' ? 'Mis proyectos' : 'Explorar proyectos'}
+                  </span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setProjectView(null)}
+                  onClick={() => {
+                    if (inlineDraft) {
+                      discardInlineDraft();
+                      return;
+                    }
+                    if (listScope === 'community') {
+                      showMyProjects();
+                    }
+                    openInlineDraft();
+                  }}
                   className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white/10 active:scale-[0.98] ${sidebarRowClass}`}
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-ui group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
-                    <FolderKanban className="h-5 w-5" />
+                    {inlineDraft ? <X className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
                   </div>
-                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Revisar mis proyectos</span>
+                  <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">
+                    {inlineDraft ? 'Cancelar' : 'Nuevo proyecto'}
+                  </span>
                 </button>
               </div>
             </Card>
 
-            {/* Tus proyectos */}
+            {/* Vista actual: tus proyectos o comunidad */}
             <Card padded={false} className={`${sidebarPanelClass} space-y-3 p-3`}>
               <div className="flex items-center gap-2 px-1">
                 <FolderKanban className="h-4 w-4 text-brand" />
-                <h3 className="text-sm font-semibold text-[var(--color-text)]">Tus proyectos</h3>
+                <h3 className="text-sm font-semibold text-[var(--color-text)]">{sidebarProjectsHeading}</h3>
               </div>
               <div className="space-y-1.5">
                 {isLoading ? (
                   <p className="px-2 text-xs text-[var(--color-muted)]">Cargando proyectos...</p>
                 ) : learningHighlights.length === 0 ? (
-                  <p className="px-2 text-xs text-[var(--color-muted)]">
-                    Registra tus proyectos para seguir tu progreso.
-                  </p>
+                  <p className="px-2 text-xs text-[var(--color-muted)]">{sidebarProjectsEmptyMessage}</p>
                 ) : (
                   learningHighlights.map((project) => (
                     <button
@@ -794,22 +886,37 @@ export const ProjectsPage = () => {
             )}
           </Card>
 
-          {/* Botón para crear nuevo proyecto */}
+          {/* Encabezado de lista y creación (solo en tus proyectos) */}
           <Card className={projectCardShadow}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div
+              className={`flex flex-col gap-4 ${listScope === 'mine' ? 'sm:flex-row sm:items-center sm:justify-between' : ''}`}
+            >
               <div>
-                <h2 className="text-xl font-semibold text-[var(--color-text)]">Tus proyectos</h2>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">
-                  Gestiona y organiza todos tus proyectos en un solo lugar.
-                </p>
+                <h2 className="text-xl font-semibold text-[var(--color-text)]">{mainProjectsHeading}</h2>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">{projectsListSubtitle}</p>
               </div>
-              <Button
-                onClick={openInlineDraft}
-                leftIcon={<Plus className="h-4 w-4" />}
-                className="shadow-[0_4px_12px_rgba(57,169,0,0.2)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.3)] transition-all hover:scale-105"
-              >
-                Nuevo proyecto
-              </Button>
+              {listScope === 'mine' ? (
+                inlineDraft ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={discardInlineDraft}
+                    leftIcon={<X className="h-4 w-4" />}
+                    className="transition-all hover:scale-105"
+                  >
+                    Cancelar
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={openInlineDraft}
+                    leftIcon={<Plus className="h-4 w-4" />}
+                    className="shadow-[0_4px_12px_rgba(57,169,0,0.2)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.3)] transition-all hover:scale-105"
+                  >
+                    Nuevo proyecto
+                  </Button>
+                )
+              ) : null}
             </div>
           </Card>
 
@@ -829,15 +936,13 @@ export const ProjectsPage = () => {
               </Card>
             )}
 
-            {!isLoading && filteredProjects.length === 0 && !inlineDraft && (
+            {!isLoading && filteredProjects.length === 0 && !(listScope === 'mine' && inlineDraft) && (
               <Card className={projectCardShadow}>
-                <p className="text-sm text-[var(--color-muted)]">
-                  No hay proyectos en este estado todavia. Crea uno nuevo o cambia el filtro.
-                </p>
+                <p className="text-sm text-[var(--color-muted)]">{mainListEmptyMessage}</p>
               </Card>
             )}
 
-            {!isLoading && (filteredProjects.length > 0 || inlineDraft) && (
+            {!isLoading && (filteredProjects.length > 0 || (listScope === 'mine' && inlineDraft)) && (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {inlineDraft && (
                   <Card className={`relative flex flex-col space-y-3 ${projectCardShadow} cursor-default`}>

@@ -65,6 +65,20 @@ export const initDb = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+        // Bloqueos entre usuarios (userRepository)
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS user_blocks (
+        blocker_id CHAR(36) NOT NULL,
+        blocked_id CHAR(36) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (blocker_id, blocked_id),
+        FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_blocker (blocker_id),
+        INDEX idx_blocked (blocked_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
         // Chats table
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS chats (
