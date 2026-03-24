@@ -1,11 +1,14 @@
+import classNames from 'classnames';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { Settings, Bell, Lock, Palette, Shield, User } from 'lucide-react';
+import { useTheme } from '../../hooks/useTheme';
+import { Settings, Bell, Lock, Moon, Palette, Sun, User } from 'lucide-react';
 
 export const SettingsPage = () => {
   const { user } = useAuth();
+  const { mode, setMode } = useTheme();
 
   return (
     <DashboardLayout
@@ -100,12 +103,43 @@ export const SettingsPage = () => {
             </div>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between py-2">
+            <div className="flex flex-col gap-3 py-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">Tema</p>
                 <p className="text-xs text-[var(--color-muted)]">Elige entre tema claro u oscuro</p>
               </div>
-              <p className="text-xs text-[var(--color-muted)]">Usa el botón de tema en la barra superior</p>
+              <div
+                className="inline-flex shrink-0 rounded-2xl border border-white/35 bg-white/45 p-1 dark:border-white/10 dark:bg-neutral-800/50"
+                role="group"
+                aria-label="Tema de la aplicación"
+              >
+                <button
+                  type="button"
+                  onClick={() => setMode('light')}
+                  className={classNames(
+                    'flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition',
+                    mode === 'light'
+                      ? 'bg-white text-[var(--color-text)] shadow-sm ring-1 ring-black/5 dark:bg-neutral-700 dark:text-white dark:ring-white/10'
+                      : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'
+                  )}
+                >
+                  <Sun className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  Claro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('dark')}
+                  className={classNames(
+                    'flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition',
+                    mode === 'dark'
+                      ? 'bg-white text-[var(--color-text)] shadow-sm ring-1 ring-black/5 dark:bg-neutral-700 dark:text-white dark:ring-white/10'
+                      : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'
+                  )}
+                >
+                  <Moon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  Oscuro
+                </button>
+              </div>
             </div>
           </div>
         </Card>

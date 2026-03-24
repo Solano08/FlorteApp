@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -185,6 +185,11 @@ export const CommunitiesPage = () => {
     setIsExploring(true);
   };
 
+  const handleSelectCommunityFromSidebar = (id: string) => {
+    setIsExploring(false);
+    navigate(`/communities/${id}`);
+  };
+
   const handleInviteFriends = () => {
     if (!communityId) return;
     const link = `${window.location.origin}/communities/${communityId}`;
@@ -246,7 +251,12 @@ export const CommunitiesPage = () => {
       );
     }) ?? [];
 
-  let content: JSX.Element;
+  const joinedCommunityIds = useMemo(
+    () => new Set(myCommunities.map((g) => g.id)),
+    [myCommunities]
+  );
+
+  let content: ReactElement;
 
   // Mostrar vista de estado vacío sólo cuando no se está explorando
   if (!communityId && !isExploring && !isLoadingMyCommunities && myCommunities.length === 0) {
@@ -273,6 +283,7 @@ export const CommunitiesPage = () => {
               isLoading={isLoadingMyCommunities}
               onCreateCommunity={handleCreateCommunity}
               onExploreCommunities={handleExploreCommunities}
+              onSelectCommunity={handleSelectCommunityFromSidebar}
             />
           )}
           <ExploreCommunitiesView
@@ -280,7 +291,14 @@ export const CommunitiesPage = () => {
             isLoading={isLoadingExplore}
             searchTerm={exploreSearch}
             onSearchTermChange={setExploreSearch}
-            onSelectCommunity={(id) => joinCommunityMutation.mutate(id)}
+            joinedCommunityIds={joinedCommunityIds}
+            onSelectCommunity={(id) => {
+              if (joinedCommunityIds.has(id)) {
+                handleSelectCommunityFromSidebar(id);
+              } else {
+                joinCommunityMutation.mutate(id);
+              }
+            }}
             onCreateCommunity={handleCreateCommunity}
           />
         </div>
@@ -311,6 +329,7 @@ export const CommunitiesPage = () => {
             isLoading={isLoadingMyCommunities}
             onCreateCommunity={handleCreateCommunity}
             onExploreCommunities={handleExploreCommunities}
+            onSelectCommunity={handleSelectCommunityFromSidebar}
           />
 
           {/* Zona principal: canales + chat */}
@@ -418,7 +437,14 @@ export const CommunitiesPage = () => {
       {content}
 
       {/* Diálogo para abandonar comunidad */}
-      <GlassDialog open={leaveDialogOpen} onClose={() => (!isLeaving ? setLeaveDialogOpen(false) : undefined)} size="sm">
+      <GlassDialog
+        open={leaveDialogOpen}
+        onClose={() => (!isLeaving ? setLeaveDialogOpen(false) : undefined)}
+        size="sm"
+        preventCloseOnBackdrop={isLeaving}
+        overlayClassName="delete-post-overlay-warning"
+        contentClassName="glass-dialog-delete"
+      >
         <div className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-[var(--color-text)]">

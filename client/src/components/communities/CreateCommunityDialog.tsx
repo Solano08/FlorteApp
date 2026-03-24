@@ -144,7 +144,7 @@ export const CreateCommunityDialog = ({
             Foto de perfil (opcional)
           </label>
           <div
-            className={`group relative rounded-2xl border-2 border-dashed transition-all duration-200 ${
+            className={`group relative rounded-2xl border-2 border-dashed transition-all duration-ui ${
               isDragging
                 ? 'border-brand/60 bg-brand/5 dark:bg-brand/10'
                 : 'border-white/40 dark:border-white/15 bg-white/30 dark:bg-neutral-800/30'
@@ -166,7 +166,7 @@ export const CreateCommunityDialog = ({
                   type="button"
                   onClick={handleRemoveImage}
                   disabled={isLoading}
-                  className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-2xl bg-white/95 dark:bg-neutral-900/95 text-red-500 shadow-md transition-all duration-200 hover:scale-110 hover:bg-white dark:hover:bg-neutral-900"
+                  className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-2xl bg-white/95 dark:bg-neutral-900/95 text-red-500 shadow-md transition-all duration-ui hover:scale-110 hover:bg-white dark:hover:bg-neutral-900"
                   aria-label="Eliminar imagen"
                 >
                   <X className="h-4 w-4" />
@@ -184,7 +184,7 @@ export const CreateCommunityDialog = ({
                   o haz clic para seleccionar un archivo desde tu dispositivo.
                 </p>
                 <label className="cursor-pointer">
-                  <span className="inline-flex items-center gap-2 rounded-2xl bg-brand/10 dark:bg-brand/20 px-4 py-2 text-xs font-medium text-brand dark:text-emerald-400 transition-all duration-200 hover:bg-brand/20 dark:hover:bg-brand/30">
+                  <span className="inline-flex items-center gap-2 rounded-2xl bg-brand/10 dark:bg-brand/20 px-4 py-2 text-xs font-medium text-brand dark:text-emerald-400 transition-all duration-ui hover:bg-brand/20 dark:hover:bg-brand/30">
                     <ImagePlus className="h-4 w-4" />
                     Elegir archivo
                   </span>

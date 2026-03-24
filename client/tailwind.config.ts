@@ -25,6 +25,12 @@ export default {
       },
       boxShadow: {
         card: '0 10px 40px -15px rgba(0,0,0,0.3)'
+      },
+      transitionDuration: {
+        ui: '620ms'
+      },
+      transitionTimingFunction: {
+        ui: 'cubic-bezier(0.22, 0.61, 0.36, 1)'
       }
     }
   },

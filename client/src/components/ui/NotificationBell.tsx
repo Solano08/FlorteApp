@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell, ChevronRight, MessageSquare, Users, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { UI_MENU_TRANSITION } from '../../utils/transitionConfig';
 import { Button } from './Button';
 import { GlassDialog } from './GlassDialog';
 import { floatingModalContentClass } from '../../utils/modalStyles';
@@ -141,7 +142,10 @@ export const NotificationBell = () => {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.2 }}
+        transition={{
+          opacity: UI_MENU_TRANSITION.opacity,
+          y: UI_MENU_TRANSITION.y
+        }}
         className="fixed z-[9999] min-w-[190px] w-80 max-w-[320px]"
         style={{
           top: dropdownPosition.top,
@@ -268,7 +272,7 @@ export const NotificationBell = () => {
         ref={buttonRef}
         type="button"
         onClick={handleToggle}
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-text)] transition-all duration-200 hover:bg-white/60 hover:shadow-sm dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sena-green/30"
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-text)] transition-all duration-ui hover:bg-white/60 hover:shadow-sm dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sena-green/30"
         aria-label="Notificaciones"
       >
         <Bell className="h-4 w-4" />

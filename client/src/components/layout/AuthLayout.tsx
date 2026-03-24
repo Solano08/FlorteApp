@@ -20,7 +20,7 @@ export const AuthLayout = ({ title, description, children }: AuthLayoutProps) =>
         <ThemeToggle />
       </div>
 
-      <div className="glass-liquid relative z-10 w-full max-w-md rounded-2xl p-8 shadow-2xl transition-all duration-300 hover:shadow-brand/20">
+      <div className="glass-liquid relative z-10 w-full max-w-md rounded-2xl p-8 shadow-2xl transition-all duration-ui hover:shadow-brand/20">
         <div className="mb-8 text-center">
           <h1 className="mb-2 bg-gradient-to-r from-brand to-emerald-600 bg-clip-text text-4xl font-bold text-transparent">
             FlorteApp

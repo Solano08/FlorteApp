@@ -9,16 +9,27 @@ interface CommunitySidebarProps {
   isLoading?: boolean;
   onCreateCommunity?: () => void;
   onExploreCommunities?: () => void;
+  /** Si se define, se usa al pulsar una comunidad (p. ej. salir de "Explorar" y abrir la comunidad). */
+  onSelectCommunity?: (communityId: string) => void;
 }
 
 export const CommunitySidebar: FC<CommunitySidebarProps> = ({
   communities,
   isLoading,
   onCreateCommunity,
-  onExploreCommunities
+  onExploreCommunities,
+  onSelectCommunity
 }) => {
   const navigate = useNavigate();
   const { communityId } = useParams<{ communityId?: string }>();
+
+  const goToCommunity = (id: string) => {
+    if (onSelectCommunity) {
+      onSelectCommunity(id);
+    } else {
+      navigate(`/communities/${id}`);
+    }
+  };
 
   return (
     <aside className="relative z-[100] flex h-full w-[80px] flex-col items-center justify-between glass-liquid px-3 py-4 overflow-visible">
@@ -46,8 +57,9 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
                 }}
               >
                 <button
-                  onClick={() => navigate(`/communities/${community.id}`)}
-                  className={`group relative z-[200] flex h-12 w-12 items-center justify-center rounded-2xl overflow-visible transition-all duration-200 ${
+                  type="button"
+                  onClick={() => goToCommunity(community.id)}
+                  className={`group relative z-[200] flex h-12 w-12 items-center justify-center rounded-2xl overflow-visible transition-all duration-ui ${
                     isActive
                       ? 'glass-liquid-strong text-sena-green ring-2 ring-sena-green/40 scale-[1.02]'
                       : 'glass-liquid text-[var(--color-text)] hover:bg-white/20 dark:hover:bg-white/10 hover:shadow-md'
@@ -57,7 +69,7 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
                     <img
                       src={resolveAssetUrl(community.iconUrl) ?? ''}
                       alt={community.name}
-                      className={`h-9 w-9 rounded-2xl object-cover shadow-sm transition-transform duration-200 ${
+                      className={`h-9 w-9 rounded-2xl object-cover shadow-sm transition-transform duration-ui ${
                         isActive ? 'scale-[1.01]' : 'group-hover:scale-[1.04]'
                       }`}
                     />
@@ -82,14 +94,14 @@ export const CommunitySidebar: FC<CommunitySidebarProps> = ({
         <button
           type="button"
           onClick={onCreateCommunity}
-          className="flex h-10 w-10 items-center justify-center rounded-2xl glass-liquid text-[var(--color-text)] transition-all duration-300 hover:scale-110 hover:bg-white/20 dark:hover:bg-white/10 hover:shadow-md"
+          className="flex h-10 w-10 items-center justify-center rounded-2xl glass-liquid text-[var(--color-text)] transition-all duration-ui hover:scale-110 hover:bg-white/20 dark:hover:bg-white/10 hover:shadow-md"
         >
           <Plus className="h-5 w-5" />
         </button>
         <button
           type="button"
           onClick={onExploreCommunities}
-          className="flex h-10 w-10 items-center justify-center rounded-2xl glass-liquid text-[var(--color-text)] transition-all duration-300 hover:scale-110 hover:bg-white/20 dark:hover:bg-white/10 hover:shadow-md"
+          className="flex h-10 w-10 items-center justify-center rounded-2xl glass-liquid text-[var(--color-text)] transition-all duration-ui hover:scale-110 hover:bg-white/20 dark:hover:bg-white/10 hover:shadow-md"
         >
           <Compass className="h-5 w-5" />
         </button>

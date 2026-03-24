@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 html {
   font-size: 14px;
@@ -50,18 +49,7 @@ html {
   -webkit-box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07), 0 6px 18px rgba(0, 0, 0, 0.085) !important;
 }
 
-/* Textarea del compositor: sin contorno verde, sombra negra al enfocar */
-.post-composer-shadow .composer-textarea-focus:focus {
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  outline: none !important;
-  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1) !important;
-  -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1) !important;
-}
-.dark .post-composer-shadow .composer-textarea-focus:focus {
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
-  -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
-}
+/* Estilo unificado textareas feed (publicar / comentar / compartir): ver final de este archivo */
 
 /* Botones de iconos del compositor: verde Sena, fondo blanco, sombra como nav */
 .composer-icon-btn {
@@ -73,24 +61,93 @@ html {
   -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* Boton flotante de mensajes: misma sombra que botones de navegacion */
+/* Boton flotante de mensajes: glass + sombra tipo nav */
 .floating-messages-btn {
-  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1) !important;
-  -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.62) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(14px) saturate(1.25);
+  -webkit-backdrop-filter: blur(14px) saturate(1.25);
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+  -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
 }
 .dark .floating-messages-btn {
-  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
-  -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
+  background: linear-gradient(135deg, rgba(42, 42, 42, 0.88) 0%, rgba(28, 28, 28, 0.75) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Menu flotante de mensajes: sombra visible */
+/* Panel flotante de mensajes (inicio): glassmorphism */
 .floating-messages-menu-shadow {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
-  -webkit-box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.32) 45%, rgba(255, 255, 255, 0.22) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(22px) saturate(1.45);
+  -webkit-backdrop-filter: blur(22px) saturate(1.45);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14), 0 4px 16px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  -webkit-box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14), 0 4px 16px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
 }
 .dark .floating-messages-menu-shadow {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
-  -webkit-box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
+  background: linear-gradient(150deg, rgba(32, 32, 36, 0.82) 0%, rgba(22, 22, 26, 0.68) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 4px 20px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  -webkit-box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 4px 20px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+/*
+ * Emoji Mart (em-emoji-picker): paleta y forma tipo WhatsApp.
+ * Variables públicas documentadas en emoji-mart (:host / [data-theme]).
+ * El reset global de box-shadow anula la sombra del host; se restaura aquí.
+ */
+/* Chats / portal: sin altura fija para que el área clicable no supere el panel visible */
+.emoji-picker-shell.emoji-picker-compact {
+  height: auto !important;
+}
+.emoji-picker-shell.emoji-picker-compact em-emoji-picker {
+  max-height: 100% !important;
+}
+
+.emoji-picker-shell em-emoji-picker {
+  width: min(340px, 92vw) !important;
+  max-width: 100%;
+  --border-radius: 18px;
+  --category-icon-size: 20px;
+  --font-size: 14px;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Verde acento WhatsApp (#25D366 / #00A884) */
+  --rgb-accent: 37, 211, 102;
+  --rgb-background: 245, 246, 246;
+  --rgb-input: 255, 255, 255;
+  --rgb-color: 60, 60, 60;
+  --color-border: rgba(0, 0, 0, 0.07);
+  --color-border-over: rgba(0, 0, 0, 0.12);
+  --shadow-color: 220deg 8% 8%;
+  --shadow: 0 12px 40px rgba(11, 20, 26, 0.18), 0 4px 12px rgba(11, 20, 26, 0.08);
+  box-shadow: 0 12px 40px rgba(11, 20, 26, 0.18), 0 4px 12px rgba(11, 20, 26, 0.08) !important;
+  -webkit-box-shadow: 0 12px 40px rgba(11, 20, 26, 0.18), 0 4px 12px rgba(11, 20, 26, 0.08) !important;
+}
+
+.dark .emoji-picker-shell em-emoji-picker {
+  --rgb-accent: 37, 211, 102;
+  /* Panel oscuro tipo WhatsApp Web (#202C33 aprox.) */
+  --rgb-background: 32, 44, 51;
+  --rgb-input: 42, 57, 66;
+  --rgb-color: 233, 237, 239;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-over: rgba(255, 255, 255, 0.18);
+  --shadow-color: 220deg 12% 4%;
+  --shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 6px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 6px 16px rgba(0, 0, 0, 0.35) !important;
+  -webkit-box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 6px 16px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Tarjetas Top projects y Avances: fondo blanco en light, mismo que publicaciones en dark */
@@ -150,7 +207,7 @@ body {
   min-height: 100vh;
   background-color: var(--color-background);
   background-image: none;
-  transition: background-color 0.3s ease;
+  transition: background-color 620ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 /* Contenido principal: will-change ayuda al compositing para backdrop-filter del nav */
@@ -190,7 +247,8 @@ body {
   z-index: 10;
   border: 1px solid transparent;
   background: rgba(255, 255, 255, 0.7);
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: background 620ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    box-shadow 620ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 .nav-btn:hover:not(.nav-btn-active) {
   background: rgba(0, 0, 0, 0.04) !important;
@@ -409,7 +467,7 @@ body {
 
   /* Botones de acción de publicaciones (Reaccionar, Comentar, Compartir, Guardar) - sin fondo */
   .post-action-btn {
-    @apply text-[var(--color-text)] transition-colors duration-200;
+    @apply text-[var(--color-text)] transition-colors duration-ui;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -432,25 +490,20 @@ body {
     --tw-ring-color: transparent !important;
   }
 
-  /* Diálogo de eliminar */
-  .delete-post-overlay-warning {
-    background: rgba(0, 0, 0, 0.18) !important;
-    backdrop-filter: blur(10px) grayscale(1) saturate(0.2) contrast(0.95) !important;
-    -webkit-backdrop-filter: blur(10px) grayscale(1) saturate(0.2) contrast(0.95) !important;
+  /* Velo estándar de diálogos: oscurecido + blur ligero (mismo aspecto que eliminar publicación; colores naturales detrás) */
+  .delete-post-overlay-warning,
+  .report-post-overlay-bw {
+    background: rgba(0, 0, 0, 0.45) !important;
+    backdrop-filter: blur(2px) !important;
+    -webkit-backdrop-filter: blur(2px) !important;
     position: fixed;
     inset: 0;
     isolation: isolate;
   }
 
-  .delete-post-overlay-warning::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(circle at center, rgba(0, 0, 0, 0) 42%, rgba(0, 0, 0, 0.46) 100%),
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0) 78%, rgba(0, 0, 0, 0.42));
-    z-index: 0;
+  .dark .delete-post-overlay-warning,
+  .dark .report-post-overlay-bw {
+    background: rgba(0, 0, 0, 0.55) !important;
   }
 
   .story-viewer-overlay-warning {
@@ -473,17 +526,18 @@ body {
     z-index: 0;
   }
 
+  /* Diálogo de eliminar: superficie plana (sin glass), borde luminoso + sombras rojizas */
   .glass-dialog-delete {
-    @apply backdrop-blur-[0px] saturate-[1.4];
-    background: 
-      linear-gradient(135deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.38) 100%),
-      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.12), transparent 70%);
-    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    background: rgb(255, 255, 255) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.88) !important;
     box-shadow:
-      0 20px 48px -12px rgba(69, 10, 10, 0.58),
-      0 10px 24px -8px rgba(69, 10, 10, 0.44),
-      inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
-      inset 0 -1px 1px 0 rgba(255, 255, 255, 0.12) !important;
+      0 0 0 1px rgba(239, 68, 68, 0.32),
+      0 24px 60px -12px rgba(239, 68, 68, 0.45),
+      0 12px 28px -8px rgba(69, 10, 10, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      inset 0 -1px 0 rgba(15, 23, 42, 0.06) !important;
     position: relative;
     isolation: isolate;
   }
@@ -492,21 +546,49 @@ body {
     display: none;
   }
 
-
   .dark .glass-dialog-delete {
-    @apply backdrop-blur-[0px] saturate-[1.5];
-    background: 
-      linear-gradient(135deg, rgba(45, 45, 45, 0.48) 0%, rgba(38, 38, 38, 0.42) 100%),
-      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), transparent 70%);
-    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    background: rgb(23, 23, 23) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
     box-shadow:
-      0 24px 56px -12px rgba(69, 10, 10, 0.76),
-      0 12px 28px -8px rgba(69, 10, 10, 0.6),
-      inset 0 1px 1px 0 rgba(255, 255, 255, 0.2),
-      inset 0 -1px 1px 0 rgba(255, 255, 255, 0.08) !important;
+      0 0 0 1px rgba(239, 68, 68, 0.35),
+      0 24px 60px -12px rgba(0, 0, 0, 0.55),
+      0 12px 28px -8px rgba(69, 10, 10, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.35) !important;
     position: relative;
   }
 
+  /* Misma superficie plana que glass-dialog-delete, sin acentos rojos (p. ej. post en modal de comentarios) */
+  .glass-dialog-neutral {
+    background: rgb(255, 255, 255) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.88) !important;
+    box-shadow:
+      0 0 0 1px rgba(15, 23, 42, 0.06),
+      0 24px 60px -12px rgba(15, 23, 42, 0.1),
+      0 12px 28px -8px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      inset 0 -1px 0 rgba(15, 23, 42, 0.06) !important;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .glass-dialog-neutral::before {
+    display: none;
+  }
+
+  .dark .glass-dialog-neutral {
+    background: rgb(23, 23, 23) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.22),
+      0 24px 60px -12px rgba(0, 0, 0, 0.55),
+      0 12px 28px -8px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.35) !important;
+    position: relative;
+  }
 
   /* Dropdown de notificaciones con más desenfoque y sin sombra verde */
   .glass-notification-dropdown {
@@ -788,6 +870,33 @@ body {
   .chats-layout .glass-liquid {
     box-shadow: 0 2px 8px 0 rgba(20, 20, 20, 0.06) !important;
   }
+  /* Búsqueda de chats: sombra verde suave al enfocar */
+  .chats-layout .chat-compose-focus-glass.glass-liquid:focus-within {
+    box-shadow: 0 3px 12px 0 rgba(57, 169, 0, 0.12) !important;
+  }
+  .dark .chats-layout .chat-compose-focus-glass.glass-liquid:focus-within {
+    box-shadow: 0 3px 14px 0 rgba(57, 169, 0, 0.16) !important;
+  }
+  /* Compositor de mensaje: sombra negra al enfocar (no verde) */
+  .chats-layout .chat-message-compose-glass.glass-liquid:focus-within {
+    box-shadow: 0 3px 12px 0 rgba(0, 0, 0, 0.12) !important;
+  }
+  .dark .chats-layout .chat-message-compose-glass.glass-liquid:focus-within {
+    box-shadow: 0 3px 14px 0 rgba(0, 0, 0, 0.45) !important;
+  }
+  /* Menú flotante mensajes (inicio): misma sombra glass / foco que compositor Chats */
+  [data-floating-messages-menu] .chat-message-compose-glass.glass-liquid {
+    box-shadow: 0 2px 8px 0 rgba(20, 20, 20, 0.06) !important;
+  }
+  .dark [data-floating-messages-menu] .chat-message-compose-glass.glass-liquid {
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.35) !important;
+  }
+  [data-floating-messages-menu] .chat-message-compose-glass.glass-liquid:focus-within {
+    box-shadow: 0 3px 12px 0 rgba(0, 0, 0, 0.12) !important;
+  }
+  .dark [data-floating-messages-menu] .chat-message-compose-glass.glass-liquid:focus-within {
+    box-shadow: 0 3px 14px 0 rgba(0, 0, 0, 0.45) !important;
+  }
   /* Recortar anillos/rings que generan línea verde horizontal */
   .chats-layout [class*="overflow-y-auto"] {
     overflow-x: hidden !important;
@@ -844,7 +953,7 @@ body {
 }
 
 .chat-message-enter {
-  animation: chat-message-in 260ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation: chat-message-in 620ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 @keyframes float-auth {
@@ -899,7 +1008,7 @@ body {
 }
 
 .toast-enter {
-  animation: toastSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: toastSlideIn 620ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
   will-change: transform;
 }
 
@@ -915,4 +1024,69 @@ body {
 [data-page="chats"] .focus-within\:shadow-\[\0_0_0_4px_rgba\(57\2c 169\2c 0\2c 0\.1\)\],
 [data-page="chats"] [class*="focus-within:shadow"] {
   box-shadow: none !important;
+}
+
+/*
+ * Textareas del feed (publicar, comentar, compartir): sin sombra hasta enfocar; al foco, misma sombra que .composer-icon-btn.
+ */
+textarea[data-feed-styled-textarea].composer-textarea-focus {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  outline: none !important;
+  transition:
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+.dark textarea[data-feed-styled-textarea].composer-textarea-focus {
+  background-color: rgba(38, 38, 38, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition:
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+textarea[data-feed-styled-textarea].composer-textarea-focus:focus,
+textarea[data-feed-styled-textarea].composer-textarea-focus:focus-visible {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  outline: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  box-shadow:
+    0 4px 14px -2px rgba(0, 0, 0, 0.15),
+    0 2px 8px -2px rgba(0, 0, 0, 0.1) !important;
+  -webkit-box-shadow:
+    0 4px 14px -2px rgba(0, 0, 0, 0.15),
+    0 2px 8px -2px rgba(0, 0, 0, 0.1) !important;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.12)) !important;
+  -webkit-filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.12)) !important;
+}
+
+.dark textarea[data-feed-styled-textarea].composer-textarea-focus:focus,
+.dark textarea[data-feed-styled-textarea].composer-textarea-focus:focus-visible {
+  background-color: rgba(48, 48, 48, 0.98) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    0 4px 14px -2px rgba(0, 0, 0, 0.4),
+    0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
+  -webkit-box-shadow:
+    0 4px 14px -2px rgba(0, 0, 0, 0.4),
+    0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45)) !important;
+  -webkit-filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45)) !important;
 }

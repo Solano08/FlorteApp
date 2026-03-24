@@ -4,12 +4,10 @@ import { motion } from 'framer-motion';
 import { PAGE_TRANSITION } from '../../utils/transitionConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../ui/Button';
-import { GlassDialog } from '../ui/GlassDialog';
 import { UserAvatar } from '../ui/UserAvatar';
 import { Home, Library, FolderKanban, LogOut, Shield, MessageCircle, Settings, User, Users, X } from 'lucide-react';
 import classNames from 'classnames';
 import { UserRole } from '../../types/auth';
-import { ThemeToggle } from '../ui/ThemeToggle';
 import { NotificationBell } from '../ui/NotificationBell';
 
 interface DashboardLayoutProps {
@@ -112,7 +110,7 @@ export const DashboardLayout = ({
       data-page={isChatsPage ? 'chats' : undefined}
     >
       <div className={classNames("flex flex-1 flex-col", contentClassName?.includes('h-full') ? 'h-screen' : 'min-h-screen')}>
-        <header className="nav-glass sticky top-0 z-40 w-full transition-[padding] duration-150">
+        <header className="nav-glass sticky top-0 z-40 w-full transition-[padding] duration-ui">
           <div className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 overflow-visible px-4 py-2.5 sm:px-6 lg:px-8">
             {/* Izquierda: logo Florte */}
             <NavLink
@@ -138,7 +136,7 @@ export const DashboardLayout = ({
                     key={`nav-${to}`}
                     to={to}
                     className={classNames(
-                      'nav-btn relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] transition-colors duration-200 sm:gap-2 sm:px-3 sm:py-2 sm:text-[11px] whitespace-nowrap',
+                      'nav-btn relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] transition-colors duration-ui sm:gap-2 sm:px-3 sm:py-2 sm:text-[11px] whitespace-nowrap',
                       isActive
                         ? 'nav-btn-active text-sena-green font-semibold dark:text-sena-green'
                         : 'text-neutral-600 font-medium hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'
@@ -170,15 +168,14 @@ export const DashboardLayout = ({
                 );
               })}
             </nav>
-            {/* Derecha: notificaciones, tema y perfil */}
+            {/* Derecha: notificaciones y perfil */}
             <div className="relative flex shrink-0 items-center justify-end gap-2 overflow-visible sm:gap-3 justify-self-end">
             <NotificationBell />
-            <ThemeToggle />
             <div className="relative hidden lg:block" ref={profileMenuRef}>
               <button
                 type="button"
                 onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 rounded-xl pl-1 pr-2 py-1.5 text-left transition-all duration-200 hover:bg-white/60 hover:shadow-sm dark:hover:bg-white/10"
+                className="flex items-center gap-2 rounded-xl pl-1 pr-2 py-1.5 text-left transition-all duration-ui hover:bg-white/60 hover:shadow-sm dark:hover:bg-white/10"
               >
                 {user && (
                   <UserAvatar
