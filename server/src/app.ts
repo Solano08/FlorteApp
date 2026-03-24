@@ -45,6 +45,11 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+/** Algunas sondas / balanceadores piden `/`; sin esto devuelve 404 y el health check puede fallar. */
+app.get('/', (_req, res) => {
+  res.status(200).type('text/plain').send('Florte API');
+});
+
 // 👉👉 SWAGGER UI (acceso: http://localhost:4000/api-docs)
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
