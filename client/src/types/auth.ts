@@ -19,6 +19,7 @@ export interface AuthUser {
   facebookUrl?: string | null;
   contactEmail?: string | null;
   xUrl?: string | null;
+  profileSkills?: string[] | null;
   role: UserRole;
   isActive: boolean;
 }

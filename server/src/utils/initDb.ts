@@ -24,10 +24,20 @@ export const initDb = async (): Promise<void> => {
         facebook_url VARCHAR(255) NULL,
         contact_email VARCHAR(255) NULL,
         x_url VARCHAR(255) NULL,
+        profile_skills JSON NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+        try {
+            await pool.execute(
+                'ALTER TABLE users ADD COLUMN profile_skills JSON NULL'
+            );
+        } catch (err: unknown) {
+            const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
+            if (msg !== 'ER_DUP_FIELDNAME') throw err;
+        }
 
         // User sessions (para refresh tokens)
         await pool.execute(`

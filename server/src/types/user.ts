@@ -15,6 +15,7 @@ export interface User {
   facebookUrl?: string | null;
   contactEmail?: string | null;
   xUrl?: string | null;
+  profileSkills?: string[] | null;
   role: UserRole;
   isActive: boolean;
   createdAt: Date;
@@ -43,6 +44,7 @@ export interface UpdateProfileInput {
   facebookUrl?: string | null;
   contactEmail?: string | null;
   xUrl?: string | null;
+  profileSkills?: string[] | null;
 }
 
 export interface PublicProfile {
@@ -59,6 +61,7 @@ export interface PublicProfile {
   facebookUrl?: string | null;
   contactEmail?: string | null;
   xUrl?: string | null;
+  profileSkills?: string[] | null;
   role: UserRole;
   isActive: boolean;
   createdAt: Date;

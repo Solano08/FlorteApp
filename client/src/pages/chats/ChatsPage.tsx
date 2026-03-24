@@ -650,35 +650,47 @@ export const ChatsPage = () => {
         }
       }
 
-      if (!matchedFriend && chat.name?.trim()) {
-        matchedFriend = friendsByNormalizedName.get(chat.name.trim().toLowerCase()) || null;
+      if (!matchedFriend && chat.name?.trim() && authUser) {
+        const normalized = chat.name.trim().toLowerCase();
+        const selfLabel = `${authUser.firstName} ${authUser.lastName}`.trim().toLowerCase();
+        // No enlazar por nombre guardado si coincide con el usuario actual: el título del chat
+        // se fijó desde quien creó la conversación y puede ser el nombre del destinatario.
+        if (normalized && normalized !== selfLabel) {
+          matchedFriend = friendsByNormalizedName.get(normalized) || null;
+        }
       }
 
       map[chat.id] = matchedFriend;
     });
 
     return map;
-  }, [allChatMessages.data, authUser?.id, chats, friendsById, friendsByNormalizedName]);
+  }, [allChatMessages.data, authUser, chats, friendsById, friendsByNormalizedName]);
 
   // Función helper para obtener el nombre del chat, incluyendo el nombre del usuario en chats directos
   const getChatDisplayName = useMemo(() => {
+    const selfLabel = authUser
+      ? `${authUser.firstName} ${authUser.lastName}`.trim().toLowerCase()
+      : '';
     return (chat: Chat) => {
-      if (chat.name?.trim() && chat.name.trim().length > 0) {
-        return chat.name.trim();
-      }
-
       if (chat.isGroup) {
-        return 'Grupo sin titulo';
+        return chat.name?.trim() || 'Grupo sin titulo';
       }
 
+      // Chat directo: `chat.name` en BD suele ser el nombre del otro según quien abrió el chat;
+      // para el interlocutor puede ser su propio nombre. Priorizar siempre al otro miembro resuelto.
       const otherUser = directChatFriendByChatId[chat.id];
       if (otherUser) {
         return `${otherUser.firstName} ${otherUser.lastName}`.trim() || otherUser.firstName || 'Usuario';
       }
 
+      const stored = chat.name?.trim() ?? '';
+      if (stored.length > 0 && (!selfLabel || stored.toLowerCase() !== selfLabel)) {
+        return stored;
+      }
+
       return 'Chat privado';
     };
-  }, [directChatFriendByChatId]);
+  }, [directChatFriendByChatId, authUser]);
 
   const getChatAvatarUrl = useMemo(() => {
     return (chat: Chat) => {

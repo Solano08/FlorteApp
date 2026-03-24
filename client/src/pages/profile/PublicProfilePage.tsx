@@ -176,6 +176,18 @@ export const PublicProfilePage = () => {
               {profile.bio && (
                 <p className="mt-4 text-sm text-[var(--color-text)] whitespace-pre-line">{profile.bio}</p>
               )}
+              {profile.profileSkills && profile.profileSkills.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {profile.profileSkills.map((skill, index) => (
+                    <span
+                      key={`pub-skill-${index}`}
+                      className="rounded-2xl bg-sena-green/10 px-3 py-1.5 text-xs font-semibold text-sena-green"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </Card>
 

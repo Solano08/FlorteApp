@@ -134,6 +134,8 @@ type ProfileValues = z.infer<typeof profileSchema>;
 
 const defaultSkills: string[] = ['UI/UX', 'React', 'Innovacion', 'Trabajo colaborativo', 'Aprendiz SENA'];
 
+const MAX_PROFILE_SKILLS = 8;
+
 
 
 const socialLinkConfigs: Array<{
@@ -238,6 +240,11 @@ export const ProfilePage = () => {
   const [inlineFirstName, setInlineFirstName] = useState('');
   const [inlineLastName, setInlineLastName] = useState('');
   const [inlineBio, setInlineBio] = useState('');
+  /** Índice de etiqueta en edición, 'append' para nueva, null si ninguna */
+  const [skillEditIndex, setSkillEditIndex] = useState<number | 'append' | null>(null);
+  const [skillEditValue, setSkillEditValue] = useState('');
+  const bioSavedByEnterRef = useRef(false);
+  const skipSkillBlurCommitRef = useRef(false);
 
   const [activeLinkEditors, setActiveLinkEditors] = useState<Record<string, boolean>>({});
 
@@ -308,6 +315,12 @@ export const ProfilePage = () => {
 
   const hasMoreProfilePosts = profilePosts.length > 3;
 
+  const displaySkillTags = useMemo((): string[] => {
+    if (!profile) return defaultSkills;
+    if (profile.profileSkills == null) return defaultSkills;
+    return profile.profileSkills;
+  }, [profile]);
+
 
 
   const handleOpenProfilePost = (post: ProfileFeedPost) => {
@@ -350,7 +363,7 @@ export const ProfilePage = () => {
         onClick={() => handleOpenSavedPost(post, options?.closeModal ?? false)}
         className="group w-full text-left"
       >
-        <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
+        <div className="profile-preview-card rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] transition hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
           <div className="flex items-center justify-between gap-3">
             <p className="font-semibold text-[var(--color-text)] line-clamp-1">{post.author.fullName}</p>
             <span className="text-[11px] text-[var(--color-muted)]">
@@ -445,6 +458,8 @@ export const ProfilePage = () => {
 
     if (!profile || !user) return;
 
+    const skillsJson = (v: string[] | null | undefined) => JSON.stringify(v ?? null);
+
     const needsSync =
 
       profile.avatarUrl !== user.avatarUrl ||
@@ -455,7 +470,9 @@ export const ProfilePage = () => {
 
       profile.lastName !== user.lastName ||
 
-      (profile.headline ?? '') !== (user.headline ?? '');
+      (profile.headline ?? '') !== (user.headline ?? '') ||
+
+      skillsJson(profile.profileSkills) !== skillsJson(user.profileSkills);
 
     if (!needsSync) return;
 
@@ -483,7 +500,9 @@ export const ProfilePage = () => {
 
       contactEmail: profile.contactEmail ?? prev.contactEmail,
 
-      xUrl: profile.xUrl ?? prev.xUrl
+      xUrl: profile.xUrl ?? prev.xUrl,
+
+      profileSkills: profile.profileSkills ?? prev.profileSkills
 
     }));
 
@@ -557,6 +576,8 @@ export const ProfilePage = () => {
 
         xUrl: updated.xUrl,
 
+        profileSkills: updated.profileSkills ?? null,
+
         role: updated.role,
 
         isActive: updated.isActive
@@ -586,6 +607,46 @@ export const ProfilePage = () => {
     }
 
   });
+
+  const persistProfileSkillsIfChanged = (next: string[]) => {
+    const baseline = profile?.profileSkills == null ? defaultSkills : profile.profileSkills;
+    if (JSON.stringify(next) !== JSON.stringify(baseline)) {
+      updateProfileMutation.mutate({ profileSkills: next });
+    }
+  };
+
+  const commitSkillDraft = (index: number | 'append', raw: string) => {
+    const trimmed = raw.trim();
+    let next: string[];
+    if (index === 'append') {
+      if (!trimmed) {
+        setSkillEditIndex(null);
+        setSkillEditValue('');
+        return;
+      }
+      if (displaySkillTags.length >= MAX_PROFILE_SKILLS) {
+        setSkillEditIndex(null);
+        setSkillEditValue('');
+        return;
+      }
+      next = [...displaySkillTags, trimmed];
+    } else if (!trimmed) {
+      next = displaySkillTags.filter((_, i) => i !== index);
+    } else {
+      next = displaySkillTags.map((s, i) => (i === index ? trimmed : s));
+    }
+    persistProfileSkillsIfChanged(next);
+    setSkillEditIndex(null);
+    setSkillEditValue('');
+  };
+
+  const saveBioFromDraft = () => {
+    const nextBio = inlineBio.trim() || null;
+    const prevBio = profile?.bio?.trim() ? profile.bio.trim() : null;
+    if (nextBio !== prevBio) {
+      updateProfileMutation.mutate({ bio: nextBio });
+    }
+  };
 
 
 
@@ -1518,17 +1579,22 @@ export const ProfilePage = () => {
                       </p>
                     </button>
                   ) : (
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div
+                      className="flex flex-wrap items-center gap-2"
+                      onBlur={(e) => {
+                        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                        const fn = inlineFirstName.trim();
+                        const ln = inlineLastName.trim();
+                        if (fn !== (profile?.firstName ?? '') || ln !== (profile?.lastName ?? '')) {
+                          updateProfileMutation.mutate({ firstName: fn, lastName: ln });
+                        }
+                        setEditingName(false);
+                      }}
+                    >
                       <input
                         type="text"
                         value={inlineFirstName}
                         onChange={(e) => setInlineFirstName(e.target.value)}
-                        onBlur={() => {
-                          if (inlineFirstName.trim() !== (profile?.firstName ?? '') || inlineLastName.trim() !== (profile?.lastName ?? '')) {
-                            updateProfileMutation.mutate({ firstName: inlineFirstName.trim(), lastName: inlineLastName.trim() });
-                          }
-                          setEditingName(false);
-                        }}
                         onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                         placeholder="Nombre"
                         className="rounded-2xl border border-white/30 bg-white/60 px-2 py-1 text-lg font-semibold text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
@@ -1538,12 +1604,6 @@ export const ProfilePage = () => {
                         type="text"
                         value={inlineLastName}
                         onChange={(e) => setInlineLastName(e.target.value)}
-                        onBlur={() => {
-                          if (inlineFirstName.trim() !== (profile?.firstName ?? '') || inlineLastName.trim() !== (profile?.lastName ?? '')) {
-                            updateProfileMutation.mutate({ firstName: inlineFirstName.trim(), lastName: inlineLastName.trim() });
-                          }
-                          setEditingName(false);
-                        }}
                         onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                         placeholder="Apellido"
                         className="rounded-2xl border border-white/30 bg-white/60 px-2 py-1 text-lg font-semibold text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
@@ -1564,42 +1624,148 @@ export const ProfilePage = () => {
                       </p>
                     </button>
                   ) : (
-                    <textarea
-                      value={inlineBio}
-                      onChange={(e) => setInlineBio(e.target.value)}
-                      onBlur={() => {
-                        if (inlineBio !== (profile?.bio ?? '')) {
-                          updateProfileMutation.mutate({ bio: inlineBio.trim() || null });
-                        }
-                        setEditingBio(false);
-                      }}
-                      placeholder="Agrega un titular atractivo para tu perfil."
-                      rows={2}
-                      className="w-full resize-none rounded-2xl border border-white/30 bg-white/60 px-2 py-1 text-sm text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
-                      autoFocus
-                    />
+                    <div className="w-full space-y-1">
+                      <textarea
+                        value={inlineBio}
+                        onChange={(e) => setInlineBio(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            bioSavedByEnterRef.current = true;
+                            saveBioFromDraft();
+                            setEditingBio(false);
+                          }
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            setInlineBio(profile?.bio ?? '');
+                            setEditingBio(false);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (bioSavedByEnterRef.current) {
+                            bioSavedByEnterRef.current = false;
+                            return;
+                          }
+                          saveBioFromDraft();
+                          setEditingBio(false);
+                        }}
+                        placeholder="Agrega un titular atractivo para tu perfil."
+                        rows={2}
+                        className="w-full resize-none rounded-2xl border border-white/30 bg-white/60 px-2 py-1 text-sm text-[var(--color-text)] outline-none focus:border-sena-green focus:ring-1 focus:ring-sena-green/30"
+                        autoFocus
+                      />
+                      <p className="text-[11px] text-[var(--color-muted)]">
+                        Enter para guardar · Mayús+Enter para nueva línea
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
 
-                <div className="flex flex-wrap gap-2 px-6 pb-6">
-
-                  {defaultSkills.map((skill) => (
-
-                    <span
-
-                      key={skill}
-
-                      className="rounded-2xl bg-sena-green/10 px-3 py-1.5 text-xs font-semibold text-sena-green"
-
-                    >
-
-                      {skill}
-
-                    </span>
-
-                  ))}
-
+                <div className="flex flex-col gap-2 px-6 pb-6">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {displaySkillTags.map((skill, index) =>
+                      skillEditIndex === index ? (
+                        <input
+                          key={`skill-edit-${index}`}
+                          type="text"
+                          value={skillEditValue}
+                          onChange={(e) => setSkillEditValue(e.target.value)}
+                          maxLength={48}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              e.preventDefault();
+                              skipSkillBlurCommitRef.current = true;
+                              setSkillEditIndex(null);
+                              setSkillEditValue('');
+                              return;
+                            }
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                          onBlur={() => {
+                            if (skipSkillBlurCommitRef.current) {
+                              skipSkillBlurCommitRef.current = false;
+                              return;
+                            }
+                            if (skillEditIndex !== index) return;
+                            commitSkillDraft(index, skillEditValue);
+                          }}
+                          className="min-w-[6.5rem] max-w-[12rem] rounded-2xl border border-sena-green/40 bg-white/80 px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] outline-none focus:ring-2 focus:ring-sena-green/30"
+                          placeholder="Etiqueta"
+                        />
+                      ) : (
+                        <button
+                          key={`skill-${index}`}
+                          type="button"
+                          onClick={() => {
+                            setSkillEditIndex(index);
+                            setSkillEditValue(skill);
+                          }}
+                          className="rounded-2xl bg-sena-green/10 px-3 py-1.5 text-left text-xs font-semibold text-sena-green outline-none transition hover:bg-sena-green/20 focus:ring-2 focus:ring-sena-green/30 focus:ring-offset-2"
+                        >
+                          {skill}
+                        </button>
+                      )
+                    )}
+                    {skillEditIndex === 'append' ? (
+                      <input
+                        key="skill-append-input"
+                        type="text"
+                        value={skillEditValue}
+                        onChange={(e) => setSkillEditValue(e.target.value)}
+                        maxLength={48}
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            skipSkillBlurCommitRef.current = true;
+                            setSkillEditIndex(null);
+                            setSkillEditValue('');
+                            return;
+                          }
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        onBlur={() => {
+                          if (skipSkillBlurCommitRef.current) {
+                            skipSkillBlurCommitRef.current = false;
+                            return;
+                          }
+                          if (skillEditIndex !== 'append') return;
+                          commitSkillDraft('append', skillEditValue);
+                        }}
+                        className="min-w-[6.5rem] max-w-[12rem] rounded-2xl border border-dashed border-sena-green/50 bg-white/80 px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] outline-none focus:ring-2 focus:ring-sena-green/30"
+                        placeholder="Nueva etiqueta"
+                      />
+                    ) : (
+                      skillEditIndex !== null &&
+                      displaySkillTags.length < MAX_PROFILE_SKILLS && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSkillEditIndex('append');
+                            setSkillEditValue('');
+                          }}
+                          className="inline-flex items-center gap-1 rounded-2xl border border-dashed border-sena-green/40 bg-sena-green/5 px-3 py-1.5 text-xs font-semibold text-sena-green transition hover:bg-sena-green/10 focus:outline-none focus:ring-2 focus:ring-sena-green/30 focus:ring-offset-2"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Añadir
+                        </button>
+                      )
+                    )}
+                  </div>
+                  {skillEditIndex !== null && (
+                    <p className="text-[11px] text-[var(--color-muted)]">
+                      Clic en una etiqueta para editarla · Enter o clic fuera para guardar (vacío borra la etiqueta).
+                      Máximo {MAX_PROFILE_SKILLS} etiquetas.
+                    </p>
+                  )}
                 </div>
 
               {profileSocialLinks.length > 0 && (
@@ -1682,7 +1848,7 @@ export const ProfilePage = () => {
 
                     >
 
-                      <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
+                      <div className="profile-preview-card rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] transition hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
 
                         <div className="flex items-center justify-between gap-3">
 
@@ -1963,7 +2129,7 @@ export const ProfilePage = () => {
 
               >
 
-                <div className="rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_16px_30px_rgba(18,55,29,0.16)] transition hover:border-sena-green/60 hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
+                <div className="profile-preview-card rounded-2xl border border-white/25 bg-white/35 px-4 py-3 text-sm text-[var(--color-text)] transition hover:bg-white/40 dark:border-white/15 dark:bg-white/10">
 
                   <div className="flex items-center justify-between gap-3">
 
@@ -2019,7 +2185,7 @@ export const ProfilePage = () => {
 
           <div className="space-y-5">
             {selectedProfilePost.source === 'shared' && (
-              <div className="rounded-2xl border border-white/20 bg-white/25 p-3 shadow-[0_16px_30px_rgba(18,55,29,0.18)] backdrop-blur">
+              <div className="post-card-shadow rounded-2xl border border-white/20 bg-white/25 p-3 backdrop-blur">
                 <div className="flex items-start gap-3">
                   <UserAvatar
                     fullName={profile ? `${profile.firstName} ${profile.lastName}` : user ? `${user.firstName} ${user.lastName}` : 'Tu perfil'}

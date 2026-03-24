@@ -13,5 +13,9 @@ export const updateProfileSchema = z.object({
   facebookUrl: optionalUrl,
   contactEmail: optionalEmail,
   xUrl: optionalUrl,
-  coverImageUrl: optionalUrl
+  coverImageUrl: optionalUrl,
+  profileSkills: z
+    .array(z.string().trim().min(1).max(48))
+    .max(8)
+    .optional()
 });

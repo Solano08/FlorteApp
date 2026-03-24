@@ -16,6 +16,7 @@ const toPublicProfile = (user: User): PublicProfile => ({
   facebookUrl: user.facebookUrl ?? null,
   contactEmail: user.contactEmail ?? null,
   xUrl: user.xUrl ?? null,
+  profileSkills: user.profileSkills ?? null,
   role: user.role,
   isActive: user.isActive,
   createdAt: user.createdAt,

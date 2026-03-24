@@ -469,6 +469,24 @@ body {
     -webkit-box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07), 0 6px 18px rgba(0, 0, 0, 0.085) !important;
   }
 
+  /* Perfil: filas clicables de publicaciones y guardados — sombra negra (misma familia que composer-icon-btn al hover) */
+  .profile-preview-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), 0 4px 14px rgba(0, 0, 0, 0.035) !important;
+    -webkit-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), 0 4px 14px rgba(0, 0, 0, 0.035) !important;
+  }
+  .dark .profile-preview-card {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07), 0 6px 18px rgba(0, 0, 0, 0.085) !important;
+    -webkit-box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07), 0 6px 18px rgba(0, 0, 0, 0.085) !important;
+  }
+  .group:hover .profile-preview-card {
+    box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1) !important;
+    -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.1) !important;
+  }
+  .dark .group:hover .profile-preview-card {
+    box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
+    -webkit-box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
+  }
+
   /* Botones de acción de publicaciones (Reaccionar, Comentar, Compartir, Guardar) - sin fondo */
   .post-action-btn {
     @apply text-[var(--color-text)] transition-colors duration-ui;

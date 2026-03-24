@@ -17,4 +17,5 @@ export interface UpdateProfilePayload {
   facebookUrl?: string | null;
   contactEmail?: string | null;
   xUrl?: string | null;
+  profileSkills?: string[];
 }

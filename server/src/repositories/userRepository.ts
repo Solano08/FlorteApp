@@ -11,6 +11,23 @@ import {
   UserRole
 } from '../types/user';
 
+const parseProfileSkills = (raw: unknown): string[] | null => {
+  if (raw == null) return null;
+  if (Array.isArray(raw)) {
+    return raw.map((s) => String(s).trim()).filter((s) => s.length > 0);
+  }
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return null;
+      return parsed.map((s) => String(s).trim()).filter((s) => s.length > 0);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
 const mapUser = (row: RowDataPacket): User => ({
   id: row.id,
   firstName: row.first_name,
@@ -26,6 +43,7 @@ const mapUser = (row: RowDataPacket): User => ({
   facebookUrl: row.facebook_url,
   contactEmail: row.contact_email,
   xUrl: row.x_url,
+  profileSkills: parseProfileSkills(row.profile_skills),
   role: row.role as UserRole,
   isActive: row.is_active === 1,
   createdAt: row.created_at,
@@ -125,6 +143,10 @@ export const userRepository = {
     if (input.xUrl !== undefined) {
       fields.push('x_url = :xUrl');
       params.xUrl = input.xUrl;
+    }
+    if (input.profileSkills !== undefined) {
+      fields.push('profile_skills = :profileSkills');
+      params.profileSkills = JSON.stringify(input.profileSkills ?? []);
     }
 
     if (fields.length === 0) {
