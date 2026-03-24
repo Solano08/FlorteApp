@@ -10,10 +10,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { UserAvatar } from './UserAvatar';
 import type { Chat, Message } from '../../types/chat';
 import type { Profile } from '../../types/profile';
-import { UI_MENU_TRANSITION } from '../../utils/transitionConfig';
+import { UI_DIALOG_CONTENT_TRANSITION, UI_MENU_TRANSITION } from '../../utils/transitionConfig';
 
-/** Solo opacidad: evita saltos y recortes al animar paneles con scroll (sin translateX). */
-const floatingMsgsPanelTransition = UI_MENU_TRANSITION.opacity;
+const floatingMsgsPanelTransition = UI_DIALOG_CONTENT_TRANSITION;
 
 const getChatDisplayName = (
   chat: Chat,
@@ -233,17 +232,15 @@ export const FloatingMessagesButton = () => {
       <motion.div
         data-floating-messages-menu
         key="messages-menu"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 8 }}
-        transition={{
-          opacity: UI_MENU_TRANSITION.opacity,
-          y: UI_MENU_TRANSITION.y
-        }}
-        className="floating-messages-menu-shadow fixed z-[9999] flex h-[min(60vh,400px)] w-[320px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-2xl"
+        initial={{ y: 10 }}
+        animate={{ y: 0 }}
+        exit={{ y: 10 }}
+        transition={UI_MENU_TRANSITION.y}
+        className="fixed z-[9999] flex h-[min(60vh,400px)] w-[320px] max-w-[calc(100vw-32px)] flex-col"
         style={menuStyle}
       >
-        <div className="relative min-h-0 flex-1">
+        <div className="floating-messages-menu-shadow flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl">
+          <div className="relative min-h-0 flex-1">
           <AnimatePresence mode="wait" initial={false}>
             {!selectedChat ? (
               <motion.div
@@ -488,6 +485,7 @@ export const FloatingMessagesButton = () => {
               </motion.div>
             )}
           </AnimatePresence>
+          </div>
         </div>
       </motion.div>
     </AnimatePresence>
