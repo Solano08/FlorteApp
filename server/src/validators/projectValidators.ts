@@ -8,3 +8,7 @@ export const createProjectSchema = z.object({
 });
 
 export const updateProjectSchema = createProjectSchema.partial();
+
+export const updateWorkspaceNotesSchema = z.object({
+  notes: z.string().max(50_000).nullable()
+});

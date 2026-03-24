@@ -154,7 +154,7 @@ html {
   -webkit-box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 6px 16px rgba(0, 0, 0, 0.35) !important;
 }
 
-/* Tarjetas Top projects y Avances: fondo blanco en light, mismo que publicaciones en dark */
+/* Top projects: con sombra. Avances: mismo fondo sin sombra */
 .top-highlights-card {
   background: #ffffff !important;
   border: 1px solid transparent !important;
@@ -170,6 +170,51 @@ html {
 .dark .top-highlights-card:hover {
   background: linear-gradient(120deg, rgba(45, 45, 45, 0.5) 0%, rgba(30, 30, 30, 0.3) 100%) !important;
 }
+.avances-highlights-card {
+  background: #ffffff !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+}
+.dark .avances-highlights-card {
+  background: linear-gradient(120deg, rgba(40, 40, 40, 0.4) 0%, rgba(25, 25, 25, 0.2) 100%) !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+}
+.dark .avances-highlights-card:hover {
+  background: linear-gradient(120deg, rgba(45, 45, 45, 0.5) 0%, rgba(30, 30, 30, 0.3) 100%) !important;
+}
+
+/* Laboratorio (Proyectos): leve movimiento vertical; la sombra acompaña la carta */
+@keyframes laboratorio-metric-soft-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -1.5px, 0);
+  }
+}
+
+.laboratorio-metric-soft-drift {
+  animation: laboratorio-metric-soft-drift 5.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+.laboratorio-metric-soft-drift:hover,
+.laboratorio-metric-soft-drift:focus-within {
+  animation: none;
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .laboratorio-metric-soft-drift {
+    animation: none !important;
+    will-change: auto !important;
+  }
+}
+
 /* Boton Publicar activo: degradado Sena animado */
 .composer-publish-btn-active {
   background: linear-gradient(135deg, rgba(57, 169, 0, 0.8) 0%, rgba(5, 150, 105, 0.7) 100%) !important;
@@ -1111,4 +1156,87 @@ textarea[data-feed-styled-textarea].composer-textarea-focus:focus-visible {
     0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
   filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45)) !important;
   -webkit-filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45)) !important;
+}
+
+/* Tiptap — notas del proyecto */
+.prose-project-notes p,
+.prose-project-notes-readonly p {
+  margin: 0.35em 0;
+}
+.prose-project-notes p:first-child,
+.prose-project-notes-readonly p:first-child {
+  margin-top: 0;
+}
+.prose-project-notes ul,
+.prose-project-notes ol,
+.prose-project-notes-readonly ul,
+.prose-project-notes-readonly ol {
+  margin: 0.35em 0;
+  padding-left: 1.25rem;
+}
+.prose-project-notes a,
+.prose-project-notes-readonly a {
+  color: var(--color-accent, #39a900);
+}
+.prose-project-notes h1,
+.prose-project-notes-readonly h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0.5em 0 0.25em;
+}
+.prose-project-notes h2,
+.prose-project-notes-readonly h2 {
+  font-size: 1.15rem;
+  font-weight: 650;
+  margin: 0.45em 0 0.2em;
+}
+.prose-project-notes h3,
+.prose-project-notes-readonly h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0.4em 0 0.15em;
+}
+.prose-project-notes hr,
+.prose-project-notes-readonly hr {
+  margin: 0.75em 0;
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+.dark .prose-project-notes hr,
+.dark .prose-project-notes-readonly hr {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+.prose-project-notes code,
+.prose-project-notes-readonly code {
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.06);
+}
+.dark .prose-project-notes code,
+.dark .prose-project-notes-readonly code {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.prose-project-notes .ProseMirror-selectednode.project-note-image-node {
+  outline: 2px solid var(--color-accent, #39a900);
+  outline-offset: 2px;
+  border-radius: 1rem;
+}
+
+.project-note-img-menu {
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.14),
+    0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  -webkit-box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.14),
+    0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+.dark .project-note-img-menu {
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.45),
+    0 4px 14px rgba(0, 0, 0, 0.35) !important;
+  -webkit-box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.45),
+    0 4px 14px rgba(0, 0, 0, 0.35) !important;
 }

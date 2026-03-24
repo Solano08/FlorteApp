@@ -156,7 +156,11 @@ export const ChannelChat: FC<ChannelChatProps> = ({
   const navigate = useNavigate();
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const prevChannelIdRef = useRef<string | undefined>(undefined);
+  const prevIsLoadingMessagesRef = useRef(false);
+  const prevLastMessageIdRef = useRef<string | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [openMessageMenuId, setOpenMessageMenuId] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -248,25 +252,50 @@ export const ChannelChat: FC<ChannelChatProps> = ({
     return palette[sum % palette.length];
   };
 
-  const previousChannelNameRef = useRef<string>('');
+  const scrollChatToBottom = (behavior: ScrollBehavior = 'auto') => {
+    const run = () => {
+      const sc = scrollContainerRef.current;
+      if (sc) {
+        sc.scrollTo({ top: sc.scrollHeight, behavior });
+        return;
+      }
+      endRef.current?.scrollIntoView({ behavior, block: 'end' });
+    };
+    requestAnimationFrame(() => requestAnimationFrame(run));
+  };
+
   useEffect(() => {
-    const channelChanged = previousChannelNameRef.current !== channelName;
-    previousChannelNameRef.current = channelName;
-    
-    // Siempre hacer scroll al final cuando:
-    // 1. Cambia el canal (entrar a un nuevo canal)
-    // 2. Se cargan mensajes por primera vez
-    // 3. Hay nuevos mensajes
-    if (channelChanged || (!isLoadingMessages && messages.length > 0)) {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (endRef.current) {
-            endRef.current.scrollIntoView({ behavior: channelChanged ? 'auto' : 'smooth' });
-          }
-        });
-      });
+    const prevId = prevChannelIdRef.current;
+    prevChannelIdRef.current = channelId;
+    const channelChanged = prevId !== channelId;
+
+    const wasLoading = prevIsLoadingMessagesRef.current;
+    prevIsLoadingMessagesRef.current = !!isLoadingMessages;
+    const loadJustFinished = wasLoading && !isLoadingMessages;
+
+    if (channelChanged) {
+      prevLastMessageIdRef.current = null;
+      scrollChatToBottom('auto');
+      return;
     }
-  }, [messages, channelName, isLoadingMessages]);
+    if (loadJustFinished) {
+      scrollChatToBottom('auto');
+    }
+  }, [channelId, isLoadingMessages]);
+
+  useEffect(() => {
+    if (isLoadingMessages) return;
+    if (messages.length === 0) {
+      prevLastMessageIdRef.current = null;
+      return;
+    }
+    const lastId = messages[messages.length - 1].id;
+    const prevLast = prevLastMessageIdRef.current;
+    if (prevLast !== null && lastId !== prevLast) {
+      scrollChatToBottom('smooth');
+    }
+    prevLastMessageIdRef.current = lastId;
+  }, [channelId, isLoadingMessages, messages]);
 
   useEffect(() => {
     if (!infoOpen && !membersOpen && !pinnedMenuOpen) return;
@@ -492,7 +521,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
       {/* Área de mensajes + input inferior */}
       <div className="flex flex-1 min-h-0 flex-col">
         {/* Mensajes */}
-        <div className="flex-1 min-h-0 px-5 py-4 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-1 min-h-0 px-5 py-4 overflow-y-auto">
           <div className="flex h-full flex-col space-y-3">
           {isLoadingMessages ? (
             <div className="flex items-center justify-center py-8">

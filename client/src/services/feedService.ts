@@ -164,6 +164,13 @@ export const feedService = {
     return data.posts.map(normalizeProfilePost);
   },
 
+  async listProfilePostsForUser(userId: string, limit?: number): Promise<ProfileFeedPost[]> {
+    const { data } = await apiClient.get<ProfilePostsResponse>(`/profile/${userId}/posts`, {
+      params: { limit }
+    });
+    return data.posts.map(normalizeProfilePost);
+  },
+
   async react(postId: string, reactionType: ReactionType): Promise<PostMetrics> {
     const { data } = await apiClient.post<ReactionResponse>(`/feed/${postId}/reactions`, { reactionType });
     return data.metrics;

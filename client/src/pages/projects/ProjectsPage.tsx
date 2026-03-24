@@ -1,9 +1,18 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { UI_MENU_TRANSITION, UI_MOTION_DURATION_S, UI_MOTION_EASE } from '../../utils/transitionConfig';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { isAxiosError } from 'axios';
+import {
+  ProjectWorkspaceNotesEditor,
+  ProjectWorkspaceNotesReadonly,
+  isEmptyWorkspaceNotesHtml,
+  notesHtmlEquivalentForSave
+} from '../../components/projects/ProjectWorkspaceNotesEditor';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { projectService } from '../../services/projectService';
 import { Project, ProjectStatus } from '../../types/project';
@@ -25,11 +34,15 @@ import {
   ArrowUpRight,
   Filter,
   Plus,
-  X,
   MoreHorizontal,
   Edit,
   Trash2,
-  ImagePlus
+  ImagePlus,
+  FileText,
+  Share2,
+  ArrowLeft,
+  CalendarDays,
+  Users
 } from 'lucide-react';
 
 const TITLE_MAX_LENGTH = 60;
@@ -44,6 +57,8 @@ const projectSchema = z.object({
 
 type ProjectValues = z.infer<typeof projectSchema>;
 
+type ProjectPanelQueryData = Awaited<ReturnType<typeof projectService.getProjectPanel>>;
+
 const statusLabels: Record<'draft' | 'in_progress' | 'completed', string> = {
   draft: 'Planificacion',
   in_progress: 'En progreso',
@@ -51,6 +66,12 @@ const statusLabels: Record<'draft' | 'in_progress' | 'completed', string> = {
 };
 
 const statusOrder: Array<'draft' | 'in_progress' | 'completed'> = ['draft', 'in_progress', 'completed'];
+
+const memberRoleLabel = (role: string): string => {
+  if (role === 'lead') return 'Líder';
+  if (role === 'coach') return 'Coach';
+  return 'Miembro';
+};
 
 // Categorías de proyectos
 const projectCategories = [
@@ -91,6 +112,47 @@ const statusDisplay: Record<
   }
 };
 
+/** Laboratorio: cartas blancas; sombras de color (completado > en progreso > planificación) */
+const laboratorioCardSurface =
+  'bg-white dark:bg-zinc-50 border border-neutral-200/90 dark:border-neutral-300/80';
+
+const laboratorioStatusShadows: Record<
+  'draft' | 'in_progress' | 'completed',
+  { idle: string; hover: string; active: string }
+> = {
+  draft: {
+    idle:
+      '!shadow-[0_6px_22px_-2px_rgba(245,158,11,0.11),0_2px_10px_-2px_rgba(245,158,11,0.06)] dark:!shadow-[0_8px_26px_-2px_rgba(245,158,11,0.15),0_2px_12px_-2px_rgba(245,158,11,0.09)]',
+    hover:
+      'hover:!shadow-[0_10px_32px_-2px_rgba(245,158,11,0.18),0_4px_18px_-2px_rgba(245,158,11,0.11)] focus-visible:!shadow-[0_10px_32px_-2px_rgba(245,158,11,0.18),0_4px_18px_-2px_rgba(245,158,11,0.11)] dark:hover:!shadow-[0_12px_36px_-2px_rgba(245,158,11,0.22),0_4px_20px_-2px_rgba(245,158,11,0.14)] dark:focus-visible:!shadow-[0_12px_36px_-2px_rgba(245,158,11,0.22),0_4px_20px_-2px_rgba(245,158,11,0.14)]',
+    active:
+      '!shadow-[0_10px_32px_-2px_rgba(245,158,11,0.21),0_4px_20px_-2px_rgba(245,158,11,0.13)] dark:!shadow-[0_12px_36px_-2px_rgba(245,158,11,0.24),0_4px_22px_-2px_rgba(245,158,11,0.15)]'
+  },
+  in_progress: {
+    idle:
+      '!shadow-[0_6px_22px_-2px_rgba(57,169,0,0.19),0_2px_10px_-2px_rgba(57,169,0,0.11)] dark:!shadow-[0_8px_26px_-2px_rgba(57,169,0,0.26),0_2px_12px_-2px_rgba(57,169,0,0.16)]',
+    hover:
+      'hover:!shadow-[0_10px_32px_-2px_rgba(57,169,0,0.3),0_4px_18px_-2px_rgba(57,169,0,0.19)] focus-visible:!shadow-[0_10px_32px_-2px_rgba(57,169,0,0.3),0_4px_18px_-2px_rgba(57,169,0,0.19)] dark:hover:!shadow-[0_12px_36px_-2px_rgba(57,169,0,0.38),0_4px_20px_-2px_rgba(57,169,0,0.24)] dark:focus-visible:!shadow-[0_12px_36px_-2px_rgba(57,169,0,0.38),0_4px_20px_-2px_rgba(57,169,0,0.24)]',
+    active:
+      '!shadow-[0_10px_32px_-2px_rgba(57,169,0,0.36),0_4px_20px_-2px_rgba(57,169,0,0.23)] dark:!shadow-[0_12px_36px_-2px_rgba(57,169,0,0.41),0_4px_22px_-2px_rgba(57,169,0,0.27)]'
+  },
+  completed: {
+    idle:
+      '!shadow-[0_6px_22px_-2px_rgba(16,185,129,0.28),0_2px_10px_-2px_rgba(16,185,129,0.16)] dark:!shadow-[0_8px_26px_-2px_rgba(52,211,153,0.38),0_2px_12px_-2px_rgba(52,211,153,0.24)]',
+    hover:
+      'hover:!shadow-[0_10px_32px_-2px_rgba(16,185,129,0.44),0_4px_18px_-2px_rgba(16,185,129,0.28)] focus-visible:!shadow-[0_10px_32px_-2px_rgba(16,185,129,0.44),0_4px_18px_-2px_rgba(16,185,129,0.28)] dark:hover:!shadow-[0_12px_36px_-2px_rgba(52,211,153,0.54),0_4px_20px_-2px_rgba(52,211,153,0.34)] dark:focus-visible:!shadow-[0_12px_36px_-2px_rgba(52,211,153,0.54),0_4px_20px_-2px_rgba(52,211,153,0.34)]',
+    active:
+      '!shadow-[0_10px_32px_-2px_rgba(16,185,129,0.52),0_4px_20px_-2px_rgba(16,185,129,0.33)] dark:!shadow-[0_12px_36px_-2px_rgba(52,211,153,0.58),0_4px_22px_-2px_rgba(52,211,153,0.4)]'
+  }
+};
+
+/** Desfase del movimiento suave del Laboratorio para que las tres cartas no vayan sincronizadas */
+const laboratorioMotionDelay: Record<'draft' | 'in_progress' | 'completed', string> = {
+  draft: '0s',
+  in_progress: '0.9s',
+  completed: '1.8s'
+};
+
 /** Panel lateral: misma sombra que los Card del centro (`Card` ya aplica glass-liquid) */
 const sidebarPanelClass =
   'shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]';
@@ -101,6 +163,11 @@ const sidebarRowClass =
 
 const projectCardShadow =
   'shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]';
+
+const projectViewTransition = {
+  duration: UI_MOTION_DURATION_S,
+  ease: UI_MOTION_EASE
+} as const;
 
 type InlineDraftState = {
   title: string;
@@ -113,6 +180,7 @@ type InlineDraftState = {
 export const ProjectsPage = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'in_progress' | 'completed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,12 +193,68 @@ export const ProjectsPage = () => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [editCoverPreviewUrl, setEditCoverPreviewUrl] = useState<string | null>(null);
+  const editCoverInputRef = useRef<HTMLInputElement>(null);
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [viewingProjectId, setViewingProjectId] = useState<string | null>(null);
+  const [notesDraft, setNotesDraft] = useState('');
+  const [savedWorkspaceNotesBaseline, setSavedWorkspaceNotesBaseline] = useState('');
+  const [workspaceNotesEditorSynced, setWorkspaceNotesEditorSynced] = useState(false);
+
+  const setProjectView = useCallback(
+    (id: string | null) => {
+      setViewingProjectId(id);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (id) next.set('v', id);
+          else next.delete('v');
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  useEffect(() => {
+    const raw = searchParams.get('v');
+    const id = raw?.trim() || null;
+    setViewingProjectId((prev) => (prev === id ? prev : id));
+  }, [searchParams]);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: projectService.listProjects
   });
+
+  const {
+    data: projectPanel,
+    isLoading: isPanelLoading,
+    isError: isPanelError,
+    error: panelQueryError
+  } = useQuery({
+    queryKey: ['projects', 'panel', viewingProjectId],
+    queryFn: () => projectService.getProjectPanel(viewingProjectId!),
+    enabled: Boolean(viewingProjectId && user?.id)
+  });
+
+  useEffect(() => {
+    setNotesDraft('');
+    setWorkspaceNotesEditorSynced(false);
+    setSavedWorkspaceNotesBaseline('');
+  }, [viewingProjectId]);
+
+  useEffect(() => {
+    if (!viewingProjectId || !projectPanel || projectPanel.project.id !== viewingProjectId) return;
+    setSavedWorkspaceNotesBaseline(projectPanel.project.workspaceNotes ?? '');
+  }, [viewingProjectId, projectPanel?.project.id]);
+
+  const handleWorkspaceNotesHtml = useCallback((html: string) => {
+    setNotesDraft(html);
+    setWorkspaceNotesEditorSynced(true);
+  }, []);
 
   const createProjectMutation = useMutation({
     mutationFn: projectService.createProject,
@@ -143,16 +267,96 @@ export const ProjectsPage = () => {
   const updateProjectMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'draft' | 'in_progress' | 'completed' }) =>
       projectService.updateProject(id, { status }),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['projects', 'me'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['projects', 'panel', vars.id] }).catch(() => {});
     }
   });
 
-  const editProjectMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { title?: string; description?: string; repositoryUrl?: string; status?: 'draft' | 'in_progress' | 'completed' } }) =>
-      projectService.updateProject(id, data),
-    onSuccess: () => {
+  const saveWorkspaceNotesMutation = useMutation({
+    mutationFn: ({ projectId, notes }: { projectId: string; notes: string | null }) =>
+      projectService.updateWorkspaceNotes(projectId, notes),
+    onSuccess: (project) => {
+      setSavedWorkspaceNotesBaseline(project.workspaceNotes ?? '');
       queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
+      queryClient.setQueryData<ProjectPanelQueryData>(['projects', 'panel', project.id], (old) => {
+        if (!old) return old;
+        return { ...old, project: { ...old.project, workspaceNotes: project.workspaceNotes } };
+      });
+    }
+  });
+
+  const uploadAttachmentMutation = useMutation({
+    mutationFn: ({ projectId, file }: { projectId: string; file: File }) =>
+      projectService.uploadProjectAttachment(projectId, file),
+    onSuccess: (attachment, vars) => {
+      queryClient.setQueryData<ProjectPanelQueryData>(['projects', 'panel', vars.projectId], (old) => {
+        if (!old) return old;
+        if (old.attachments.some((a) => a.id === attachment.id)) return old;
+        return { ...old, attachments: [...old.attachments, attachment] };
+      });
+    }
+  });
+
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: ({ projectId, attachmentId }: { projectId: string; attachmentId: string }) =>
+      projectService.deleteProjectAttachment(projectId, attachmentId),
+    onSuccess: (_void, vars) => {
+      queryClient.setQueryData<ProjectPanelQueryData>(['projects', 'panel', vars.projectId], (old) => {
+        if (!old) return old;
+        return { ...old, attachments: old.attachments.filter((a) => a.id !== vars.attachmentId) };
+      });
+    }
+  });
+
+  const deleteImageAttachmentForNotes = useCallback(
+    (attachmentId: string) => {
+      if (!viewingProjectId) return Promise.reject(new Error('Sin proyecto'));
+      return deleteAttachmentMutation.mutateAsync({ projectId: viewingProjectId, attachmentId });
+    },
+    [viewingProjectId, deleteAttachmentMutation]
+  );
+
+  const uploadProjectImageForNotes = useCallback(
+    async (file: File) => {
+      if (!viewingProjectId) throw new Error('Sin proyecto');
+      const att = await uploadAttachmentMutation.mutateAsync({
+        projectId: viewingProjectId,
+        file
+      });
+      const src = resolveAssetUrl(att.fileUrl) ?? att.fileUrl;
+      return { src, attachmentId: att.id };
+    },
+    [viewingProjectId, uploadAttachmentMutation]
+  );
+
+  const editProjectMutation = useMutation({
+    mutationFn: async ({
+      id,
+      data,
+      coverFile
+    }: {
+      id: string;
+      data: { title?: string; description?: string; repositoryUrl?: string; status?: 'draft' | 'in_progress' | 'completed' };
+      coverFile: File | null;
+    }) => {
+      const updated = await projectService.updateProject(id, data);
+      if (coverFile) {
+        await projectService.uploadProjectCover(id, coverFile);
+      }
+      return updated;
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['projects', 'me'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['projects', 'panel', vars.id] }).catch(() => {});
+      setEditCoverPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+      setEditCoverFile(null);
+      if (editCoverInputRef.current) editCoverInputRef.current.value = '';
       setProjectToEdit(null);
       reset();
     }
@@ -160,9 +364,20 @@ export const ProjectsPage = () => {
 
   const deleteProjectMutation = useMutation({
     mutationFn: (id: string) => projectService.deleteProject(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['projects', 'me'] }).catch(() => {});
       setProjectToDelete(null);
+      setViewingProjectId((v) => (v === deletedId ? null : v));
+      setSearchParams(
+        (prev) => {
+          if (prev.get('v') !== deletedId) return prev;
+          const next = new URLSearchParams(prev);
+          next.delete('v');
+          return next;
+        },
+        { replace: true }
+      );
     }
   });
 
@@ -209,6 +424,16 @@ export const ProjectsPage = () => {
       setValue('status', projectToEdit.status);
     }
   }, [projectToEdit, setValue]);
+
+  useEffect(() => {
+    if (!projectToEdit) return;
+    setEditCoverFile(null);
+    setEditCoverPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    if (editCoverInputRef.current) editCoverInputRef.current.value = '';
+  }, [projectToEdit?.id]);
 
   // Función para obtener la categoría de un proyecto (simulado basado en palabras clave)
   const getProjectCategory = (project: Project): ProjectCategory => {
@@ -286,6 +511,22 @@ export const ProjectsPage = () => {
     return projects.slice(0, 3);
   }, [projects]);
 
+  const activeProject = useMemo(
+    () => (viewingProjectId ? projects.find((p) => p.id === viewingProjectId) ?? null : null),
+    [projects, viewingProjectId]
+  );
+
+  const panelForbidden =
+    isPanelError && isAxiosError(panelQueryError) && panelQueryError.response?.status === 403;
+
+  const sortedPanelMembers = useMemo(() => {
+    const list = projectPanel?.members ?? [];
+    return [...list].sort((a, b) => {
+      if (a.isOwner === b.isOwner) return 0;
+      return a.isOwner ? -1 : 1;
+    });
+  }, [projectPanel?.members]);
+
   const handleMenuToggle = (projectId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setOpenMenuId((prev) => (prev === projectId ? null : projectId));
@@ -301,6 +542,34 @@ export const ProjectsPage = () => {
     e.stopPropagation();
     setProjectToDelete(project);
     setOpenMenuId(null);
+  };
+
+  const handleCopyProjectLink = (project: Project, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/projects?v=${encodeURIComponent(project.id)}`;
+    void navigator.clipboard.writeText(url);
+    setOpenMenuId(null);
+  };
+
+  const handleEditCoverChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    setEditCoverPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+    setEditCoverFile(file);
+  };
+
+  const closeEditDialog = () => {
+    setEditCoverPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setEditCoverFile(null);
+    if (editCoverInputRef.current) editCoverInputRef.current.value = '';
+    setProjectToEdit(null);
+    reset();
   };
 
   const discardInlineDraft = useCallback(() => {
@@ -397,7 +666,8 @@ export const ProjectsPage = () => {
                   <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Explorar proyectos</span>
                 </button>
                 <button
-                  onClick={() => navigate('/projects')}
+                  type="button"
+                  onClick={() => setProjectView(null)}
                   className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white/10 active:scale-[0.98] ${sidebarRowClass}`}
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-ui group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
@@ -425,8 +695,11 @@ export const ProjectsPage = () => {
                   learningHighlights.map((project) => (
                     <button
                       key={project.id}
-                      onClick={() => navigate(`/projects/${project.id}`)}
-                      className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white/10 active:scale-[0.98] ${sidebarRowClass}`}
+                      type="button"
+                      onClick={() => setProjectView(project.id)}
+                      className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white/10 active:scale-[0.98] ${sidebarRowClass} ${
+                        viewingProjectId === project.id ? 'ring-2 ring-brand/40' : ''
+                      }`}
                     >
                       <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-ui group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
@@ -444,7 +717,30 @@ export const ProjectsPage = () => {
         </aside>
 
         {/* Contenido principal */}
-        <section className="mx-auto flex min-w-0 w-full flex-col gap-3 sm:gap-4 lg:gap-5 pb-16 sm:pb-20 px-3 sm:px-4 relative z-10 hide-scrollbar" style={{ width: '100%', maxWidth: '100%', overflowX: 'visible', boxShadow: 'none', WebkitBoxShadow: 'none', overflowY: 'auto', height: 'calc(100vh - 56px)', alignSelf: 'flex-start' }}>
+        <section
+          className="mx-auto flex min-w-0 w-full flex-col pb-16 sm:pb-20 px-3 sm:px-4 relative z-10 hide-scrollbar"
+          style={{
+            width: '100%',
+            maxWidth: '100%',
+            overflowX: 'visible',
+            boxShadow: 'none',
+            WebkitBoxShadow: 'none',
+            overflowY: 'auto',
+            height: 'calc(100vh - 56px)',
+            alignSelf: 'flex-start'
+          }}
+        >
+          <div className="relative w-full min-h-0 flex-1">
+            <AnimatePresence mode="wait">
+              {!viewingProjectId ? (
+                <motion.div
+                  key="projects-list"
+                  initial={{ opacity: 0, x: -14 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -14 }}
+                  transition={projectViewTransition}
+                  className="flex flex-col gap-3 sm:gap-4 lg:gap-5"
+                >
           {/* Barra de búsqueda */}
           <Card className={projectCardShadow}>
             <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
@@ -452,7 +748,7 @@ export const ProjectsPage = () => {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Buscar proyectos, grupos o hashtags..."
-                className="w-full min-w-0 max-w-xl rounded-2xl border-white/50 dark:border-white/15 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+                className="w-full min-w-0 max-w-xl rounded-2xl border-white/50 dark:border-white/15 shadow-[0_4px_14px_-2px_rgba(0,0,0,0.2)] transition-shadow duration-ui dark:shadow-[0_4px_16px_-2px_rgba(0,0,0,0.45)] focus:!border-white/25 focus:!ring-0 dark:focus:!border-white/15 focus:shadow-[0_6px_20px_-2px_rgba(0,0,0,0.3)] dark:focus:shadow-[0_6px_22px_-2px_rgba(0,0,0,0.55)]"
               />
               <Button
                 type="button"
@@ -660,38 +956,69 @@ export const ProjectsPage = () => {
                   <Card
                     key={project.id}
                     className={`group relative flex flex-col space-y-4 transition-all duration-ui hover:scale-[1.02] cursor-pointer ${projectCardShadow} hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)] overflow-hidden`}
-                    onClick={() => navigate(`/projects/${project.id}`)}
+                    onClick={() => setProjectView(project.id)}
                   >
-                    {isOwner && (
-                      <div className="absolute right-2 top-2 z-10" ref={(el) => { menuRefs.current[project.id] = el; }}>
-                        <button
-                          type="button"
-                          onClick={(e) => handleMenuToggle(project.id, e)}
-                          className="flex-shrink-0 rounded-2xl p-1.5 text-[var(--color-muted)] transition-all hover:bg-white/40 dark:hover:bg-neutral-700/40 hover:text-[var(--color-text)] opacity-0 group-hover:opacity-100"
-                          aria-label="Opciones del proyecto"
-                        >
-                          <MoreHorizontal className="h-5 w-5" />
-                        </button>
+                    <div
+                      className="absolute right-2 top-2 z-10"
+                      ref={(el) => {
+                        menuRefs.current[project.id] = el;
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => handleMenuToggle(project.id, e)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-2xl text-[var(--color-muted)] transition hover:bg-white/30 dark:hover:bg-[#0E0F0F] hover:text-sena-green"
+                        aria-haspopup="true"
+                        aria-expanded={openMenuId === project.id}
+                        aria-label="Opciones del proyecto"
+                      >
+                        <MoreHorizontal className="h-5 w-5" />
+                      </button>
+                      <AnimatePresence>
                         {openMenuId === project.id && (
-                          <div className="absolute right-0 top-8 z-50 w-48 rounded-2xl glass-liquid-strong border border-white/20 p-1 shadow-lg">
+                          <motion.div
+                            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                            transition={{
+                              opacity: UI_MENU_TRANSITION.opacity,
+                              y: UI_MENU_TRANSITION.y,
+                              scale: UI_MENU_TRANSITION.scale
+                            }}
+                            className="absolute right-0 top-9 z-20 w-48 rounded-2xl bg-white dark:bg-neutral-900 border border-slate-200/90 dark:border-neutral-700/90 shadow-[0_10px_28px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.45)] p-2 text-sm text-[var(--color-text)]"
+                          >
+                            {isOwner ? (
+                              <button
+                                type="button"
+                                onClick={(e) => handleEditProject(project, e)}
+                                className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-black/5 dark:hover:bg-neutral-800"
+                              >
+                                <FileText className="h-4 w-4 text-sena-green" />
+                                Editar proyecto
+                              </button>
+                            ) : null}
                             <button
-                              onClick={(e) => handleEditProject(project, e)}
-                              className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm text-[var(--color-text)] transition-colors hover:bg-white/20"
+                              type="button"
+                              onClick={(e) => handleCopyProjectLink(project, e)}
+                              className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-black/5 dark:hover:bg-neutral-800"
                             >
-                              <Edit className="h-4 w-4" />
-                              <span>Editar</span>
+                              <Share2 className="h-4 w-4 text-sena-green" />
+                              Copiar enlace
                             </button>
-                            <button
-                              onClick={(e) => handleDeleteProject(project, e)}
-                              className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span>Eliminar</span>
-                            </button>
-                          </div>
+                            {isOwner ? (
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteProject(project, e)}
+                                className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm text-red-500 dark:text-red-400 transition hover:bg-rose-50 dark:hover:bg-rose-900/25 hover:text-red-600 dark:hover:text-red-300"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
+                                Eliminar
+                              </button>
+                            ) : null}
+                          </motion.div>
                         )}
-                      </div>
-                    )}
+                      </AnimatePresence>
+                    </div>
 
                     {coverSrc ? (
                       <div className="relative -mx-4 -mt-4 h-36 w-[calc(100%+2rem)] overflow-hidden">
@@ -743,14 +1070,16 @@ export const ProjectsPage = () => {
                           key={status}
                           variant={project.status === status ? 'primary' : 'secondary'}
                           size="sm"
+                          disabled={!isOwner}
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (!isOwner) return;
                             updateProjectMutation.mutate({
                               id: project.id,
                               status
                             });
                           }}
-                          className="transition-all hover:scale-105"
+                          className={`transition-all hover:scale-105 ${!isOwner ? 'opacity-50' : ''}`}
                         >
                           {statusLabels[status]}
                         </Button>
@@ -762,112 +1091,359 @@ export const ProjectsPage = () => {
               </div>
             )}
           </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={`project-detail-${viewingProjectId}`}
+                  initial={{ opacity: 0, x: 14 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 14 }}
+                  transition={projectViewTransition}
+                  className="flex flex-col gap-4"
+                >
+                  {activeProject ? (
+                    (() => {
+                      const p = projectPanel?.project ?? activeProject;
+                      const detailCover = resolveAssetUrl(p.coverImage ?? null);
+                      const detailOwner = user?.id === p.ownerId;
+                      const detailStatus = statusDisplay[p.status];
+                      const DetailStatusIcon = detailStatus.icon;
+                      return (
+                        <>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setProjectView(null)}
+                              leftIcon={<ArrowLeft className="h-4 w-4" />}
+                              className="shadow-[0_4px_12px_rgba(57,169,0,0.15)]"
+                            >
+                              Volver a proyectos
+                            </Button>
+                            {detailOwner ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setProjectToEdit(p)}
+                                leftIcon={<Edit className="h-4 w-4" />}
+                              >
+                                Editar proyecto
+                              </Button>
+                            ) : null}
+                          </div>
+
+                          <Card className={`overflow-hidden ${projectCardShadow}`}>
+                            {detailCover ? (
+                              <div className="relative -mx-4 -mt-4 h-48 w-[calc(100%+2rem)] overflow-hidden sm:h-56">
+                                <img src={detailCover} alt="" className="h-full w-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="relative -mx-4 -mt-4 flex h-40 w-[calc(100%+2rem)] items-center justify-center bg-gradient-to-br from-brand/20 to-emerald-500/15">
+                                <FolderKanban className="h-16 w-16 text-brand/35" />
+                              </div>
+                            )}
+                            <div className="space-y-4 pt-2">
+                              <div>
+                                <h1 className="text-2xl font-semibold text-[var(--color-text)]">{p.title}</h1>
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <span className="inline-flex rounded-2xl bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand ring-1 ring-brand/20">
+                                    {statusLabels[p.status]}
+                                  </span>
+                                  <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
+                                    <DetailStatusIcon className={`h-3.5 w-3.5 shrink-0 ${detailStatus.accent}`} />
+                                    {detailStatus.helper}
+                                  </span>
+                                </div>
+                              </div>
+                              <p className="whitespace-pre-line text-sm leading-relaxed text-[var(--color-muted)]">
+                                {p.description?.trim()
+                                  ? p.description
+                                  : 'Sin descripción. Puedes añadirla desde Editar proyecto.'}
+                              </p>
+                              {p.repositoryUrl ? (
+                                <a
+                                  href={p.repositoryUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 text-sm font-medium text-brand hover:text-emerald-600 transition-colors"
+                                >
+                                  <GitBranch className="h-4 w-4" />
+                                  Abrir repositorio
+                                </a>
+                              ) : null}
+                            </div>
+                          </Card>
+
+                          <div className="grid gap-4 lg:grid-cols-2">
+                            <Card className={projectCardShadow}>
+                              <h3 className="mb-2 text-sm font-semibold text-[var(--color-text)]">Fase del proyecto</h3>
+                              <p className="mb-3 text-xs text-[var(--color-muted)]">
+                                Cambia la fase cuando tu equipo avance en el ciclo del proyecto.
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {statusOrder.map((status) => (
+                                  <Button
+                                    key={status}
+                                    variant={p.status === status ? 'primary' : 'secondary'}
+                                    size="sm"
+                                    disabled={!detailOwner}
+                                    onClick={() => {
+                                      if (!detailOwner) return;
+                                      updateProjectMutation.mutate({
+                                        id: p.id,
+                                        status
+                                      });
+                                    }}
+                                    className={`transition-all hover:scale-105 ${!detailOwner ? 'opacity-50' : ''}`}
+                                  >
+                                    {statusLabels[status]}
+                                  </Button>
+                                ))}
+                              </div>
+                            </Card>
+
+                            <Card className={projectCardShadow}>
+                              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--color-text)]">
+                                <CalendarDays className="h-4 w-4 text-brand" />
+                                Fechas
+                              </h3>
+                              <dl className="space-y-3 text-sm">
+                                <div>
+                                  <dt className="text-xs font-medium text-[var(--color-muted)]">Creado</dt>
+                                  <dd className="text-[var(--color-text)]">
+                                    {new Date(p.createdAt).toLocaleString('es-CO', {
+                                      dateStyle: 'medium',
+                                      timeStyle: 'short'
+                                    })}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-xs font-medium text-[var(--color-muted)]">Última actualización</dt>
+                                  <dd className="text-[var(--color-text)]">
+                                    {new Date(p.updatedAt).toLocaleString('es-CO', {
+                                      dateStyle: 'medium',
+                                      timeStyle: 'short'
+                                    })}
+                                  </dd>
+                                </div>
+                              </dl>
+                            </Card>
+
+                            <Card className={`lg:col-span-2 ${projectCardShadow}`}>
+                              <h3 className="mb-4 flex flex-wrap items-center gap-2 text-sm font-semibold text-[var(--color-text)]">
+                                <FileText className="h-4 w-4 text-brand" />
+                                Espacio de trabajo
+                                {detailOwner &&
+                                p.id === viewingProjectId &&
+                                workspaceNotesEditorSynced &&
+                                !notesHtmlEquivalentForSave(notesDraft, savedWorkspaceNotesBaseline) ? (
+                                  <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold normal-case text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+                                    (Borrador)
+                                  </span>
+                                ) : null}
+                              </h3>
+                              {!user?.id ? (
+                                <p className="text-sm text-[var(--color-muted)]">
+                                  Inicia sesión para ver notas y archivos del equipo.
+                                </p>
+                              ) : isPanelLoading ? (
+                                <p className="text-sm text-[var(--color-muted)]">Cargando espacio de trabajo...</p>
+                              ) : isPanelError ? (
+                                <p className="text-sm text-[var(--color-muted)]">
+                                  {panelForbidden
+                                    ? 'No tienes acceso al espacio de trabajo de este proyecto (solo miembros).'
+                                    : 'No se pudo cargar el espacio de trabajo. Intenta de nuevo.'}
+                                </p>
+                              ) : projectPanel ? (
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    {detailOwner ? (
+                                      <ProjectWorkspaceNotesEditor
+                                        key={viewingProjectId}
+                                        initialContent={projectPanel.project.workspaceNotes ?? ''}
+                                        onHtmlChange={handleWorkspaceNotesHtml}
+                                        onSave={() =>
+                                          saveWorkspaceNotesMutation.mutate({
+                                            projectId: p.id,
+                                            notes: isEmptyWorkspaceNotesHtml(notesDraft)
+                                              ? null
+                                              : notesDraft.slice(0, 50_000)
+                                          })
+                                        }
+                                        saving={saveWorkspaceNotesMutation.isPending}
+                                        onUploadImage={uploadProjectImageForNotes}
+                                        uploadPending={uploadAttachmentMutation.isPending}
+                                        onDeleteImageAttachment={deleteImageAttachmentForNotes}
+                                      />
+                                    ) : (
+                                      <ProjectWorkspaceNotesReadonly
+                                        html={projectPanel.project.workspaceNotes}
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              ) : null}
+                            </Card>
+                          </div>
+                        </>
+                      );
+                    })()
+                  ) : (
+                    <Card className={projectCardShadow}>
+                      <p className="text-sm text-[var(--color-muted)]">No se encontró el proyecto.</p>
+                      <Button type="button" variant="secondary" className="mt-4" onClick={() => setProjectView(null)}>
+                        Volver a proyectos
+                      </Button>
+                    </Card>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </section>
 
-        {/* Sidebar derecho: Laboratorio */}
+        {/* Sidebar derecho: Laboratorio o panel del proyecto abierto */}
         <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden' }}>
-          <div className="flex flex-col space-y-6 py-4 px-4">
-            {/* Laboratorio */}
-            <Card padded={false} className={`${sidebarPanelClass} space-y-3 p-3`}>
-              <div className="flex items-center gap-2 px-1">
-                <Rocket className="h-4 w-4 text-brand" />
-                <h3 className="text-sm font-semibold text-[var(--color-text)]">Laboratorio</h3>
-              </div>
-              <p className="px-1 text-xs text-[var(--color-muted)]">
-                Visualiza el estado de cada iniciativa y cambia de fase con un clic.
-              </p>
-              <div className="grid grid-cols-3 gap-2.5 px-1 pb-1">
-                {statusOrder.map((status) => {
-                  const { icon: Icon, accent, badge } = statusDisplay[status];
-                  const isActive = statusFilter === status;
-                  const statusConfig = {
-                    draft: {
-                      gradient: 'from-amber-50/80 via-amber-100/60 to-orange-50/80 dark:from-amber-950/30 dark:via-amber-900/20 dark:to-orange-950/30',
-                      border: 'border-amber-300/50 dark:border-amber-700/40',
-                      borderHover: 'hover:border-amber-400/60 dark:hover:border-amber-600/50',
-                      shadow:
-                        'shadow-[0_3px_12px_rgba(0,0,0,0.06),0_4px_14px_rgba(245,158,11,0.22)] dark:shadow-[0_3px_14px_rgba(0,0,0,0.28),0_4px_14px_rgba(245,158,11,0.16)]',
-                      shadowHover:
-                        'hover:shadow-[0_5px_16px_rgba(0,0,0,0.08),0_6px_18px_rgba(245,158,11,0.32)] dark:hover:shadow-[0_5px_18px_rgba(0,0,0,0.32),0_6px_18px_rgba(245,158,11,0.24)]',
-                      activeShadow:
-                        'shadow-[0_5px_18px_rgba(0,0,0,0.08),0_8px_22px_rgba(245,158,11,0.3)] dark:shadow-[0_5px_22px_rgba(0,0,0,0.35),0_8px_22px_rgba(245,158,11,0.22)]'
-                    },
-                    in_progress: {
-                      gradient: 'from-sena-green/10 via-sena-green/5 to-emerald-50/80 dark:from-sena-green/20 dark:via-sena-green/10 dark:to-emerald-950/30',
-                      border: 'border-sena-green/30 dark:border-sena-green/40',
-                      borderHover: 'hover:border-sena-green/50 dark:hover:border-sena-green/50',
-                      shadow:
-                        'shadow-[0_3px_12px_rgba(0,0,0,0.06),0_4px_14px_rgba(57,169,0,0.22)] dark:shadow-[0_3px_14px_rgba(0,0,0,0.28),0_4px_14px_rgba(57,169,0,0.16)]',
-                      shadowHover:
-                        'hover:shadow-[0_5px_16px_rgba(0,0,0,0.08),0_6px_18px_rgba(57,169,0,0.32)] dark:hover:shadow-[0_5px_18px_rgba(0,0,0,0.32),0_6px_18px_rgba(57,169,0,0.24)]',
-                      activeShadow:
-                        'shadow-[0_5px_18px_rgba(0,0,0,0.08),0_8px_22px_rgba(57,169,0,0.3)] dark:shadow-[0_5px_22px_rgba(0,0,0,0.35),0_8px_22px_rgba(57,169,0,0.22)]'
-                    },
-                    completed: {
-                      gradient: 'from-brand/20 via-emerald-100/60 to-green-50/80 dark:from-brand/30 dark:via-emerald-900/20 dark:to-green-950/30',
-                      border: 'border-brand/40 dark:border-emerald-700/40',
-                      borderHover: 'hover:border-brand/50 dark:hover:border-emerald-600/50',
-                      shadow:
-                        'shadow-[0_3px_12px_rgba(0,0,0,0.06),0_4px_14px_rgba(57,169,0,0.22)] dark:shadow-[0_3px_14px_rgba(0,0,0,0.28),0_4px_14px_rgba(57,169,0,0.16)]',
-                      shadowHover:
-                        'hover:shadow-[0_5px_16px_rgba(0,0,0,0.08),0_6px_18px_rgba(57,169,0,0.32)] dark:hover:shadow-[0_5px_18px_rgba(0,0,0,0.32),0_6px_18px_rgba(57,169,0,0.24)]',
-                      activeShadow:
-                        'shadow-[0_5px_18px_rgba(0,0,0,0.08),0_8px_22px_rgba(57,169,0,0.3)] dark:shadow-[0_5px_22px_rgba(0,0,0,0.35),0_8px_22px_rgba(57,169,0,0.22)]'
-                    }
-                  };
-                  const config = statusConfig[status];
-                  return (
-                    <div key={status} className="relative group">
-                      <button
-                        type="button"
-                        onClick={() => setStatusFilter((prev) => (prev === status ? 'all' : status))}
-                        className={`relative flex flex-col items-center justify-center rounded-2xl border p-2.5 pb-2 min-h-[80px] w-full transition-all duration-ui bg-gradient-to-br ${config.gradient} ${
-                          isActive
-                            ? `${config.border} ${config.activeShadow} scale-[1.05] ring-2 ring-offset-2 ring-offset-transparent ${
-                                status === 'draft' ? 'ring-amber-400/30 dark:ring-amber-600/30' :
-                                status === 'in_progress' ? 'ring-sena-green/30 dark:ring-sena-green/30' :
-                                'ring-brand/30 dark:ring-emerald-600/30'
-                              }`
-                            : `${config.border} ${config.shadow} ${config.borderHover} ${config.shadowHover} hover:scale-[1.03]`
-                        }`}
-                      >
-                        <span className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-ui group-hover:scale-110 group-hover:rotate-3 ${badge} ${
-                          isActive ? 'shadow-lg' : ''
-                        }`}>
-                          <Icon className={`h-5 w-5 ${accent} transition-transform group-hover:scale-110`} />
-                        </span>
-                        <p className={`mt-2 text-xl font-bold transition-colors ${
-                          status === 'draft' ? 'text-amber-700 dark:text-amber-400' :
-                          status === 'in_progress' ? 'text-sena-dark dark:text-sena-green' :
-                          'text-brand dark:text-emerald-400'
-                        }`}>{stats[status]}</p>
-                        {/* Nombre del estado en la parte inferior - solo visible en hover */}
-                        <p className={`mt-1 text-[9px] font-semibold uppercase tracking-wide transition-all duration-ui opacity-0 group-hover:opacity-100 ${
-                          status === 'draft' ? 'text-amber-700/80 dark:text-amber-400/80' :
-                          status === 'in_progress' ? 'text-sena-dark/80 dark:text-sena-green/80' :
-                          'text-brand/80 dark:text-emerald-400/80'
-                        }`}>
-                          {statusLabels[status]}
-                        </p>
-                      </button>
+          <div className="flex min-h-0 flex-1 flex-col space-y-6 overflow-y-auto py-4 px-4">
+            <AnimatePresence mode="wait">
+              {!viewingProjectId ? (
+                <motion.div
+                  key="lab-sidebar"
+                  initial={{ opacity: 0, x: -14 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -14 }}
+                  transition={projectViewTransition}
+                  className="space-y-6"
+                >
+                  <Card padded={false} className={`${sidebarPanelClass} space-y-3 p-3`}>
+                    <div className="flex items-center gap-2 px-1">
+                      <Rocket className="h-4 w-4 text-brand" />
+                      <h3 className="text-sm font-semibold text-[var(--color-text)]">Laboratorio</h3>
                     </div>
-                  );
-                })}
-              </div>
-            </Card>
+                    <p className="px-1 text-xs text-[var(--color-muted)]">
+                      Visualiza el estado de cada iniciativa y cambia de fase con un clic.
+                    </p>
+                    <div className="grid grid-cols-3 gap-2.5 px-1 pb-1">
+                      {statusOrder.map((status) => {
+                        const { icon: Icon, accent, badge } = statusDisplay[status];
+                        const isActive = statusFilter === status;
+                        const shadowStyle = laboratorioStatusShadows[status];
+                        return (
+                          <div
+                            key={status}
+                            className={`relative group ${!isActive ? 'laboratorio-metric-soft-drift' : ''}`}
+                            style={
+                              !isActive ? { animationDelay: laboratorioMotionDelay[status] } : undefined
+                            }
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setStatusFilter((prev) => (prev === status ? 'all' : status))}
+                              className={`relative flex min-h-[80px] w-full flex-col items-center justify-center rounded-2xl p-2.5 pb-2 transition-all duration-ui ease-ui focus:outline-none ${laboratorioCardSurface} ${
+                                isActive
+                                  ? `${shadowStyle.active} scale-[1.05]`
+                                  : `${shadowStyle.idle} ${shadowStyle.hover} hover:scale-[1.03]`
+                              }`}
+                            >
+                              <span
+                                className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-ui group-hover:scale-110 group-hover:rotate-3 ${badge}`}
+                              >
+                                <Icon className={`h-5 w-5 ${accent} transition-transform group-hover:scale-110`} />
+                              </span>
+                              <p
+                                className={`mt-2 text-xl font-bold transition-colors ${
+                                  status === 'draft'
+                                    ? 'text-amber-700 dark:text-amber-400'
+                                    : status === 'in_progress'
+                                      ? 'text-sena-dark dark:text-sena-green'
+                                      : 'text-brand dark:text-emerald-400'
+                                }`}
+                              >
+                                {stats[status]}
+                              </p>
+                              <p
+                                className={`mt-1 text-[9px] font-semibold uppercase tracking-wide transition-all duration-ui opacity-0 group-hover:opacity-100 ${
+                                  status === 'draft'
+                                    ? 'text-amber-700/80 dark:text-amber-400/80'
+                                    : status === 'in_progress'
+                                      ? 'text-sena-dark/80 dark:text-sena-green/80'
+                                      : 'text-brand/80 dark:text-emerald-400/80'
+                                }`}
+                              >
+                                {statusLabels[status]}
+                              </p>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={`project-sidebar-${viewingProjectId}`}
+                  initial={{ opacity: 0, x: 14 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 14 }}
+                  transition={projectViewTransition}
+                  className="space-y-6"
+                >
+                  <Card padded={false} className={`${sidebarPanelClass} space-y-3 p-3`}>
+                    <div className="flex items-center gap-2 px-1">
+                      <Users className="h-4 w-4 text-brand" />
+                      <h3 className="text-sm font-semibold text-[var(--color-text)]">Equipo de trabajo</h3>
+                    </div>
+                    {!user?.id ? (
+                      <p className="px-1 text-xs text-[var(--color-muted)]">Inicia sesión para ver al equipo.</p>
+                    ) : isPanelLoading ? (
+                      <p className="px-1 text-xs text-[var(--color-muted)]">Cargando equipo...</p>
+                    ) : isPanelError ? (
+                      <p className="px-1 text-xs text-[var(--color-muted)]">
+                        {panelForbidden ? 'Sin acceso al equipo (solo miembros).' : 'No se pudo cargar el equipo.'}
+                      </p>
+                    ) : sortedPanelMembers.length === 0 ? (
+                      <p className="px-1 text-xs text-[var(--color-muted)]">No hay miembros registrados.</p>
+                    ) : (
+                      <ul className="space-y-2 px-1">
+                        {sortedPanelMembers.map((m) => {
+                          const av = m.avatarUrl ? resolveAssetUrl(m.avatarUrl) : null;
+                          return (
+                            <li
+                              key={m.userId}
+                              className={`flex items-center gap-2 rounded-2xl px-2 py-2 ${sidebarRowClass}`}
+                            >
+                              {av ? (
+                                <img src={av} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                              ) : (
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/15 text-xs font-bold text-brand">
+                                  {(m.firstName || 'U').charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-[var(--color-text)]">{m.fullName}</p>
+                                <p className="text-[10px] text-[var(--color-muted)]">
+                                  {memberRoleLabel(m.role)}
+                                  {m.isOwner ? ' · Dueño' : ''}
+                                </p>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </aside>
       </div>
 
       {/* Diálogo para editar proyecto */}
-      <GlassDialog
-        open={!!projectToEdit}
-        onClose={() => {
-          setProjectToEdit(null);
-          reset();
-        }}
-        size="md"
-      >
+      <GlassDialog open={!!projectToEdit} onClose={closeEditDialog} size="md">
+        {projectToEdit ? (
         <div className="space-y-6">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 rounded-2xl bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
@@ -892,12 +1468,55 @@ export const ProjectsPage = () => {
                     description: values.description,
                     repositoryUrl: values.repositoryUrl || undefined,
                     status: values.status
-                  }
+                  },
+                  coverFile: editCoverFile
                 });
               }
             })}
             className="space-y-4"
           >
+            <input
+              ref={editCoverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleEditCoverChange}
+            />
+            <div className="space-y-2">
+              <span className="block text-xs font-medium text-[var(--color-text)]">Foto del proyecto</span>
+              <div className="relative overflow-hidden rounded-2xl border border-white/20 dark:border-white/10">
+                <div className="relative flex h-36 w-full items-center justify-center bg-gradient-to-br from-brand/15 to-emerald-500/10">
+                  {(editCoverPreviewUrl || resolveAssetUrl(projectToEdit.coverImage ?? null)) ? (
+                    <img
+                      src={
+                        editCoverPreviewUrl ??
+                        resolveAssetUrl(projectToEdit.coverImage ?? null) ??
+                        ''
+                      }
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="relative z-[1] shadow-md"
+                    leftIcon={<ImagePlus className="h-4 w-4" />}
+                    onClick={() => editCoverInputRef.current?.click()}
+                    disabled={editProjectMutation.isPending}
+                  >
+                    {projectToEdit.coverImage || editCoverFile
+                      ? 'Cambiar foto'
+                      : 'Subir foto'}
+                  </Button>
+                </div>
+              </div>
+              <p className="text-[10px] text-[var(--color-muted)]">
+                Formatos de imagen. Se aplicará al guardar los cambios.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <label htmlFor="edit-project-title" className="block text-xs font-medium text-[var(--color-text)]">
                 Título del proyecto
@@ -979,10 +1598,7 @@ export const ProjectsPage = () => {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => {
-                  setProjectToEdit(null);
-                  reset();
-                }}
+                onClick={closeEditDialog}
                 disabled={isSubmitting || editProjectMutation.isPending}
               >
                 Cancelar
@@ -997,6 +1613,7 @@ export const ProjectsPage = () => {
             </div>
           </form>
         </div>
+        ) : null}
       </GlassDialog>
 
       {/* Diálogo para confirmar eliminación */}

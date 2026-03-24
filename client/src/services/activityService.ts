@@ -7,5 +7,12 @@ export const activityService = {
       '/profile/me/activity'
     );
     return data.activity;
+  },
+
+  async getOverviewForUser(userId: string): Promise<ActivityOverview> {
+    const { data } = await apiClient.get<{ success: boolean; activity: ActivityOverview }>(
+      `/profile/${userId}/activity`
+    );
+    return data.activity;
   }
 };

@@ -12,6 +12,7 @@ import { env } from '../config/env';
 import { AuthResult, AuthUser, TokenPayload } from '../types/auth';
 import { logger } from '../utils/logger';
 import { User } from '../types/user';
+import { activityService } from './activityService';
 
 const JWT_PREFIX = 'JWT ';
 const LEGACY_PREFIX = 'Bearer ';
@@ -105,6 +106,8 @@ export const authService = {
       expiresAt: getRefreshExpiry()
     });
 
+    void activityService.recordLogin(user.id).catch(() => {});
+
     return { user: mapUserToAuth(user), tokens };
   },
 
@@ -139,6 +142,8 @@ export const authService = {
       device: input.device,
       ipAddress: input.ipAddress
     });
+
+    void activityService.recordLogin(user.id).catch(() => {});
 
     return { user: mapUserToAuth(user), tokens };
   },

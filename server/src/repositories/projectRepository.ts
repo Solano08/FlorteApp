@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { getPool } from '../config/database';
-import { CreateProjectInput, Project, ProjectStatus, UpdateProjectInput } from '../types/project';
+import { CreateProjectInput, Project, ProjectAttachment, ProjectStatus, UpdateProjectInput } from '../types/project';
 
 const mapProject = (row: RowDataPacket): Project => ({
   id: row.id,
@@ -9,10 +9,21 @@ const mapProject = (row: RowDataPacket): Project => ({
   description: row.description,
   repositoryUrl: row.repository_url,
   coverImage: row.cover_image ?? null,
+  workspaceNotes: row.workspace_notes ?? null,
   status: row.status,
   ownerId: row.owner_id,
   createdAt: row.created_at,
   updatedAt: row.updated_at
+});
+
+const mapAttachment = (row: RowDataPacket) => ({
+  id: row.id as string,
+  projectId: row.project_id as string,
+  fileUrl: row.file_url as string,
+  fileName: row.file_name as string,
+  mimeType: row.mime_type as string,
+  uploadedBy: row.uploaded_by as string,
+  createdAt: row.created_at as Date
 });
 
 export const projectRepository = {
@@ -167,5 +178,67 @@ export const projectRepository = {
     const project = await this.findById(projectId);
     if (!project) throw new Error('Proyecto no encontrado tras actualizar la imagen');
     return project;
+  },
+
+  async updateWorkspaceNotes(projectId: string, notes: string | null): Promise<Project> {
+    const [result] = await getPool().execute<ResultSetHeader>(
+      `UPDATE projects
+       SET workspace_notes = :notes, updated_at = CURRENT_TIMESTAMP
+       WHERE id = :id`,
+      { id: projectId, notes }
+    );
+    if (result.affectedRows !== 1) {
+      throw new Error('No fue posible actualizar las notas del proyecto');
+    }
+    const project = await this.findById(projectId);
+    if (!project) throw new Error('Proyecto no encontrado');
+    return project;
+  },
+
+  async listAttachments(projectId: string): Promise<ProjectAttachment[]> {
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      `SELECT id, project_id, file_url, file_name, mime_type, uploaded_by, created_at
+       FROM project_attachments
+       WHERE project_id = :projectId
+       ORDER BY created_at DESC`,
+      { projectId }
+    );
+    return rows.map((row) => mapAttachment(row) as ProjectAttachment);
+  },
+
+  async insertAttachment(input: {
+    projectId: string;
+    fileUrl: string;
+    fileName: string;
+    mimeType: string;
+    uploadedBy: string;
+  }): Promise<ProjectAttachment> {
+    const id = crypto.randomUUID();
+    await getPool().execute<ResultSetHeader>(
+      `INSERT INTO project_attachments (id, project_id, file_url, file_name, mime_type, uploaded_by)
+       VALUES (:id, :projectId, :fileUrl, :fileName, :mimeType, :uploadedBy)`,
+      {
+        id,
+        projectId: input.projectId,
+        fileUrl: input.fileUrl,
+        fileName: input.fileName,
+        mimeType: input.mimeType,
+        uploadedBy: input.uploadedBy
+      }
+    );
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      'SELECT * FROM project_attachments WHERE id = :id LIMIT 1',
+      { id }
+    );
+    if (rows.length === 0) throw new Error('Adjunto no encontrado tras crearlo');
+    return mapAttachment(rows[0]) as ProjectAttachment;
+  },
+
+  async deleteAttachment(projectId: string, attachmentId: string): Promise<boolean> {
+    const [result] = await getPool().execute<ResultSetHeader>(
+      'DELETE FROM project_attachments WHERE id = :attachmentId AND project_id = :projectId',
+      { attachmentId, projectId }
+    );
+    return result.affectedRows === 1;
   }
 };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
@@ -48,7 +48,6 @@ export const CommunitiesPage = () => {
   const [exploreSearch, setExploreSearch] = useState('');
   const toast = useToast();
   const { user } = useAuth();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
   // Comunidades del usuario (sidebar tipo Discord)
@@ -155,7 +154,6 @@ export const CommunitiesPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channelMessages', channelId] }).catch(() => {});
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     },
     onError: () => {
       toast.error('No se pudo enviar el mensaje. Por favor, intenta nuevamente.');
@@ -163,13 +161,6 @@ export const CommunitiesPage = () => {
   });
 
   const isSubmittingChannel = createChannelMutation.isPending;
-
-  // Scroll automático a mensajes nuevos
-  useEffect(() => {
-    if (channelId && messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, channelId]);
 
   // Redirigir a la primera comunidad si no hay communityId pero el usuario tiene comunidades
   useEffect(() => {

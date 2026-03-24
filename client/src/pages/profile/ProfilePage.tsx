@@ -36,13 +36,7 @@ import { useNavigate } from 'react-router-dom';
 
 import {
 
-  Activity,
-
   Facebook,
-
-  Flame,
-
-  FolderKanban,
 
   Github,
 
@@ -82,9 +76,13 @@ import { Profile } from '../../types/profile';
 
 import { ActivityOverview } from '../../types/activity';
 
+import { ProfileActivitySection } from '../../components/profile/ProfileActivitySection';
+
 import { floatingModalContentClass } from '../../utils/modalStyles';
 
-
+/** Sombra negra para paneles Card del perfil (publicaciones, guardados, etc.) */
+const profilePanelBlackShadow =
+  'shadow-[0_10px_28px_-4px_rgba(0,0,0,0.2)] dark:shadow-[0_12px_32px_-4px_rgba(0,0,0,0.48)]';
 
 const optionalUrlField = z
 
@@ -982,69 +980,6 @@ export const ProfilePage = () => {
 
 
 
-  const summaryFallback = {
-
-    contributionsThisWeek: 0,
-
-    activeProjects: 0,
-
-    streakDays: 0,
-
-    hasProjectActivity: false
-
-  };
-
-
-
-  const activitySummary = activityOverview?.summary ?? summaryFallback;
-
-  const activityStats: Array<{
-    id: string;
-    label: string;
-    value: number;
-    icon: typeof Activity;
-    accent?: string;
-    isActive: boolean;
-    helper: string;
-  }> = [
-    {
-      id: 'contributions',
-      label: 'Contribuciones',
-      value: activitySummary.contributionsThisWeek,
-      icon: Activity,
-      accent: 'text-sena-green',
-      isActive: activitySummary.contributionsThisWeek > 0 || activitySummary.hasProjectActivity,
-      helper:
-        activitySummary.contributionsThisWeek > 0
-          ? 'Esta semana ya sumaste puntos de contribucion.'
-          : 'Aun no registras contribuciones esta semana.'
-    },
-    {
-      id: 'projects',
-      label: 'Proyectos activos',
-      value: activitySummary.activeProjects,
-      icon: FolderKanban,
-      isActive: activitySummary.activeProjects > 0,
-      helper:
-        activitySummary.activeProjects > 0
-          ? 'Tienes proyectos con actividad en curso.'
-          : 'Unete o reactiva un proyecto para ver progreso.'
-    },
-    {
-      id: 'streak',
-      label: 'Racha activa',
-      value: activitySummary.streakDays,
-      icon: Flame,
-      accent: 'text-amber-500',
-      isActive: activitySummary.streakDays > 0,
-      helper:
-        activitySummary.streakDays > 1
-          ? `Llevas ${activitySummary.streakDays} dias conectandote sin pausar.`
-          : 'Conectate hoy y maniana para iniciar una racha.'
-    }
-  ];
-
-
   type SocialLinkDisplay = {
 
     id: (typeof socialLinkConfigs)[number]['name'];
@@ -1804,7 +1739,9 @@ export const ProfilePage = () => {
 
             </Card>
 
-            <Card className="border border-white/30 bg-white/60 shadow-[0_10px_22px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
+            <Card
+              className={`border border-white/30 bg-white/60 ${profilePanelBlackShadow} backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10`}
+            >
 
               <div className="flex items-center justify-between">
 
@@ -1904,62 +1841,16 @@ export const ProfilePage = () => {
 
         <div className="space-y-6">
 
-          <Card className="border border-white/30 bg-white/60 shadow-[0_10px_22px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
-
-            <div className="flex items-start justify-between gap-3">
-
-              <div>
-
-                <h3 className="text-base font-semibold text-[var(--color-text)]">Mi actividad</h3>
-
-                <p className="text-xs text-[var(--color-muted)]">
-
-                  Visualiza tus contribuciones recientes en proyectos.
-
-                </p>
-
-              </div>
-
-              <span className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
-
-                Ultimas 5 semanas
-
-              </span>
-
-            </div>
-
-            <div className="mt-4">
-              {isLoadingActivity ? (
-                <p className="text-xs text-[var(--color-muted)]">Cargando actividad reciente...</p>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {activityStats.map(({ id, label, value, icon: Icon, accent }) => (
-                    <div
-                      key={id}
-                      className="group relative flex min-h-[110px] flex-col items-center justify-center gap-3 rounded-2xl border border-white/25 bg-white/35 px-4 py-5 text-center shadow-[0_16px_28px_rgba(18,55,29,0.14)]"
-                      role="figure"
-                      title={label}
-                      aria-label={label}
-                    >
-                      <p className="text-4xl font-bold text-[var(--color-text)]">{value}</p>
-                      <Icon className={`h-7 w-7 ${accent ?? 'text-[var(--color-muted)]'}`} />
-                      <span className="pointer-events-none absolute -bottom-8 rounded-2xl bg-neutral-900/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white opacity-0 shadow-[0_8px_16px_rgba(15,23,42,0.35)] transition group-hover:opacity-100">
-                        {label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {!isLoadingActivity && !activitySummary.hasProjectActivity && (
-              <p className="mt-2 text-[11px] text-[var(--color-muted)]">
-                Inicia sesion y participa en proyectos para ver tu actividad reflejada aqui.
-              </p>
-            )}
-          </Card>
+          <ProfileActivitySection
+            overview={activityOverview}
+            isLoading={isLoadingActivity}
+            perspective="self"
+          />
 
 
-          <Card className="border border-white/30 bg-white/60 shadow-[0_10px_22px_rgba(18,55,29,0.12)] backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10">
+          <Card
+            className={`border border-white/30 bg-white/60 ${profilePanelBlackShadow} backdrop-blur-[14px] dark:border-white/15 dark:bg-white/10`}
+          >
 
             <div className="flex items-start justify-between gap-3">
 

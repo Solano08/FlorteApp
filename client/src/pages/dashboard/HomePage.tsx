@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,12 +26,15 @@ import { storyService } from '../../services/storyService';
 import { userService } from '../../services/userService';
 import {
   Bookmark,
+  CheckCircle,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Eye,
   FileText,
   Flag,
   FolderKanban,
+  Hammer,
   Heart,
   Image,
   MessageCircle,
@@ -44,11 +47,13 @@ import {
   Trash2,
   Video,
   X,
-  Users
+  Users,
+  type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { FeedAttachment, FeedComment, FeedPostAggregate, FeedPostReactionUser, ReactionType } from '../../types/feed';
+import type { ProjectStatus } from '../../types/project';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { resolveAssetUrl } from '../../utils/media';
 import { compressImageForUpload } from '../../utils/imageCompress';
@@ -87,6 +92,22 @@ const reportReasons = [
   'Violacion de derechos',
   'Otro'
 ];
+
+/** Icono del bloque Avances destacados (alineado con estados en Proyectos) */
+const avanceHighlightByStatus: Record<ProjectStatus, { Icon: LucideIcon; iconClass: string }> = {
+  draft: {
+    Icon: ClipboardList,
+    iconClass: 'text-amber-600 dark:text-amber-400'
+  },
+  in_progress: {
+    Icon: Hammer,
+    iconClass: 'text-sena-green'
+  },
+  completed: {
+    Icon: CheckCircle,
+    iconClass: 'text-brand dark:text-emerald-400'
+  }
+};
 
 function ImageWithFallback({ src, alt, className }: { src: string; alt?: string; className?: string }) {
   const [errored, setErrored] = useState(false);
@@ -232,6 +253,15 @@ type ReportTarget =
 
 const feedQueryKey = ['feed', 'posts'] as const;
 
+/** Misma vista de detalle que en Proyectos (`?v=id`); mantiene listas al día al volver al inicio */
+const homeProjectsQueryOptions = {
+  staleTime: 0,
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
+  refetchInterval: 30_000,
+  refetchIntervalInBackground: false
+} as const;
+
 export const HomePage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -286,6 +316,12 @@ export const HomePage = () => {
   const emojiButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
   const navigate = useNavigate();
+  const openProjectWorkspace = useCallback(
+    (projectId: string) => {
+      navigate({ pathname: '/projects', search: `?v=${encodeURIComponent(projectId)}` });
+    },
+    [navigate]
+  );
   const location = useLocation();
   const pendingFocusPostIdRef = useRef<string | null>(null);
   const userDisplayName = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'FlorteApp';
@@ -619,12 +655,14 @@ export const HomePage = () => {
 
   const { data: projects = [] } = useQuery({
     queryKey: ['projects', 'me'],
-    queryFn: projectService.listMyProjects
+    queryFn: projectService.listMyProjects,
+    ...homeProjectsQueryOptions
   });
 
   const { data: allProjects = [] } = useQuery({
     queryKey: ['projects'],
-    queryFn: projectService.listProjects
+    queryFn: projectService.listProjects,
+    ...homeProjectsQueryOptions
   });
 
   const { data: resources = [] } = useQuery({
@@ -2014,7 +2052,8 @@ export const HomePage = () => {
                   topProjects.map((project) => (
                     <button
                       key={project.id}
-                      onClick={() => navigate(`/projects/${project.id}`)}
+                      type="button"
+                      onClick={() => openProjectWorkspace(project.id)}
                       className="top-highlights-card group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white active:scale-[0.98]"
                     >
                       <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-neutral-700/60 text-black dark:text-white transition-all duration-ui group-hover:bg-white dark:group-hover:bg-neutral-600/70 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] dark:group-hover:shadow-[0_0_12px_rgba(255,255,255,0.08)]">
@@ -2041,21 +2080,26 @@ export const HomePage = () => {
                     Registra tus proyectos para seguir tu progreso.
                   </p>
                 ) : (
-                  learningHighlights.map((project) => (
-                    <button
-                      key={project.id}
-                      onClick={() => navigate(`/projects/${project.id}`)}
-                      className="top-highlights-card group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white active:scale-[0.98]"
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-neutral-700/60 text-black dark:text-white transition-all duration-ui group-hover:bg-white dark:group-hover:bg-neutral-600/70 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] dark:group-hover:shadow-[0_0_12px_rgba(255,255,255,0.08)]">
-                        <FolderKanban className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[var(--color-text)] truncate">{project.title}</p>
-                        <p className="text-xs text-[var(--color-muted)] capitalize">{project.status}</p>
-                      </div>
-                    </button>
-                  ))
+                  learningHighlights.map((project) => {
+                    const { Icon: AvanceIcon, iconClass } =
+                      avanceHighlightByStatus[project.status] ?? avanceHighlightByStatus.draft;
+                    return (
+                      <button
+                        type="button"
+                        key={project.id}
+                        onClick={() => openProjectWorkspace(project.id)}
+                        className="avances-highlights-card group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white active:scale-[0.98]"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-neutral-700/60 transition-all duration-ui group-hover:bg-white dark:group-hover:bg-neutral-600/70 group-hover:scale-110">
+                          <AvanceIcon className={classNames('h-5 w-5 shrink-0', iconClass)} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[var(--color-text)] truncate">{project.title}</p>
+                          <p className="text-xs text-[var(--color-muted)] capitalize">{project.status}</p>
+                        </div>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </div>

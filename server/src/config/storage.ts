@@ -72,3 +72,14 @@ export const projectCoverUpload = multer({
     cb(null, true);
   }
 });
+
+/** Archivos del espacio de trabajo del proyecto (imágenes, PDF, etc.) */
+export const projectWorkspaceFileUpload = multer({
+  storage: memoryStorage,
+  limits: {
+    fileSize: 20 * 1024 * 1024 // 20MB
+  },
+  fileFilter: (_req, _file, cb) => {
+    cb(null, true);
+  }
+});

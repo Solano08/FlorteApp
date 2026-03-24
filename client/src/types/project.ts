@@ -6,10 +6,31 @@ export interface Project {
   description?: string | null;
   repositoryUrl?: string | null;
   coverImage?: string | null;
+  workspaceNotes?: string | null;
   status: ProjectStatus;
   ownerId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProjectAttachment {
+  id: string;
+  projectId: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  uploadedBy: string;
+  createdAt: string;
+}
+
+export interface ProjectPanelMember {
+  userId: string;
+  role: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  avatarUrl: string | null;
+  isOwner: boolean;
 }
 
 export interface CreateProjectPayload {

@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactElement } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingScreen';
 import { UserRole } from '../types/auth';
@@ -49,6 +49,19 @@ const PublicRoute = ({ children }: { children: ReactElement }) => {
     return <Navigate to="/dashboard" replace />;
   }
   return children;
+};
+
+/** Compat: enlaces `/projects/:id` → misma vista que `?v=id` en ProjectsPage */
+const ProjectsDeepLink = () => {
+  const { projectId } = useParams<{ projectId: string }>();
+  const id = projectId?.trim();
+  if (!id) return <Navigate to="/projects" replace />;
+  return (
+    <Navigate
+      to={{ pathname: '/projects', search: `?v=${encodeURIComponent(id)}` }}
+      replace
+    />
+  );
 };
 
 export const AppRoutes = () => (
@@ -165,6 +178,14 @@ export const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <ProjectsPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/projects/:projectId"
+      element={
+        <ProtectedRoute>
+          <ProjectsDeepLink />
         </ProtectedRoute>
       }
     />

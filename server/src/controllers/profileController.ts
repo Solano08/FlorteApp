@@ -93,5 +93,34 @@ export const profileController = {
     }
     const profile = await profileService.getProfile(userId);
     res.json({ success: true, profile });
+  },
+
+  publicActivity: async (req: Request, res: Response) => {
+    const requesterId = req.user?.userId;
+    if (!requesterId) {
+      throw new AppError('Autenticacion requerida', 401);
+    }
+    const { userId } = req.params;
+    if (!userId) {
+      throw new AppError('Usuario no valido', 400);
+    }
+    await profileService.getProfile(userId);
+    const activity = await activityService.getProfileActivity(userId);
+    res.json({ success: true, activity });
+  },
+
+  publicRecentPosts: async (req: Request, res: Response) => {
+    const requesterId = req.user?.userId;
+    if (!requesterId) {
+      throw new AppError('Autenticacion requerida', 401);
+    }
+    const { userId } = req.params;
+    if (!userId) {
+      throw new AppError('Usuario no valido', 400);
+    }
+    await profileService.getProfile(userId);
+    const { limit = 6 } = profileFeedSchema.parse(req.query);
+    const posts = await feedService.listProfilePosts(userId, requesterId, limit);
+    res.json({ success: true, posts });
   }
 };

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt';
 import { AppError } from '../utils/appError';
 import { UserRole } from '../types/user';
+import { recordDailyLoginIfNeeded } from '../utils/dailyLoginRecorder';
 
 const TOKEN_PREFIXES = ['JWT ', 'Bearer '];
 
@@ -23,6 +24,7 @@ export const requireAuth = (req: Request, _res: Response, next: NextFunction): v
 
   try {
     req.user = verifyAccessToken(token);
+    recordDailyLoginIfNeeded(req.user.userId);
     next();
   } catch (error) {
     throw new AppError('Token invalido o expirado', 401);

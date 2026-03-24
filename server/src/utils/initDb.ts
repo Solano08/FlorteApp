@@ -261,6 +261,7 @@ export const initDb = async (): Promise<void> => {
         description TEXT NULL,
         repository_url VARCHAR(500) NULL,
         cover_image VARCHAR(500) NULL,
+        workspace_notes TEXT NULL,
         status ENUM('draft', 'in_progress', 'completed') NOT NULL DEFAULT 'draft',
         owner_id CHAR(36) NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -275,6 +276,27 @@ export const initDb = async (): Promise<void> => {
             const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
             if (msg !== 'ER_DUP_FIELDNAME') throw err;
         }
+
+        try {
+            await pool.execute('ALTER TABLE projects ADD COLUMN workspace_notes TEXT NULL');
+        } catch (err: unknown) {
+            const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
+            if (msg !== 'ER_DUP_FIELDNAME') throw err;
+        }
+
+        await pool.execute(`
+      CREATE TABLE IF NOT EXISTS project_attachments (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        project_id CHAR(36) NOT NULL,
+        file_url VARCHAR(500) NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        mime_type VARCHAR(120) NOT NULL,
+        uploaded_by CHAR(36) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
 
         // Project members table
         await pool.execute(`

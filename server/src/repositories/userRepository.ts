@@ -69,6 +69,22 @@ export const userRepository = {
     return mapUser(rows[0]);
   },
 
+  async findBasicByIds(ids: string[]): Promise<Array<{ id: string; firstName: string; lastName: string; avatarUrl: string | null }>> {
+    const unique = [...new Set(ids.filter(Boolean))];
+    if (unique.length === 0) return [];
+    const placeholders = unique.map(() => '?').join(',');
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      `SELECT id, first_name, last_name, avatar_url FROM users WHERE id IN (${placeholders})`,
+      unique
+    );
+    return rows.map((row) => ({
+      id: row.id as string,
+      firstName: row.first_name as string,
+      lastName: row.last_name as string,
+      avatarUrl: (row.avatar_url as string | null) ?? null
+    }));
+  },
+
   async createUser(input: CreateUserInput): Promise<User> {
     const id = crypto.randomUUID();
     const [result] = await getPool().execute<ResultSetHeader>(
