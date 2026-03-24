@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { UI_MOTION_DURATION_S, UI_MOTION_EASE } from '../../utils/transitionConfig';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -36,9 +37,9 @@ export const ToastComponent = ({ toast, onClose }: ToastProps) => {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: offscreenSlideX, opacity: 1 }}
       transition={{
-        layout: { duration: 0.28, ease: [0.2, 0.9, 0.2, 1] },
-        x: { duration: 0.62, ease: [0.22, 0.61, 0.36, 1] },
-        opacity: { duration: 0.62, ease: [0.22, 0.61, 0.36, 1] }
+        layout: { duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE },
+        x: { duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE },
+        opacity: { duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE }
       }}
       className="relative flex items-center justify-center rounded-2xl bg-white dark:bg-neutral-800 text-[var(--color-text)] px-4 py-3 overflow-hidden max-w-[320px] shadow-[0_10px_24px_rgba(15,23,42,0.16)] dark:shadow-[0_10px_24px_rgba(0,0,0,0.45)]"
       style={{ transformOrigin: 'right center', willChange: 'transform, opacity' }}

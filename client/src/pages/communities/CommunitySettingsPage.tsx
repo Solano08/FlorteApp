@@ -154,7 +154,7 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('general')}
-                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-ui ${
                     activeSection === 'general'
                       ? 'bg-sena-green/10 text-sena-green dark:bg-sena-green/20 dark:text-emerald-300 font-medium shadow-sm ring-1 ring-sena-green/30'
                       : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-[var(--color-text)]'
@@ -166,7 +166,7 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('privacy')}
-                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-ui ${
                     activeSection === 'privacy'
                       ? 'bg-sena-green/10 text-sena-green dark:bg-sena-green/20 dark:text-emerald-300 font-medium shadow-sm ring-1 ring-sena-green/30'
                       : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-[var(--color-text)]'
@@ -178,7 +178,7 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('members')}
-                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-ui ${
                     activeSection === 'members'
                       ? 'bg-sena-green/10 text-sena-green dark:bg-sena-green/20 dark:text-emerald-300 font-medium shadow-sm ring-1 ring-sena-green/30'
                       : 'text-[var(--color-muted)] hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-[var(--color-text)]'
@@ -190,7 +190,7 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSection('danger')}
-                  className={`mt-4 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-200 ${
+                  className={`mt-4 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-[13px] transition-all duration-ui ${
                     activeSection === 'danger'
                       ? 'bg-red-500/10 text-red-500 dark:bg-red-500/15 dark:text-red-400 font-medium'
                       : 'text-red-500 dark:text-red-400 hover:bg-red-500/5 dark:hover:bg-red-500/10'
@@ -204,7 +204,7 @@ export const CommunitySettingsPage = () => {
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-neutral-900/5 via-neutral-900/3 to-neutral-900/5 px-3 py-2 text-[13px] text-[var(--color-text)] shadow-sm hover:shadow-md hover:bg-white/80 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 transition-all duration-200"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-neutral-900/5 via-neutral-900/3 to-neutral-900/5 px-3 py-2 text-[13px] text-[var(--color-text)] shadow-sm hover:shadow-md hover:bg-white/80 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 transition-all duration-ui"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   <span>Volver a la comunidad</span>

@@ -301,18 +301,18 @@ export const ProjectsPage = () => {
               <div className="space-y-1.5">
                 <button
                   onClick={() => navigate('/explore')}
-                  className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                  className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-ui hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-ui group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                     <ArrowUpRight className="h-5 w-5" />
                   </div>
                   <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Explorar proyectos</span>
                 </button>
                 <button
                   onClick={() => navigate('/projects')}
-                  className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                  className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-ui hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-ui group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                     <FolderKanban className="h-5 w-5" />
                   </div>
                   <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Revisar mis proyectos</span>
@@ -338,9 +338,9 @@ export const ProjectsPage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-300 hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                      className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-ui hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-300 group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-ui group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -392,7 +392,7 @@ export const ProjectsPage = () => {
                         key={category.id}
                         type="button"
                         onClick={() => setCategoryFilter(category.id)}
-                        className={`flex flex-col items-center gap-2 rounded-2xl p-3 text-center transition-all duration-200 hover:scale-105 ${
+                        className={`flex flex-col items-center gap-2 rounded-2xl p-3 text-center transition-all duration-ui hover:scale-105 ${
                           isSelected
                             ? 'bg-brand/20 ring-2 ring-brand/40 shadow-lg'
                             : 'bg-white/50 dark:bg-neutral-800/50 hover:bg-white/70 dark:hover:bg-neutral-700/70'
@@ -460,7 +460,7 @@ export const ProjectsPage = () => {
                   return (
                   <Card
                     key={project.id}
-                    className="group relative flex flex-col space-y-4 transition-all duration-300 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:scale-[1.02] cursor-pointer"
+                    className="group relative flex flex-col space-y-4 transition-all duration-ui hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:scale-[1.02] cursor-pointer"
                     onClick={() => navigate(`/projects/${project.id}`)}
                   >
                     {/* Botón de menú en la esquina superior derecha */}
@@ -606,7 +606,7 @@ export const ProjectsPage = () => {
                       <button
                         type="button"
                         onClick={() => setStatusFilter((prev) => (prev === status ? 'all' : status))}
-                        className={`relative flex flex-col items-center justify-center rounded-2xl border p-2.5 pb-2 min-h-[80px] w-full transition-all duration-300 bg-gradient-to-br ${config.gradient} ${
+                        className={`relative flex flex-col items-center justify-center rounded-2xl border p-2.5 pb-2 min-h-[80px] w-full transition-all duration-ui bg-gradient-to-br ${config.gradient} ${
                           isActive
                             ? `${config.border} ${config.activeShadow} scale-[1.05] ring-2 ring-offset-2 ring-offset-transparent ${
                                 status === 'draft' ? 'ring-amber-400/30 dark:ring-amber-600/30' :
@@ -616,7 +616,7 @@ export const ProjectsPage = () => {
                             : `${config.border} ${config.shadow} ${config.borderHover} ${config.shadowHover} hover:scale-[1.03]`
                         }`}
                       >
-                        <span className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${badge} ${
+                        <span className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-ui group-hover:scale-110 group-hover:rotate-3 ${badge} ${
                           isActive ? 'shadow-lg' : ''
                         }`}>
                           <Icon className={`h-5 w-5 ${accent} transition-transform group-hover:scale-110`} />
@@ -627,7 +627,7 @@ export const ProjectsPage = () => {
                           'text-brand dark:text-emerald-400'
                         }`}>{stats[status]}</p>
                         {/* Nombre del estado en la parte inferior - solo visible en hover */}
-                        <p className={`mt-1 text-[9px] font-semibold uppercase tracking-wide transition-all duration-200 opacity-0 group-hover:opacity-100 ${
+                        <p className={`mt-1 text-[9px] font-semibold uppercase tracking-wide transition-all duration-ui opacity-0 group-hover:opacity-100 ${
                           status === 'draft' ? 'text-amber-700/80 dark:text-amber-400/80' :
                           status === 'in_progress' ? 'text-sena-dark/80 dark:text-sena-green/80' :
                           'text-brand/80 dark:text-emerald-400/80'
@@ -924,6 +924,9 @@ export const ProjectsPage = () => {
         open={!!projectToDelete}
         onClose={() => setProjectToDelete(null)}
         size="sm"
+        preventCloseOnBackdrop={deleteProjectMutation.isPending}
+        overlayClassName="delete-post-overlay-warning"
+        contentClassName="glass-dialog-delete"
       >
         <div className="space-y-6">
           <div className="space-y-1.5">
@@ -950,14 +953,13 @@ export const ProjectsPage = () => {
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              className="!bg-red-500 !text-white !border-red-500/60 !shadow-[0_2px_8px_rgba(0,0,0,0.14)] hover:!bg-red-600 hover:!shadow-[0_4px_14px_rgba(0,0,0,0.2)] focus:!ring-red-400/60"
               onClick={() => {
                 if (projectToDelete) {
                   deleteProjectMutation.mutate(projectToDelete.id);
                 }
               }}
               loading={deleteProjectMutation.isPending}
-              className="bg-red-500/10 text-red-500 hover:bg-red-500/20"
             >
               Eliminar
             </Button>

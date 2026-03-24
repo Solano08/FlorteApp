@@ -128,11 +128,11 @@ export const LibraryPage = () => {
                   <img
                     src={resource.image}
                     alt={resource.title}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    className="h-full w-full object-cover transition-transform duration-ui group-hover:scale-110"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-ui group-hover:opacity-100" />
                   {resource.type === 'external' && (
-                    <div className="absolute bottom-2 right-2 rounded-2xl bg-white/90 p-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <div className="absolute bottom-2 right-2 rounded-2xl bg-white/90 p-2 opacity-0 transition-opacity duration-ui group-hover:opacity-100">
                       <ExternalLink className="h-4 w-4 text-brand" />
                     </div>
                   )}

@@ -1,4 +1,6 @@
 import { FC, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Hash, Send, MoreVertical, Plus, Smile, Info, Users, Pin, X, Reply, Copy, Forward, Star, Flag, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +12,7 @@ import { EmojiPicker } from '../ui/EmojiPicker';
 import { resolveAssetUrl } from '../../utils/media';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
+import { UI_MOTION_SLIDE_TWEEN, UI_OVERLAY_TRANSITION } from '../../utils/transitionConfig';
 
 interface ChannelChatProps {
   channelId: string;
@@ -82,7 +85,23 @@ export const ChannelChat: FC<ChannelChatProps> = ({
 
   const pinMessageMutation = useMutation({
     mutationFn: (messageId: string) => channelService.togglePinMessage(messageId),
-    onSuccess: (_, messageId) => {
+    onSuccess: (updated) => {
+      queryClient.setQueryData<ChannelMessage[]>(['channelMessages', channelId], (old) => {
+        if (!old) return old;
+        const next = old.map((m) => {
+          if (m.id === updated.id) {
+            return { ...m, ...updated };
+          }
+          if (updated.isPinned && m.isPinned) {
+            return { ...m, isPinned: false, pinnedAt: undefined, pinnedBy: undefined };
+          }
+          return m;
+        });
+        return next.sort((a, b) => {
+          if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1;
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+      });
       void queryClient.invalidateQueries({ queryKey: ['channelMessages', channelId] });
       toast.success('Mensaje actualizado');
     },
@@ -107,47 +126,9 @@ export const ChannelChat: FC<ChannelChatProps> = ({
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [pollSubmitting, setPollSubmitting] = useState(false);
   const [pollVotes, setPollVotes] = useState<Record<string, string | null>>({});
-  const pinnedMenuRef = useRef<HTMLDivElement | null>(null);
-  const membersPanelRef = useRef<HTMLElement | null>(null);
   const messageMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
   const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  // Cerrar menú de mensajes fijados al hacer clic fuera
-  useEffect(() => {
-    if (!pinnedMenuOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (pinnedMenuRef.current && !pinnedMenuRef.current.contains(event.target as Node)) {
-        setPinnedMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [pinnedMenuOpen]);
-
-  // Cerrar panel de miembros al hacer clic fuera
-  useEffect(() => {
-    if (!membersOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (membersPanelRef.current && !membersPanelRef.current.contains(event.target as Node)) {
-        const target = event.target as HTMLElement;
-        // Solo cerrar si no se hace clic en el overlay
-        if (target.classList.contains('backdrop-blur-[2px]')) {
-          setMembersOpen(false);
-        }
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [membersOpen]);
 
   // Cerrar menú de mensajes al hacer clic fuera
   useEffect(() => {
@@ -224,6 +205,29 @@ export const ChannelChat: FC<ChannelChatProps> = ({
     }
   }, [messages, channelName, isLoadingMessages]);
 
+  useEffect(() => {
+    if (!infoOpen && !membersOpen && !pinnedMenuOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (pinnedMenuOpen) setPinnedMenuOpen(false);
+      else if (membersOpen) setMembersOpen(false);
+      else if (infoOpen) setInfoOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [infoOpen, membersOpen, pinnedMenuOpen]);
+
+  useEffect(() => {
+    setInfoOpen(false);
+    setMembersOpen(false);
+    setPinnedMenuOpen(false);
+  }, [channelId]);
+
   const activeMembers = useMemo(() => {
     const map = new Map<string, { id: string; name: string; avatarUrl?: string | null }>();
     messages.forEach((m) => {
@@ -236,6 +240,8 @@ export const ChannelChat: FC<ChannelChatProps> = ({
     });
     return Array.from(map.values());
   }, [messages]);
+
+  const pinnedMessages = useMemo(() => messages.filter((m) => m.isPinned), [messages]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -331,8 +337,8 @@ export const ChannelChat: FC<ChannelChatProps> = ({
     <section className="chat-ios flex h-full min-h-0 flex-1 flex-col glass-liquid">
       {/* Header del canal */}
       <header className="flex items-center gap-3 border-b border-white/20 dark:border-white/5 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl px-5 py-3.5 shadow-sm">
-        <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-sena-green/10 dark:bg-sena-green/20">
-          <Hash className="h-4.5 w-4.5 text-sena-green" />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl">
+          <Hash className="h-4 w-4 text-[var(--color-muted)]" />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-sm font-semibold text-[var(--color-text)] truncate">{channelName}</h2>
@@ -341,45 +347,17 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          {/* Botón y menú de mensajes fijados */}
-          <div className="relative">
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-150 hover:text-sena-green"
-              onClick={() => setPinnedMenuOpen((prev) => !prev)}
-              aria-label="Ver mensajes fijados"
-            >
-              <Pin className="h-3.5 w-3.5" />
-            </button>
-            {pinnedMenuOpen && (
-              <div
-                ref={pinnedMenuRef}
-                className="absolute right-0 z-50 mt-2 w-72 rounded-2xl glass-liquid-strong p-3 text-sm text-[var(--color-text)]"
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                    Mensajes fijados
-                  </span>
-                  <button
-                    type="button"
-                    className="flex h-6 w-6 items-center justify-center rounded-2xl bg-white/80 text-[var(--color-muted)] hover:text-sena-green dark:bg-neutral-800/80 transition-colors"
-                    onClick={() => setPinnedMenuOpen(false)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <div className="max-h-64 space-y-2 overflow-y-auto">
-                  {/* Por ahora no hay soporte para mensajes fijados en el backend */}
-                  <p className="text-xs text-[var(--color-muted)] py-2">
-                    Aún no hay mensajes fijados en este canal.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-150 hover:text-sena-green"
+            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-ui hover:text-sena-green"
+            onClick={() => setPinnedMenuOpen(true)}
+            aria-label="Ver mensajes fijados"
+          >
+            <Pin className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-ui hover:text-sena-green"
             onClick={() => setMembersOpen(true)}
             aria-label="Ver miembros del canal"
           >
@@ -387,7 +365,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           </button>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-150 hover:text-sena-green"
+            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-ui hover:text-sena-green"
             onClick={() => setInfoOpen(true)}
             aria-label="Información del canal"
           >
@@ -427,7 +405,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
               return (
                 <div
                   key={message.id}
-                  className={`group flex gap-3 w-full transition-all duration-200 ${
+                  className={`group flex gap-3 w-full transition-all duration-ui ${
                     isOwn ? 'justify-end' : 'justify-start'
                   } ${isLast ? 'chat-message-enter' : ''}`}
                   onMouseEnter={() => setHoveredMessageId(message.id)}
@@ -511,7 +489,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     key={opt}
                                     type="button"
                                     onClick={() => handleVote(message.id, opt)}
-                                    className={`flex w-full items-center justify-between rounded-2xl px-2.5 py-1.5 text-[11px] transition-all duration-150 border ${
+                                    className={`flex w-full items-center justify-between rounded-2xl px-2.5 py-1.5 text-[11px] transition-all duration-ui border ${
                                       isSelected
                                         ? 'border-sena-green/70 bg-sena-green/10 text-sena-green'
                                         : 'border-white/60 bg-white/60 text-[var(--color-text)] hover:border-sena-green/40 hover:bg-sena-green/5 dark:border-white/10 dark:bg-neutral-800/80'
@@ -543,7 +521,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                           <div className="relative">
                             <button
                               type="button"
-                              className={`ml-2 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-2xl text-[var(--color-muted)] transition-all duration-150 hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 ${
+                              className={`ml-2 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-2xl text-[var(--color-muted)] transition-all duration-ui hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 ${
                                 hoveredMessageId === message.id || openMessageMenuId === message.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                               }`}
                               onClick={(e) => {
@@ -559,7 +537,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                 ref={(el) => {
                                   messageMenuRefs.current[message.id] = el;
                                 }}
-                                className={`absolute ${isOwn ? 'left-0' : 'right-0'} top-8 z-50 w-48 rounded-2xl glass-frosted p-2 text-sm text-[var(--color-text)]`}
+                                className={`absolute ${isOwn ? 'right-0' : 'left-0'} top-full z-50 mt-0.5 w-48 rounded-2xl glass-frosted p-2 text-sm text-[var(--color-text)]`}
                               >
                                 <button
                                   type="button"
@@ -678,13 +656,13 @@ export const ChannelChat: FC<ChannelChatProps> = ({
         <div className="px-5 pb-5 pt-3 border-t border-white/20 dark:border-white/5">
           <form
             onSubmit={handleSubmit}
-            className="w-full h-16 rounded-2xl border border-white/50 dark:border-white/15 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl px-4 shadow-[0_4px_20px_rgba(15,23,42,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-200 focus-within:border-sena-green/40 dark:focus-within:border-sena-green/30 focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.15)] dark:focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.25)]"
+            className="w-full h-16 rounded-2xl border border-white/50 dark:border-white/15 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl px-4 shadow-[0_4px_20px_rgba(15,23,42,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-ui focus-within:border-sena-green/40 dark:focus-within:border-sena-green/30 focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.15)] dark:focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.25)]"
           >
             <div className="relative flex h-full items-center gap-3">
               <div className="relative">
                 <button
                   type="button"
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-neutral-800/70 text-[var(--color-muted)] transition-all duration-200 hover:bg-white/90 dark:hover:bg-neutral-700/90 hover:text-sena-green hover:scale-105"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-neutral-800/70 text-[var(--color-muted)] transition-all duration-ui hover:bg-white/90 dark:hover:bg-neutral-700/90 hover:text-sena-green hover:scale-105"
                   onClick={() => setPlusMenuOpen((prev) => !prev)}
                   aria-label="Más opciones"
                 >
@@ -750,14 +728,16 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                 <button
                   type="button"
                   ref={emojiButtonRef}
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-neutral-800/70 text-[var(--color-muted)] transition-all duration-200 hover:bg-white/90 dark:hover:bg-neutral-700/90 hover:text-sena-green hover:scale-105"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-neutral-800/70 text-[var(--color-muted)] transition-all duration-ui hover:bg-white/90 dark:hover:bg-neutral-700/90 hover:text-sena-green hover:scale-105"
                   onClick={() => setEmojiPickerOpen((prev) => !prev)}
                 >
                   <Smile className="h-4 w-4" />
                 </button>
                 {emojiPickerOpen && (
-                  <div className="absolute bottom-full mb-2 right-0 z-50" ref={emojiPickerRef}>
+                  <div className="absolute bottom-full mb-2 right-0 z-50">
                     <EmojiPicker
+                      ref={emojiPickerRef}
+                      compactBounds
                       onEmojiSelect={(emoji) => {
                         setContent((prev) => prev + emoji);
                         setEmojiPickerOpen(false);
@@ -770,7 +750,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
               <Button
                 type="submit"
                 size="sm"
-                className="h-11 w-11 rounded-2xl px-0 bg-gradient-to-br from-sena-green to-emerald-600 hover:from-sena-green/95 hover:to-emerald-600/95 shadow-[0_4px_12px_rgba(57,169,0,0.3)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.4)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-11 w-11 rounded-2xl px-0 bg-gradient-to-br from-sena-green to-emerald-600 hover:from-sena-green/95 hover:to-emerald-600/95 shadow-[0_4px_12px_rgba(57,169,0,0.3)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.4)] transition-all duration-ui disabled:opacity-50 disabled:cursor-not-allowed"
                 loading={sending}
                 disabled={!content.trim()}
               >
@@ -781,93 +761,313 @@ export const ChannelChat: FC<ChannelChatProps> = ({
         </div>
       </div>
 
-      {/* Diálogo información del canal */}
-      <GlassDialog open={infoOpen} onClose={() => setInfoOpen(false)} size="sm">
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--color-text)]">Información del canal</h2>
-            <p className="text-sm text-[var(--color-muted)]">
-              Detalles rápidos del canal y su actividad reciente.
-            </p>
-          </div>
-          <div className="space-y-2 rounded-2xl bg-white/80 p-4 text-sm text-[var(--color-text)] shadow-sm dark:bg-neutral-900/80">
-            <p className="font-semibold">#{channelName}</p>
-            {channelDescription && (
-              <p className="text-[13px] text-[var(--color-muted)]">{channelDescription}</p>
-            )}
-            <div className="mt-2 flex flex-wrap gap-3 text-[12px] text-[var(--color-muted)]">
-              <span>
-                {messages.length} {messages.length === 1 ? 'mensaje' : 'mensajes'}
-              </span>
-              <span>
-                {activeMembers.length} {activeMembers.length === 1 ? 'miembro activo' : 'miembros activos'}
-              </span>
-            </div>
-          </div>
-          <div className="flex justify-end pt-1">
-            <Button type="button" variant="ghost" onClick={() => setInfoOpen(false)}>
-              Cerrar
-            </Button>
-          </div>
-        </div>
-      </GlassDialog>
+      {/* Panel lateral información del canal (misma apariencia que Chats) */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {infoOpen && (
+              <>
+                <motion.div
+                  key="channel-info-backdrop"
+                  role="presentation"
+                  aria-hidden
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={UI_OVERLAY_TRANSITION}
+                  className="fixed inset-0 z-[10050] bg-black/45 backdrop-blur-[2px] dark:bg-black/55"
+                  onClick={() => setInfoOpen(false)}
+                />
+                <motion.aside
+                  key="channel-info-panel"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="channel-info-panel-title"
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={UI_MOTION_SLIDE_TWEEN}
+                  className="fixed right-0 top-0 z-[10051] flex h-full w-full max-w-[min(100vw,420px)] flex-col border-l border-neutral-200/80 bg-[#f0f2f5] shadow-[-12px_0_40px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-[#1a1d21] dark:shadow-[-12px_0_48px_rgba(0,0,0,0.45)]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <header className="flex shrink-0 items-center gap-3 border-b border-neutral-200/90 bg-white/90 px-3 py-3.5 dark:border-white/10 dark:bg-[#1e2125]/95">
+                    <button
+                      type="button"
+                      onClick={() => setInfoOpen(false)}
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+                      aria-label="Cerrar panel"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                    <h2
+                      id="channel-info-panel-title"
+                      className="flex-1 text-center text-[15px] font-semibold text-neutral-900 dark:text-neutral-100"
+                    >
+                      Info. del canal
+                    </h2>
+                    <span className="h-10 w-10 shrink-0" aria-hidden />
+                  </header>
 
-      {/* Panel lateral de miembros (dashboard derecho) */}
-      {membersOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-[100] bg-neutral-950/20"
-            onClick={() => setMembersOpen(false)}
-          />
-          <aside
-            ref={membersPanelRef}
-            className="fixed right-0 top-0 z-[101] flex h-full w-72 flex-col border-l border-white/20 bg-white/96 dark:bg-neutral-950/95 backdrop-blur-xl shadow-[0_0_40px_rgba(15,23,42,0.25)] dark:shadow-[0_0_40px_rgba(0,0,0,0.5)] dark:border-white/10"
-          >
-            <div className="flex items-center justify-between border-b border-white/20 px-4 py-3 dark:border-white/10">
-              <div>
-                <p className="text-sm font-semibold text-[var(--color-text)]">Miembros del canal</p>
-                <p className="text-[11px] text-[var(--color-muted)]">
-                  {activeMembers.length} {activeMembers.length === 1 ? 'miembro' : 'miembros'}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="flex h-7 w-7 items-center justify-center rounded-2xl bg-white/80 text-[var(--color-muted)] hover:text-sena-green dark:bg-neutral-800/80 transition-colors"
-                onClick={() => setMembersOpen(false)}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
-              {activeMembers.length === 0 ? (
-                <p className="text-sm text-[var(--color-muted)] py-4 text-center">
-                  Aún no hay miembros activos en este canal.
-                </p>
-              ) : (
-                activeMembers.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-2 rounded-2xl bg-white/90 dark:bg-neutral-900/90 px-2.5 py-2 text-sm text-[var(--color-text)] shadow-sm ring-1 ring-white/40 dark:ring-white/10 transition-all hover:bg-white dark:hover:bg-neutral-800/90"
-                  >
-                    {member.avatarUrl ? (
-                      <img
-                        src={resolveAssetUrl(member.avatarUrl) ?? ''}
-                        alt={member.name}
-                        className="h-8 w-8 rounded-2xl object-cover ring-1 ring-white/40 dark:ring-white/15"
-                      />
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6">
+                    <div className="flex flex-col items-center text-center">
+                      <span className="flex h-36 w-36 items-center justify-center rounded-full bg-gradient-to-br from-sena-green/20 to-emerald-500/15 shadow-md ring-2 ring-white/50 dark:ring-white/10">
+                        <Hash className="h-16 w-16 text-sena-green" />
+                      </span>
+                      <p className="mt-5 max-w-[280px] text-xl font-semibold leading-snug text-neutral-900 dark:text-white">
+                        #{channelName}
+                      </p>
+                      <p className="mt-1.5 max-w-[280px] text-sm text-neutral-500 line-clamp-4 dark:text-neutral-400">
+                        {channelDescription?.trim() || 'Canal de la comunidad'}
+                      </p>
+                    </div>
+
+                    <p className="mt-8 text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+                      Información
+                    </p>
+                    <div className="mt-2 divide-y divide-neutral-200/90 rounded-xl border border-neutral-200/80 bg-white/90 text-sm dark:divide-white/10 dark:border-white/10 dark:bg-[#252a31]/90">
+                      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+                        <span className="text-neutral-500 dark:text-neutral-400">Tipo</span>
+                        <span className="inline-flex items-center gap-1.5 font-medium text-neutral-800 dark:text-neutral-200">
+                          <Hash className="h-4 w-4 text-sena-green" />
+                          Canal
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+                        <span className="text-neutral-500 dark:text-neutral-400">Mensajes</span>
+                        <span className="font-medium tabular-nums text-neutral-800 dark:text-neutral-200">
+                          {messages.length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+                        <span className="text-neutral-500 dark:text-neutral-400">Miembros activos</span>
+                        <span className="font-medium tabular-nums text-neutral-800 dark:text-neutral-200">
+                          {activeMembers.length}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 divide-y divide-neutral-200/90 overflow-hidden rounded-xl border border-neutral-200/80 bg-white/90 dark:divide-white/10 dark:border-white/10 dark:bg-[#252a31]/90">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInfoOpen(false);
+                          setMembersOpen(true);
+                        }}
+                        className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] text-neutral-800 transition-colors hover:bg-neutral-100/90 dark:text-neutral-100 dark:hover:bg-white/5"
+                      >
+                        <Users className="h-5 w-5 shrink-0 text-neutral-500 dark:text-neutral-400" />
+                        Ver miembros del canal
+                      </button>
+                    </div>
+                  </div>
+                </motion.aside>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+
+      {/* Panel lateral miembros del canal (misma apariencia que info del canal) */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {membersOpen && (
+              <>
+                <motion.div
+                  key="channel-members-backdrop"
+                  role="presentation"
+                  aria-hidden
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={UI_OVERLAY_TRANSITION}
+                  className="fixed inset-0 z-[10050] bg-black/45 backdrop-blur-[2px] dark:bg-black/55"
+                  onClick={() => setMembersOpen(false)}
+                />
+                <motion.aside
+                  key="channel-members-panel"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="channel-members-panel-title"
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={UI_MOTION_SLIDE_TWEEN}
+                  className="fixed right-0 top-0 z-[10051] flex h-full w-full max-w-[min(100vw,420px)] flex-col border-l border-neutral-200/80 bg-[#f0f2f5] shadow-[-12px_0_40px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-[#1a1d21] dark:shadow-[-12px_0_48px_rgba(0,0,0,0.45)]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <header className="flex shrink-0 items-center gap-3 border-b border-neutral-200/90 bg-white/90 px-3 py-3.5 dark:border-white/10 dark:bg-[#1e2125]/95">
+                    <button
+                      type="button"
+                      onClick={() => setMembersOpen(false)}
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+                      aria-label="Cerrar panel"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                    <h2
+                      id="channel-members-panel-title"
+                      className="flex-1 text-center text-[15px] font-semibold text-neutral-900 dark:text-neutral-100"
+                    >
+                      Miembros del canal
+                    </h2>
+                    <span className="h-10 w-10 shrink-0" aria-hidden />
+                  </header>
+
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6">
+                    <div className="flex flex-col items-center text-center">
+                      <span className="flex h-36 w-36 items-center justify-center rounded-full bg-gradient-to-br from-sena-green/20 to-emerald-500/15 shadow-md ring-2 ring-white/50 dark:ring-white/10">
+                        <Users className="h-16 w-16 text-sena-green" />
+                      </span>
+                      <p className="mt-5 max-w-[280px] text-xl font-semibold leading-snug text-neutral-900 dark:text-white">
+                        #{channelName}
+                      </p>
+                      <p className="mt-1.5 max-w-[280px] text-sm text-neutral-500 dark:text-neutral-400">
+                        {activeMembers.length === 0
+                          ? 'Nadie ha escrito aún en este canal'
+                          : `${activeMembers.length} ${activeMembers.length === 1 ? 'miembro activo' : 'miembros activos'}`}
+                      </p>
+                    </div>
+
+                    <p className="mt-8 text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+                      Participantes
+                    </p>
+                    {activeMembers.length === 0 ? (
+                      <div className="mt-2 rounded-xl border border-neutral-200/80 bg-white/90 px-4 py-8 text-center text-sm text-neutral-500 dark:border-white/10 dark:bg-[#252a31]/90 dark:text-neutral-400">
+                        Aún no hay miembros activos en este canal.
+                      </div>
                     ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-sena-green/15 text-[11px] font-semibold text-sena-green ring-1 ring-white/40 dark:ring-white/15">
-                        {member.name.charAt(0).toUpperCase()}
+                      <div className="mt-2 divide-y divide-neutral-200/90 overflow-hidden rounded-xl border border-neutral-200/80 bg-white/90 dark:divide-white/10 dark:border-white/10 dark:bg-[#252a31]/90">
+                        {activeMembers.map((member) => (
+                          <div
+                            key={member.id}
+                            className="flex items-center gap-3 px-4 py-3.5 text-left text-sm text-neutral-800 dark:text-neutral-100"
+                          >
+                            {member.avatarUrl ? (
+                              <img
+                                src={resolveAssetUrl(member.avatarUrl) ?? ''}
+                                alt=""
+                                className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-white/50 dark:ring-white/10"
+                              />
+                            ) : (
+                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sena-green/25 to-emerald-500/15 text-sm font-semibold text-sena-green ring-2 ring-white/50 dark:ring-white/10">
+                                {member.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <span className="min-w-0 flex-1 truncate font-medium">{member.name}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <span className="truncate flex-1">{member.name}</span>
                   </div>
-                ))
-              )}
-            </div>
-          </aside>
-        </>
-      )}
+                </motion.aside>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+
+      {/* Panel lateral mensajes fijados (misma apariencia que info / miembros) */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {pinnedMenuOpen && (
+              <>
+                <motion.div
+                  key="channel-pinned-backdrop"
+                  role="presentation"
+                  aria-hidden
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={UI_OVERLAY_TRANSITION}
+                  className="fixed inset-0 z-[10050] bg-black/45 backdrop-blur-[2px] dark:bg-black/55"
+                  onClick={() => setPinnedMenuOpen(false)}
+                />
+                <motion.aside
+                  key="channel-pinned-panel"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="channel-pinned-panel-title"
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={UI_MOTION_SLIDE_TWEEN}
+                  className="fixed right-0 top-0 z-[10051] flex h-full w-full max-w-[min(100vw,420px)] flex-col border-l border-neutral-200/80 bg-[#f0f2f5] shadow-[-12px_0_40px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-[#1a1d21] dark:shadow-[-12px_0_48px_rgba(0,0,0,0.45)]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <header className="flex shrink-0 items-center gap-3 border-b border-neutral-200/90 bg-white/90 px-3 py-3.5 dark:border-white/10 dark:bg-[#1e2125]/95">
+                    <button
+                      type="button"
+                      onClick={() => setPinnedMenuOpen(false)}
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+                      aria-label="Cerrar panel"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                    <h2
+                      id="channel-pinned-panel-title"
+                      className="flex-1 text-center text-[15px] font-semibold text-neutral-900 dark:text-neutral-100"
+                    >
+                      Mensajes fijados
+                    </h2>
+                    <span className="h-10 w-10 shrink-0" aria-hidden />
+                  </header>
+
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6">
+                    <div className="flex flex-col items-center text-center">
+                      <span className="flex h-36 w-36 items-center justify-center rounded-full bg-gradient-to-br from-sena-green/20 to-emerald-500/15 shadow-md ring-2 ring-white/50 dark:ring-white/10">
+                        <Pin className="h-16 w-16 text-sena-green" />
+                      </span>
+                      <p className="mt-5 max-w-[280px] text-xl font-semibold leading-snug text-neutral-900 dark:text-white">
+                        #{channelName}
+                      </p>
+                      <p className="mt-1.5 max-w-[280px] text-sm text-neutral-500 dark:text-neutral-400">
+                        {pinnedMessages.length === 0
+                          ? 'Ningún mensaje fijado por ahora'
+                          : `${pinnedMessages.length} ${pinnedMessages.length === 1 ? 'mensaje fijado' : 'mensajes fijados'}`}
+                      </p>
+                    </div>
+
+                    <p className="mt-8 text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+                      Lista
+                    </p>
+                    {pinnedMessages.length === 0 ? (
+                      <div className="mt-2 rounded-xl border border-neutral-200/80 bg-white/90 px-4 py-8 text-center text-sm text-neutral-500 dark:border-white/10 dark:bg-[#252a31]/90 dark:text-neutral-400">
+                        Aún no hay mensajes fijados en este canal.
+                      </div>
+                    ) : (
+                      <div className="mt-2 divide-y divide-neutral-200/90 overflow-hidden rounded-xl border border-neutral-200/80 bg-white/90 dark:divide-white/10 dark:border-white/10 dark:bg-[#252a31]/90">
+                        {pinnedMessages.map((message) => {
+                          const poll = parsePollContent(message.content);
+                          const preview = poll
+                            ? `Encuesta: ${poll.title}`
+                            : message.content?.trim() ||
+                              (message.attachmentUrl ? 'Archivo adjunto' : 'Sin texto');
+                          const sender = message.sender
+                            ? `${message.sender.firstName} ${message.sender.lastName}`.trim()
+                            : 'Usuario';
+                          return (
+                            <div
+                              key={message.id}
+                              className="px-4 py-3.5 text-left text-sm text-neutral-800 dark:text-neutral-100"
+                            >
+                              <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{sender}</p>
+                              <p className="mt-1 line-clamp-4 whitespace-pre-wrap break-words text-neutral-800 dark:text-neutral-200">
+                                {preview}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </motion.aside>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
       {/* Diálogo reportar mensaje */}
       <GlassDialog
@@ -950,6 +1150,9 @@ export const ChannelChat: FC<ChannelChatProps> = ({
         open={!!deleteTarget}
         onClose={() => (!deleteMessageMutation.isPending ? setDeleteTarget(null) : undefined)}
         size="sm"
+        preventCloseOnBackdrop={deleteMessageMutation.isPending}
+        overlayClassName="delete-post-overlay-warning"
+        contentClassName="glass-dialog-delete"
       >
         <div className="space-y-4">
           <div>
@@ -978,8 +1181,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
             </Button>
             <Button
               type="button"
-              variant="primary"
-              className="bg-rose-500/90 hover:bg-rose-600/90 text-white border-rose-400/30"
+              className="!bg-red-500 !text-white !border-red-500/60 !shadow-[0_2px_8px_rgba(0,0,0,0.14)] hover:!bg-red-600 hover:!shadow-[0_4px_14px_rgba(0,0,0,0.2)] focus:!ring-red-400/60"
               onClick={() => deleteTarget && deleteMessageMutation.mutate(deleteTarget.id)}
               loading={deleteMessageMutation.isPending}
             >

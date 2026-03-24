@@ -13,6 +13,24 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
+const variantClasses: Record<ButtonVariant, string> = {
+  primary:
+    'bg-sena-green text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sena-green/40',
+  secondary:
+    'border border-white/25 bg-white/20 text-[var(--color-text)] backdrop-blur-md hover:bg-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sena-green/30 dark:border-white/15 dark:bg-white/10 dark:hover:bg-white/15',
+  ghost:
+    'bg-transparent text-[var(--color-text)] hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sena-green/25 dark:hover:bg-white/10',
+  destructive:
+    'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 dark:bg-red-600 dark:hover:bg-red-500',
+};
+
+const sizeClasses: Record<ButtonSize, string> = {
+  xs: 'min-h-0 px-2 py-1 text-[11px]',
+  sm: 'min-h-9 px-3 py-1.5 text-sm',
+  md: 'min-h-10 px-4 py-2 text-sm',
+  lg: 'min-h-11 px-5 py-2.5 text-base',
+};
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
@@ -25,51 +43,36 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       fullWidth,
       loading,
       disabled,
+      type = 'button',
       ...props
     },
     ref
   ) => {
-    const baseStyles =
-      'inline-flex items-center justify-center gap-1.5 rounded-2xl font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent';
-
-    const variants: Record<ButtonVariant, string> = {
-      primary:
-        'bg-sena-green/85 text-white backdrop-blur-sm shadow-[0_8px_25px_rgba(57,169,0,0.2)] hover:shadow-[0_12px_30px_rgba(57,169,0,0.3)] hover:scale-[1.02] hover:bg-sena-green/95 focus:ring-sena-green/35 active:scale-95 border border-white/10',
-      secondary:
-        'bg-white/10 text-[var(--color-text)] backdrop-blur-md border border-white/20 hover:border-white/40 hover:bg-white/20 hover:text-sena-green shadow-sm focus:ring-sena-green/20 dark:bg-white/5 dark:hover:bg-white/10',
-      ghost:
-        'bg-white/5 text-[var(--color-text)] border border-white/10 hover:bg-white/15 hover:border-white/25 hover:text-[var(--color-text)] focus:ring-transparent backdrop-blur-sm transition-all hover:scale-[1.02] active:scale-95 dark:bg-white/5 dark:hover:bg-white/10',
-      destructive:
-        'bg-red-500/90 text-white backdrop-blur-sm hover:bg-red-600 focus:ring-red-500/35 active:scale-95 border border-white/10'
-    };
-
-    const sizes: Record<ButtonSize, string> = {
-      xs: 'px-2 py-1 text-[11px]',
-      sm: 'px-3 py-1.5 text-xs',
-      md: 'px-4 py-2 text-sm',
-      lg: 'px-5 py-2.5 text-base'
-    };
+    const isDisabled = disabled || loading;
 
     return (
       <button
         ref={ref}
+        type={type}
+        disabled={isDisabled}
         className={classNames(
-          baseStyles,
-          variants[variant],
-          sizes[size],
+          'inline-flex items-center justify-center rounded-2xl font-medium transition-all duration-ui ease-ui',
+          variantClasses[variant],
+          sizeClasses[size],
           fullWidth && 'w-full',
-          (disabled || loading) && 'opacity-70 cursor-not-allowed',
+          isDisabled && 'cursor-not-allowed opacity-70',
           className
         )}
-        disabled={disabled || loading}
         {...props}
       >
-        {leftIcon}
-        {loading && (
-          <span className="inline-block h-4 w-4 animate-spin rounded-2xl border-2 border-white border-b-transparent" />
-        )}
-        <span>{children}</span>
-        {rightIcon}
+        <span className="inline-flex items-center justify-center gap-1.5">
+          {leftIcon}
+          {loading && (
+            <span className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-b-transparent" />
+          )}
+          <span>{children}</span>
+          {rightIcon}
+        </span>
       </button>
     );
   }

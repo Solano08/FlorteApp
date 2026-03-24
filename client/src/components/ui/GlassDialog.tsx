@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from 'react';
 import { AnimatePresence, motion, type HTMLMotionProps } from 'framer-motion';
 import classNames from 'classnames';
 import { createPortal } from 'react-dom';
+import { UI_DIALOG_CONTENT_TRANSITION, UI_OVERLAY_TRANSITION } from '../../utils/transitionConfig';
 
 type GlassDialogSize = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -70,6 +71,23 @@ export const GlassDialog = ({
 
   const { className: motionClassName, ...motionRest } = contentMotionProps ?? {};
 
+  /** Velo oscuro + blur ligero (igual que eliminar publicación); destructivos pueden pasar `delete-post-overlay-warning` explícitamente. */
+  const resolvedOverlayClassName = overlayClassName ?? 'report-post-overlay-bw';
+
+  const hasExplicitFlatSurface =
+    Boolean(contentClassName?.includes('glass-dialog-delete')) ||
+    Boolean(contentClassName?.includes('glass-dialog-neutral'));
+
+  const mergedContentClassName = frameless
+    ? contentClassName
+    : hasExplicitFlatSurface
+      ? contentClassName
+      : classNames('glass-dialog-neutral', contentClassName);
+
+  const flatDialogSurface =
+    Boolean(mergedContentClassName?.includes('glass-dialog-delete')) ||
+    Boolean(mergedContentClassName?.includes('glass-dialog-neutral'));
+
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -79,10 +97,10 @@ export const GlassDialog = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.24, ease: 'easeOut' }}
+          transition={UI_OVERLAY_TRANSITION}
           className={classNames(
-            'fixed inset-0 z-[10000] flex items-center justify-center bg-neutral-900/8 dark:bg-neutral-900/12 backdrop-blur-[12px]',
-            overlayClassName
+            'fixed inset-0 z-[10000] flex items-center justify-center',
+            resolvedOverlayClassName
           )}
           style={{
             position: 'fixed',
@@ -100,23 +118,23 @@ export const GlassDialog = ({
               initial={{ opacity: 0, scale: 0.94, y: 32 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 16 }}
-              transition={{ type: 'spring', stiffness: 170, damping: 24 }}
+              transition={UI_DIALOG_CONTENT_TRANSITION}
               {...motionRest}
               className={classNames(
                 'relative w-full overflow-hidden',
                 frameless
                   ? 'rounded-none border-none bg-transparent p-0 shadow-none backdrop-blur-none'
-                  : contentClassName?.includes('glass-dialog-delete')
+                  : flatDialogSurface
                     ? `rounded-2xl p-6`
                     : 'rounded-2xl p-6 glass-liquid-deep',
                 frameless ? '' : sizeClasses[size],
-                contentClassName,
+                mergedContentClassName,
                 motionClassName
               )}
               onClick={(event) => event.stopPropagation()}
             >
               {/* Efectos de luz adicionales para glass-liquid-deep */}
-              {(size === 'lg' || size === 'xl') && !frameless && (
+              {(size === 'lg' || size === 'xl') && !frameless && !flatDialogSurface && (
                 <>
                   <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_30%_20%,_rgba(255,255,255,0.25),_transparent_50%)] opacity-60 dark:opacity-20 mix-blend-overlay z-[1]" />
                   <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_70%_80%,_rgba(255,255,255,0.15),_transparent_50%)] opacity-50 dark:opacity-12 mix-blend-overlay z-[1]" />

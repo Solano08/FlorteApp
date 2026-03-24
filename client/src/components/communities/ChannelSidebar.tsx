@@ -1,5 +1,19 @@
-import { FC, useMemo, useState, useRef, useEffect } from 'react';
-import { Hash, UserPlus, ChevronDown, ChevronRight, Settings, Plus, Check, X, Folder } from 'lucide-react';
+import { FC, useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  Hash,
+  UserPlus,
+  ChevronDown,
+  ChevronRight,
+  Settings,
+  Plus,
+  Check,
+  X,
+  Folder,
+  MoreVertical,
+  Pencil,
+  Trash2
+} from 'lucide-react';
 import { Channel } from '../../types/channel';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Group } from '../../types/group';
@@ -40,7 +54,6 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
   }, [user, community]);
   const [isCommunityMenuOpen, setIsCommunityMenuOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
-  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
   const [isCreatingTextChannel, setIsCreatingTextChannel] = useState(false);
   const [newTextChannelName, setNewTextChannelName] = useState('');
@@ -60,19 +73,116 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     const stored = localStorage.getItem(`channelCategories_${communityId}`);
     return stored ? JSON.parse(stored) : {};
   });
-  const [draggedChannel, setDraggedChannel] = useState<{ channel: Channel; categoryId: string | null } | null>(null);
+  const [draggedChannel, setDraggedChannel] = useState<{ channel: Channel; categoryUiId: string } | null>(null);
   const [draggedCategory, setDraggedCategory] = useState<{ id: string } | null>(null);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [dragOverPosition, setDragOverPosition] = useState<'before' | 'after' | null>(null);
+  /** Orden local de canales por categoría (UI id: texto, uuid, etc.) */
+  const [channelOrders, setChannelOrders] = useState<Record<string, string[]>>({});
+  const [dragOverChannelId, setDragOverChannelId] = useState<string | null>(null);
+  const [channelDropEdge, setChannelDropEdge] = useState<'before' | 'after' | null>(null);
   const [categoryOrder, setCategoryOrder] = useState<string[]>(() => {
     // Cargar orden de categorías desde localStorage
     if (!communityId) return [];
     const stored = localStorage.getItem(`categoryOrder_${communityId}`);
     return stored ? JSON.parse(stored) : [];
   });
+  const channelListScrollRef = useRef<HTMLDivElement | null>(null);
   const communityMenuRef = useRef<HTMLDivElement | null>(null);
+  const communityMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [communityMenuPos, setCommunityMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [openCategoryMenuId, setOpenCategoryMenuId] = useState<string | null>(null);
+  const [categoryMenuPos, setCategoryMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const categoryMenuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const categoryMenuDropdownRef = useRef<HTMLDivElement | null>(null);
+  const [renamingCategoryId, setRenamingCategoryId] = useState<string | null>(null);
+  const [renameCategoryDraft, setRenameCategoryDraft] = useState('');
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
+
+  const COMMUNITY_MENU_W = 224;
+  const COMMUNITY_MENU_H = 110;
+  const CATEGORY_MENU_W = 216;
+  const CATEGORY_MENU_H = 260;
+
+  useLayoutEffect(() => {
+    if (!isCommunityMenuOpen) {
+      setCommunityMenuPos(null);
+      return;
+    }
+    const update = () => {
+      const el = communityMenuButtonRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const gap = 6;
+      // Alinear el borde izquierdo del menú con el del botón (chevron estrecho). Si alineáramos por la
+      // derecha (rect.right - ancho), el panel quedaría demasiado a la izquierda.
+      let left = rect.left;
+      left = Math.max(8, Math.min(left, window.innerWidth - COMMUNITY_MENU_W - 8));
+      let top = rect.bottom + gap;
+      if (top + COMMUNITY_MENU_H > window.innerHeight - 8) {
+        top = Math.max(8, rect.top - COMMUNITY_MENU_H - gap);
+      }
+      setCommunityMenuPos({ top, left });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [isCommunityMenuOpen]);
+
+  useLayoutEffect(() => {
+    if (!openCategoryMenuId) {
+      setCategoryMenuPos(null);
+      return;
+    }
+    const update = () => {
+      const el = categoryMenuButtonRefs.current[openCategoryMenuId];
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const gap = 6;
+      // Borde derecho del menú alineado con el del botón ⋮ (queda justo debajo / al lado del disparador)
+      let left = rect.right - CATEGORY_MENU_W;
+      left = Math.max(8, Math.min(left, window.innerWidth - CATEGORY_MENU_W - 8));
+      let top = rect.bottom + gap;
+      if (top + CATEGORY_MENU_H > window.innerHeight - 8) {
+        top = Math.max(8, rect.top - CATEGORY_MENU_H - gap);
+      }
+      setCategoryMenuPos({ top, left });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [openCategoryMenuId]);
+
+  // Auto-scroll del listado al arrastrar un canal cerca del borde (listas largas)
+  useEffect(() => {
+    if (!draggedChannel || draggedCategory) return;
+
+    const onDragOverDoc = (e: DragEvent) => {
+      const el = channelListScrollRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const zone = 72;
+      const y = e.clientY;
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      if (y >= r.top && y <= r.top + zone && el.scrollTop > 0) {
+        el.scrollTop = Math.max(0, el.scrollTop - 16);
+      } else if (y <= r.bottom && y >= r.bottom - zone && el.scrollTop < maxScroll - 1) {
+        el.scrollTop = Math.min(maxScroll, el.scrollTop + 16);
+      }
+    };
+
+    document.addEventListener('dragover', onDragOverDoc);
+    return () => document.removeEventListener('dragover', onDragOverDoc);
+  }, [draggedChannel, draggedCategory]);
 
   const { textChannels, voiceChannels } = useMemo(() => {
     const sorted = [...channels].sort((a, b) => a.position - b.position);
@@ -107,7 +217,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     }
   };
 
-  // Guardar relación canal-categoría
+  // Guardar relación canal-categoría (null = categoría "Texto" / sin categoría)
   const saveChannelCategory = (channelId: string, categoryId: string | null) => {
     if (!communityId) return;
     const updated = { ...channelCategories };
@@ -118,6 +228,11 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     }
     setChannelCategories(updated);
     localStorage.setItem(`channelCategories_${communityId}`, JSON.stringify(updated));
+  };
+
+  const uiCategoryToStorage = (uiId: string | null | undefined): string | null => {
+    if (!uiId || uiId === 'texto') return null;
+    return uiId;
   };
 
   // Guardar orden de categorías
@@ -152,12 +267,15 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     return ordered;
   };
 
-  // Manejar drag and drop de canales
-  const handleChannelDragStart = (e: React.DragEvent, channel: Channel, categoryId: string | null) => {
-    setDraggedChannel({ channel, categoryId });
+  // Manejar drag and drop de canales (asa = grip; preview transparente = arrastre más fluido)
+  const handleChannelDragStart = (e: React.DragEvent, channel: Channel, categoryUiId: string) => {
+    setDraggedChannel({ channel, categoryUiId });
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', channel.id);
     e.dataTransfer.setData('type', 'channel');
+    const img = new Image();
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    e.dataTransfer.setDragImage(img, 0, 0);
   };
 
   // Manejar drag and drop de categorías
@@ -180,6 +298,86 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     setDragOverPosition(null);
   };
 
+  const handleContainerDragLeave = (ev: React.DragEvent) => {
+    const rel = ev.relatedTarget as Node | null;
+    if (rel && ev.currentTarget.contains(rel)) return;
+    handleDragLeave();
+  };
+
+  const handleChannelRowDragOver = (e: React.DragEvent, targetChannel: Channel) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    if (!draggedChannel || draggedCategory) return;
+    if (draggedChannel.channel.id === targetChannel.id) {
+      setDragOverChannelId(null);
+      setChannelDropEdge(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const h = Math.max(rect.height, 1);
+    const rel = (e.clientY - rect.top) / h;
+    // Zonas amplias arriba/abajo para "antes/después" sin precisión milimétrica
+    let edge: 'before' | 'after';
+    if (rel < 0.3) edge = 'before';
+    else if (rel > 0.7) edge = 'after';
+    else edge = rel < 0.5 ? 'before' : 'after';
+    setDragOverChannelId(targetChannel.id);
+    setChannelDropEdge(edge);
+  };
+
+  const handleChannelRowDragLeave = (e: React.DragEvent) => {
+    const rel = e.relatedTarget as Node | null;
+    if (rel && e.currentTarget.contains(rel)) return;
+    setDragOverChannelId(null);
+    setChannelDropEdge(null);
+  };
+
+  const handleChannelRowDrop = (e: React.DragEvent, targetChannel: Channel, categoryUiId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedChannel || draggedCategory) return;
+    const dragId = draggedChannel.channel.id;
+    const srcUi = draggedChannel.categoryUiId;
+    const edge = channelDropEdge ?? 'before';
+
+    if (srcUi === categoryUiId) {
+      setChannelOrders((prev) => {
+        const list = sortChannelsWithLocalOrder(categoryUiId, getChannelsInCategory(categoryUiId));
+        const ids = list.map((c) => c.id);
+        const from = ids.indexOf(dragId);
+        const to = ids.indexOf(targetChannel.id);
+        if (from === -1 || to === -1 || dragId === targetChannel.id) return prev;
+        const nextIds = [...ids];
+        nextIds.splice(from, 1);
+        let ins = edge === 'before' ? to : to + 1;
+        if (from < ins) ins -= 1;
+        nextIds.splice(ins, 0, dragId);
+        const merged = { ...prev, [categoryUiId]: nextIds };
+        if (communityId) {
+          localStorage.setItem(`channelDisplayOrder_${communityId}`, JSON.stringify(merged));
+        }
+        return merged;
+      });
+    } else {
+      saveChannelCategory(dragId, uiCategoryToStorage(categoryUiId));
+      setChannelOrders((prev) => {
+        const next = { ...prev };
+        next[srcUi] = (prev[srcUi] || []).filter((x) => x !== dragId);
+        const dest = [...(prev[categoryUiId] || [])].filter((x) => x !== dragId);
+        if (!dest.includes(dragId)) dest.push(dragId);
+        next[categoryUiId] = dest;
+        if (communityId) {
+          localStorage.setItem(`channelDisplayOrder_${communityId}`, JSON.stringify(next));
+        }
+        return next;
+      });
+    }
+    setDraggedChannel(null);
+    setDragOverChannelId(null);
+    setChannelDropEdge(null);
+  };
+
   const handleDrop = (e: React.DragEvent, targetCategoryId: string | null, position?: 'before' | 'after') => {
     e.preventDefault();
     if (!communityId) return;
@@ -187,8 +385,21 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     const dragType = e.dataTransfer.getData('type');
     
     if (dragType === 'channel' && draggedChannel) {
-      // Mover canal a categoría
-      saveChannelCategory(draggedChannel.channel.id, targetCategoryId);
+      const srcUi = draggedChannel.categoryUiId;
+      const targetUi = targetCategoryId ?? srcUi;
+      saveChannelCategory(draggedChannel.channel.id, uiCategoryToStorage(targetUi));
+      if (srcUi !== targetUi) {
+        setChannelOrders((prev) => {
+          const id = draggedChannel.channel.id;
+          const next = { ...prev };
+          next[srcUi] = (prev[srcUi] || []).filter((x) => x !== id);
+          const dest = [...(prev[targetUi] || [])].filter((x) => x !== id);
+          if (!dest.includes(id)) dest.push(id);
+          next[targetUi] = dest;
+          localStorage.setItem(`channelDisplayOrder_${communityId}`, JSON.stringify(next));
+          return next;
+        });
+      }
       setDraggedChannel(null);
     } else if (dragType === 'category' && draggedCategory) {
       // Mover categoría (los canales se mueven automáticamente porque están asociados por categoryId)
@@ -260,6 +471,8 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     setDraggedCategory(null);
     setDragOverCategory(null);
     setDragOverPosition(null);
+    setDragOverChannelId(null);
+    setChannelDropEdge(null);
   };
 
   const toggleCategoryCollapse = (categoryId: string) => {
@@ -280,6 +493,25 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
       return textChannels.filter((channel) => !channelCategories[channel.id]);
     }
     return textChannels.filter((channel) => channelCategories[channel.id] === categoryId);
+  };
+
+  const sortChannelsWithLocalOrder = (categoryUiId: string, list: Channel[]): Channel[] => {
+    const custom = channelOrders[categoryUiId];
+    const byId = new Map(list.map((c) => [c.id, c]));
+    if (!custom?.length) {
+      return [...list].sort((a, b) => a.position - b.position);
+    }
+    const out: Channel[] = [];
+    const seen = new Set<string>();
+    for (const id of custom) {
+      const c = byId.get(id);
+      if (c) {
+        out.push(c);
+        seen.add(id);
+      }
+    }
+    const rest = list.filter((c) => !seen.has(c.id)).sort((a, b) => a.position - b.position);
+    return [...out, ...rest];
   };
 
   const handleCreateCategoryInline = () => {
@@ -305,20 +537,89 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     setIsCreatingCategory(false);
   };
 
+  const isCustomCategoryId = (id: string) => id !== 'texto' && id !== 'voz';
+
+  const deleteCategoryById = (id: string) => {
+    if (!communityId || !isCustomCategoryId(id)) return;
+    if (!window.confirm('¿Eliminar esta categoría? Los canales pasarán a "Texto".')) return;
+    setCategories((prev) => {
+      const updated = prev.filter((c) => c.id !== id);
+      localStorage.setItem(`categories_${communityId}`, JSON.stringify(updated));
+      return updated;
+    });
+    setCategoryOrder((prev) => {
+      const next = prev.filter((x) => x !== id);
+      localStorage.setItem(`categoryOrder_${communityId}`, JSON.stringify(next));
+      return next;
+    });
+    setChannelCategories((prev) => {
+      const next = { ...prev };
+      for (const [chId, catId] of Object.entries(next)) {
+        if (catId === id) delete next[chId];
+      }
+      localStorage.setItem(`channelCategories_${communityId}`, JSON.stringify(next));
+      return next;
+    });
+    setChannelOrders((prev) => {
+      const n = { ...prev };
+      delete n[id];
+      localStorage.setItem(`channelDisplayOrder_${communityId}`, JSON.stringify(n));
+      return n;
+    });
+    setOpenCategoryMenuId(null);
+  };
+
+  const commitRenameCategory = () => {
+    if (!renamingCategoryId || !communityId) return;
+    const name = renameCategoryDraft.trim();
+    if (!name) return;
+    setCategories((prev) => {
+      const updated = prev.map((c) => (c.id === renamingCategoryId ? { ...c, name } : c));
+      localStorage.setItem(`categories_${communityId}`, JSON.stringify(updated));
+      return updated;
+    });
+    setRenamingCategoryId(null);
+    setRenameCategoryDraft('');
+  };
+
   // Actualizar categorías y relaciones cuando cambia el communityId
   useEffect(() => {
     if (!communityId) {
       setCategories([]);
       setChannelCategories({});
       setCategoryOrder([]);
+      setChannelOrders({});
       return;
     }
     const storedCategories = localStorage.getItem(`categories_${communityId}`);
-    setCategories(storedCategories ? JSON.parse(storedCategories) : []);
+    const parsedCategories: Array<{ id: string; name: string; communityId: string }> = storedCategories
+      ? JSON.parse(storedCategories)
+      : [];
+    setCategories(parsedCategories);
+
+    const validCustomCategoryIds = new Set(parsedCategories.map((c) => c.id));
     const storedRelations = localStorage.getItem(`channelCategories_${communityId}`);
-    setChannelCategories(storedRelations ? JSON.parse(storedRelations) : {});
+    const parsedRelations: Record<string, string> = storedRelations ? JSON.parse(storedRelations) : {};
+
+    // Quitar canales apuntando a categorías borradas (localStorage huérfano); vuelven a "Texto".
+    const sanitizedRelations: Record<string, string> = {};
+    for (const [chId, catId] of Object.entries(parsedRelations)) {
+      if (validCustomCategoryIds.has(catId)) {
+        sanitizedRelations[chId] = catId;
+      }
+    }
+    if (JSON.stringify(sanitizedRelations) !== JSON.stringify(parsedRelations)) {
+      localStorage.setItem(`channelCategories_${communityId}`, JSON.stringify(sanitizedRelations));
+    }
+    setChannelCategories(sanitizedRelations);
     const storedOrder = localStorage.getItem(`categoryOrder_${communityId}`);
     setCategoryOrder(storedOrder ? JSON.parse(storedOrder) : []);
+    try {
+      const ord = localStorage.getItem(`channelDisplayOrder_${communityId}`);
+      setChannelOrders(ord ? JSON.parse(ord) : {});
+    } catch {
+      setChannelOrders({});
+    }
   }, [communityId]);
 
   // Cerrar menú de comunidad al hacer clic fuera
@@ -326,9 +627,11 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     if (!isCommunityMenuOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (communityMenuRef.current && !communityMenuRef.current.contains(event.target as Node)) {
-        setIsCommunityMenuOpen(false);
+      const t = event.target as Node;
+      if (communityMenuRef.current?.contains(t) || communityMenuButtonRef.current?.contains(t)) {
+        return;
       }
+      setIsCommunityMenuOpen(false);
     };
 
     const handleEscape = (event: KeyboardEvent) => {
@@ -371,10 +674,37 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     };
   }, [contextMenu]);
 
-  // Manejar click derecho en el sidebar
+  useEffect(() => {
+    if (!openCategoryMenuId) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const t = event.target as Node;
+      const btn = categoryMenuButtonRefs.current[openCategoryMenuId];
+      if (categoryMenuDropdownRef.current?.contains(t) || btn?.contains(t)) return;
+      setOpenCategoryMenuId(null);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenCategoryMenuId(null);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [openCategoryMenuId]);
+
+  /** Menú contextual en coordenadas de viewport (portal a body evita offset por transform en ancestros). */
+  const CONTEXT_MENU_W = 192;
+  const CONTEXT_MENU_H = 120;
+
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY });
+    const x = Math.max(8, Math.min(e.clientX, window.innerWidth - CONTEXT_MENU_W - 8));
+    const y = Math.max(8, Math.min(e.clientY, window.innerHeight - CONTEXT_MENU_H - 8));
+    setContextMenu({ x, y });
   };
 
   const handleChannelSettings = (channelId: string, e: React.MouseEvent) => {
@@ -398,49 +728,20 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                   <h2 className="text-sm font-semibold text-[var(--color-text)] truncate">
                     {community.name}
                   </h2>
-                  <div className="relative">
+                  <div className="relative flex-shrink-0">
                     <button
+                      ref={communityMenuButtonRef}
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setIsCommunityMenuOpen((prev) => !prev);
                       }}
-                      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 transition-colors duration-150"
+                      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 transition-colors duration-ui"
                       aria-label="Menú de comunidad"
+                      aria-expanded={isCommunityMenuOpen}
                     >
-                      <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isCommunityMenuOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`h-3 w-3 transition-transform duration-ui ${isCommunityMenuOpen ? 'rotate-180' : ''}`} />
                     </button>
-
-                    {/* Menú desplegable de comunidad */}
-                    {isCommunityMenuOpen && (
-                      <div
-                        ref={communityMenuRef}
-                        className="absolute left-0 top-6 z-30 w-56 rounded-2xl bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl py-1.5 text-[12px] text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
-                      >
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-2xl mx-1"
-                          onClick={() => {
-                            setIsCommunityMenuOpen(false);
-                            onCommunitySettings?.();
-                          }}
-                        >
-                          <Settings className="h-3.5 w-3.5" />
-                          <span>Ajustes de la comunidad</span>
-                        </button>
-                        <div className="my-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-neutral-700 to-transparent" />
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-150 rounded-2xl mx-1"
-                          onClick={() => {
-                            setIsCommunityMenuOpen(false);
-                            onLeaveCommunity?.();
-                          }}
-                        >
-                          <span>Abandonar comunidad</span>
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -448,7 +749,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                 <button
                   type="button"
                   onClick={onInviteFriends}
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-2xl bg-transparent text-[var(--color-muted)] hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 transition-all duration-200 shadow-none hover:shadow-sm"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-2xl bg-transparent text-[var(--color-muted)] hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 transition-all duration-ui shadow-none hover:shadow-sm"
                   aria-label="Invitar amigos"
                 >
                   <UserPlus className="h-4 w-4" />
@@ -461,7 +762,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
       {/* Contenedor de canales con scroll */}
       <div className="flex flex-1 min-h-0 flex-col px-3 py-3 bg-transparent">
         {/* Lista de canales */}
-          <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+          <div ref={channelListScrollRef} className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden pr-1">
           {isCreatingCategory && (
             <div className="mb-2 flex items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm">
               <Folder className="h-4 w-4 text-[var(--color-muted)]" />
@@ -512,9 +813,9 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
           ) : (
             <>
               {/* Mostrar categorías creadas */}
-              {getOrderedCategories().map((category, categoryIndex) => {
+              {getOrderedCategories().map((category) => {
                 const isCollapsed = collapsedCategories.has(category.id);
-                const categoryChannels = getChannelsInCategory(category.id);
+                const categoryChannels = sortChannelsWithLocalOrder(category.id, getChannelsInCategory(category.id));
                 const isDraggingCategory = draggedCategory?.id === category.id;
                 return (
                   <div 
@@ -565,40 +866,68 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                           <ChevronDown className="h-3 w-3 text-[var(--color-muted)]" />
                         )}
                       </button>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] flex-1">
-                        {category.name}
-                      </p>
-                      {category.id !== 'texto' && (
+                      {renamingCategoryId === category.id ? (
+                        <input
+                          autoFocus
+                          value={renameCategoryDraft}
+                          onChange={(e) => setRenameCategoryDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              commitRenameCategory();
+                            }
+                            if (e.key === 'Escape') {
+                              e.preventDefault();
+                              setRenamingCategoryId(null);
+                              setRenameCategoryDraft('');
+                            }
+                          }}
+                          className="min-w-0 flex-1 rounded-lg bg-white/60 dark:bg-neutral-800/50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text)] outline-none ring-1 ring-sena-green/30"
+                        />
+                      ) : (
+                        <p className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                          {category.name}
+                        </p>
+                      )}
+                      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setContextMenu(null);
-                            setSelectedCategoryId(category.id);
+                            if (category.id === 'texto') {
+                              setSelectedCategoryId(null);
+                            } else {
+                              setSelectedCategoryId(category.id);
+                            }
                             setIsCreatingTextChannel(true);
                             setNewTextChannelName('');
                           }}
-                          className="opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
-                          aria-label="Crear canal en categoría"
+                          className="flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
+                          aria-label={
+                            category.id === 'texto' ? 'Crear canal en Texto' : 'Crear canal en categoría'
+                          }
                         >
                           <Plus className="h-3 w-3" />
                         </button>
-                      )}
-                      {category.id === 'texto' && (
                         <button
+                          ref={(el) => {
+                            categoryMenuButtonRefs.current[category.id] = el;
+                          }}
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setIsCreatingTextChannel(true);
-                            setSelectedCategoryId(null);
-                            setNewTextChannelName('');
+                            setOpenCategoryMenuId((prev) => (prev === category.id ? null : category.id));
                           }}
-                          className="opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
-                          aria-label="Crear canal en Texto"
+                          className={`flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all ${
+                            openCategoryMenuId === category.id ? 'opacity-100' : ''
+                          }`}
+                          aria-label="Opciones de categoría"
+                          aria-expanded={openCategoryMenuId === category.id}
                         >
-                          <Plus className="h-3 w-3" />
+                          <MoreVertical className="h-3 w-3" />
                         </button>
-                      )}
+                      </div>
                     </div>
                     {!isCollapsed && (
                       <>
@@ -691,14 +1020,14 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                           </div>
                         )}
                         <div 
-                          className="ml-4 space-y-0.5"
+                          className="ml-4 space-y-0"
                           onDragOver={(e) => {
                             e.preventDefault();
                             if (!draggedCategory && isAdmin) {
                               handleDragOver(e, category.id);
                             }
                           }}
-                          onDragLeave={handleDragLeave}
+                          onDragLeave={handleContainerDragLeave}
                           onDrop={(e) => {
                             e.preventDefault();
                             if (!draggedCategory && isAdmin) {
@@ -708,19 +1037,48 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                         >
                         {categoryChannels.map((channel) => {
                           const isActive = channel.id === channelId;
+                          const showChannelDropBefore =
+                            isAdmin &&
+                            draggedChannel &&
+                            !draggedCategory &&
+                            dragOverChannelId === channel.id &&
+                            channelDropEdge === 'before';
+                          const showChannelDropAfter =
+                            isAdmin &&
+                            draggedChannel &&
+                            !draggedCategory &&
+                            dragOverChannelId === channel.id &&
+                            channelDropEdge === 'after';
                           return (
                             <div
                               key={channel.id}
                               draggable={isAdmin}
                               onDragStart={(e) => isAdmin && handleChannelDragStart(e, channel, category.id)}
                               onDragEnd={handleDragEnd}
-                              className={`group relative ${isAdmin ? 'cursor-move' : 'cursor-default'}`}
+                              title={isAdmin ? 'Arrastra la fila para reordenar el canal' : undefined}
+                              className={`group relative rounded-2xl transition-[box-shadow,transform,opacity] duration-ui ${
+                                isAdmin ? 'cursor-grab select-none active:cursor-grabbing touch-manipulation' : ''
+                              } ${
+                                draggedChannel?.channel.id === channel.id
+                                  ? 'z-[1] scale-[0.985] opacity-75 shadow-md ring-1 ring-sena-green/35'
+                                  : ''
+                              }`}
                               onMouseEnter={() => setHoveredChannel(channel.id)}
                               onMouseLeave={() => setHoveredChannel(null)}
+                              onDragOver={(e) => isAdmin && handleChannelRowDragOver(e, channel)}
+                              onDragLeave={handleChannelRowDragLeave}
+                              onDrop={(e) => isAdmin && handleChannelRowDrop(e, channel, category.id)}
                             >
+                              {showChannelDropBefore && (
+                                <div
+                                  className="pointer-events-none absolute -top-0.5 left-2 right-2 z-10 h-0.5 rounded-full bg-sena-green shadow-[0_0_8px_rgba(57,169,0,0.6)]"
+                                  aria-hidden
+                                />
+                              )}
                               <button
+                                type="button"
                                 onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
-                                className={`relative flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
+                                className={`relative flex min-w-0 w-full items-center gap-2 rounded-2xl px-2 py-1.5 text-left text-[13px] transition-all duration-ui ${
                                   isActive
                                     ? 'glass-liquid-strong text-sena-green font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 before:rounded-2xl'
                                     : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-neutral-700/50 hover:text-[var(--color-text)]'
@@ -728,16 +1086,29 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                               >
                                 <Hash className="h-4 w-4 flex-shrink-0" />
                                 <span className="truncate flex-1">{channel.name}</span>
-                                <button
-                                  type="button"
+                                <span
+                                  role="button"
+                                  tabIndex={0}
                                   onClick={(e) => handleChannelSettings(channel.id, e)}
-                                  className="flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      handleChannelSettings(channel.id, e as unknown as React.MouseEvent);
+                                    }
+                                  }}
+                                  className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-ui opacity-0 group-hover:opacity-100"
                                   aria-label="Ajustes del canal"
                                   style={{ pointerEvents: hoveredChannel === channel.id ? 'auto' : 'none' }}
                                 >
                                   <Settings className="h-3.5 w-3.5" />
-                                </button>
+                                </span>
                               </button>
+                              {showChannelDropAfter && (
+                                <div
+                                  className="pointer-events-none absolute -bottom-0.5 left-2 right-2 z-10 h-0.5 rounded-full bg-sena-green shadow-[0_0_8px_rgba(57,169,0,0.6)]"
+                                  aria-hidden
+                                />
+                              )}
                             </div>
                           );
                         })}
@@ -818,27 +1189,43 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
 
               {voiceChannels.length > 0 && (
                 <div>
-                  <div
-                    className="group mt-3 mb-1.5 flex items-center gap-1 px-1"
-                    onMouseEnter={() => setHoveredCategory('voz')}
-                    onMouseLeave={() => setHoveredCategory(null)}
-                  >
+                  <div className="group mt-3 mb-1.5 flex items-center gap-1 px-1">
                     <ChevronDown className="h-3 w-3 text-[var(--color-muted)]" />
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] flex-1">
+                    <p className="min-w-0 flex-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
                       Voz
                     </p>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsCreatingTextChannel(true);
-                      }}
-                      className={`flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150
-                        ${hoveredCategory === 'voz' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                      aria-label="Crear canal en Voz"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsCreatingTextChannel(true);
+                        }}
+                        className="flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-ui"
+                        aria-label="Crear canal en Voz"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        ref={(el) => {
+                          categoryMenuButtonRefs.current.voice_channels_header = el;
+                        }}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenCategoryMenuId((prev) =>
+                            prev === 'voice_channels_header' ? null : 'voice_channels_header'
+                          );
+                        }}
+                        className={`flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-ui ${
+                          openCategoryMenuId === 'voice_channels_header' ? 'opacity-100' : ''
+                        }`}
+                        aria-label="Opciones de categoría Voz"
+                        aria-expanded={openCategoryMenuId === 'voice_channels_header'}
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-0.5">
                     {voiceChannels.map((channel) => {
@@ -852,7 +1239,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                         >
                           <button
                             onClick={() => navigate(`/communities/${communityId}/${channel.id}`)}
-                            className={`relative flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
+                            className={`relative flex w-full items-center gap-2 rounded-2xl px-3 py-1.5 text-left text-[13px] transition-all duration-ui ${
                               isActive
                                 ? 'glass-liquid-strong text-sena-green font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:bg-sena-green/60 before:rounded-2xl'
                                 : 'text-[var(--color-muted)] hover:bg-white/50 dark:hover:bg-neutral-700/50 hover:text-[var(--color-text)]'
@@ -863,7 +1250,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             <button
                               type="button"
                               onClick={(e) => handleChannelSettings(channel.id, e)}
-                              className="flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-150 opacity-0 group-hover:opacity-100"
+                              className="flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-ui opacity-0 group-hover:opacity-100"
                               aria-label="Ajustes del canal"
                               style={{ pointerEvents: hoveredChannel === channel.id ? 'auto' : 'none' }}
                             >
@@ -882,37 +1269,172 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
       </div>
     </aside>
 
-    {/* Menú contextual */}
-    {contextMenu && (
-      <div
-        ref={contextMenuRef}
-        className="fixed z-50 w-48 rounded-2xl bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl py-1.5 text-[12px] text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
-        style={{ left: contextMenu.x, top: contextMenu.y }}
-      >
-        <button
-          type="button"
-          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-2xl mx-1"
-          onClick={() => {
-            setContextMenu(null);
-            setIsCreatingTextChannel(true);
-          }}
+    {/* Menú de comunidad (portal → body; evita recorte por overflow del shell) */}
+    {isCommunityMenuOpen &&
+      communityMenuPos &&
+      typeof document !== 'undefined' &&
+      createPortal(
+        <div
+          ref={communityMenuRef}
+          className="fixed z-[10060] w-56 rounded-2xl bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl py-1.5 text-[12px] leading-snug text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
+          style={{ top: communityMenuPos.top, left: communityMenuPos.left }}
         >
-          <Hash className="h-3.5 w-3.5" />
-          <span>Crear canal</span>
-        </button>
-        <button
-          type="button"
-          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-150 rounded-2xl mx-1"
-          onClick={() => {
-            setContextMenu(null);
-            setIsCreatingCategory(true);
-          }}
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
+            onClick={() => {
+              setIsCommunityMenuOpen(false);
+              onCommunitySettings?.();
+            }}
+          >
+            <Settings className="h-3.5 w-3.5 shrink-0" />
+            <span className="min-w-0">Ajustes de la comunidad</span>
+          </button>
+          <div className="my-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-neutral-700 to-transparent" />
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-ui rounded-2xl mx-1"
+            onClick={() => {
+              setIsCommunityMenuOpen(false);
+              onLeaveCommunity?.();
+            }}
+          >
+            <span className="min-w-0">Abandonar comunidad</span>
+          </button>
+        </div>,
+        document.body
+      )}
+
+    {/* Menú de opciones por categoría (portal; mismo patrón que menú de comunidad) */}
+    {openCategoryMenuId &&
+      categoryMenuPos &&
+      typeof document !== 'undefined' &&
+      createPortal(
+        <div
+          ref={categoryMenuDropdownRef}
+          className="fixed z-[10060] rounded-2xl bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl py-1.5 text-[12px] leading-snug text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
+          style={{ top: categoryMenuPos.top, left: categoryMenuPos.left, width: CATEGORY_MENU_W }}
         >
-          <Folder className="h-3.5 w-3.5" />
-          <span>Crear categoría</span>
-        </button>
-      </div>
-    )}
+          {openCategoryMenuId === 'voice_channels_header' ? (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
+              onClick={() => {
+                setOpenCategoryMenuId(null);
+                setIsCreatingTextChannel(true);
+              }}
+            >
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0">Crear canal</span>
+            </button>
+          ) : (
+            (() => {
+              const cat = getOrderedCategories().find((c) => c.id === openCategoryMenuId);
+              if (!cat) return null;
+              const isCollapsed = collapsedCategories.has(cat.id);
+              const canAdminEdit = isAdmin && isCustomCategoryId(cat.id);
+              return (
+                <>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
+                    onClick={() => {
+                      toggleCategoryCollapse(cat.id);
+                      setOpenCategoryMenuId(null);
+                    }}
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--color-muted)]" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--color-muted)]" />
+                    )}
+                    <span className="min-w-0">{isCollapsed ? 'Expandir categoría' : 'Colapsar categoría'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
+                    onClick={() => {
+                      setContextMenu(null);
+                      if (cat.id === 'texto') {
+                        setSelectedCategoryId(null);
+                      } else {
+                        setSelectedCategoryId(cat.id);
+                      }
+                      setIsCreatingTextChannel(true);
+                      setNewTextChannelName('');
+                      setOpenCategoryMenuId(null);
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0">Crear canal</span>
+                  </button>
+                  {canAdminEdit && (
+                    <>
+                      <div className="my-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-neutral-700 to-transparent" />
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
+                        onClick={() => {
+                          setRenameCategoryDraft(cat.name);
+                          setRenamingCategoryId(cat.id);
+                          setOpenCategoryMenuId(null);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5 shrink-0" />
+                        <span className="min-w-0">Renombrar categoría</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-ui rounded-2xl mx-1"
+                        onClick={() => deleteCategoryById(cat.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                        <span className="min-w-0">Eliminar categoría</span>
+                      </button>
+                    </>
+                  )}
+                </>
+              );
+            })()
+          )}
+        </div>,
+        document.body
+      )}
+
+    {/* Menú contextual junto al puntero (portal → body para position:fixed correcto) */}
+    {contextMenu &&
+      typeof document !== 'undefined' &&
+      createPortal(
+        <div
+          ref={contextMenuRef}
+          className="fixed z-[10060] w-48 rounded-2xl bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl py-1.5 text-[12px] text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
+            onClick={() => {
+              setContextMenu(null);
+              setIsCreatingTextChannel(true);
+            }}
+          >
+            <Hash className="h-3.5 w-3.5" />
+            <span>Crear canal</span>
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
+            onClick={() => {
+              setContextMenu(null);
+              setIsCreatingCategory(true);
+            }}
+          >
+            <Folder className="h-3.5 w-3.5" />
+            <span>Crear categoría</span>
+          </button>
+        </div>,
+        document.body
+      )}
     </>
   );
 };

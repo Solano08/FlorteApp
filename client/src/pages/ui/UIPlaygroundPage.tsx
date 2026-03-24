@@ -165,7 +165,7 @@ export const UIPlaygroundPage = () => {
               </p>
             </Card>
 
-            <Card className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg">
+            <Card className="cursor-pointer transition-all duration-ui ease-ui hover:scale-[1.02] hover:shadow-lg">
               <h3 className="mb-2 text-lg font-semibold text-[var(--color-text)]">Card Interactivo</h3>
               <p className="text-sm text-[var(--color-muted)]">
                 Este card tiene efectos hover y es clickeable.
@@ -313,7 +313,7 @@ export const UIPlaygroundPage = () => {
                 </div>
                 <button
                   onClick={() => setDialogOpen(false)}
-                  className="rounded-2xl p-2 transition-all hover:bg-white/15 hover:scale-[1.03]"
+                  className="rounded-2xl p-2 transition-all duration-ui ease-ui hover:bg-white/15 hover:scale-[1.03]"
                   aria-label="Cerrar diálogo"
                 >
                   <X className="h-5 w-5 text-[var(--color-text)]" />
@@ -520,13 +520,13 @@ export const UIPlaygroundPage = () => {
             <div>
               <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">Efectos Hover</h3>
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-2xl glass-liquid p-4 text-center transition-all hover:scale-105 hover:shadow-lg">
+                <div className="rounded-2xl glass-liquid p-4 text-center transition-all duration-ui ease-ui hover:scale-105 hover:shadow-lg">
                   <p className="text-sm font-semibold text-[var(--color-text)]">Scale + Shadow</p>
                 </div>
-                <div className="rounded-2xl glass-liquid p-4 text-center transition-colors hover:bg-brand/10">
+                <div className="rounded-2xl glass-liquid p-4 text-center transition-colors duration-ui ease-ui hover:bg-brand/10">
                   <p className="text-sm font-semibold text-[var(--color-text)]">Color Change</p>
                 </div>
-                <div className="rounded-2xl glass-liquid p-4 text-center transition-transform hover:rotate-2">
+                <div className="rounded-2xl glass-liquid p-4 text-center transition-transform duration-ui ease-ui hover:rotate-2">
                   <p className="text-sm font-semibold text-[var(--color-text)]">Rotate</p>
                 </div>
               </div>

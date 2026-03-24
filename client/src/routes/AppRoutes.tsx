@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingScreen';
@@ -24,7 +24,7 @@ const ProtectedRoute = ({
   children,
   allowedRoles
 }: {
-  children: JSX.Element;
+  children: ReactElement;
   allowedRoles?: UserRole[];
 }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -40,7 +40,7 @@ const ProtectedRoute = ({
   return children;
 };
 
-const PublicRoute = ({ children }: { children: JSX.Element }) => {
+const PublicRoute = ({ children }: { children: ReactElement }) => {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) {
     return <LoadingScreen />;

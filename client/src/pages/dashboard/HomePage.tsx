@@ -2,6 +2,12 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEv
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  UI_DIALOG_CONTENT_TRANSITION,
+  UI_MENU_TRANSITION,
+  UI_MOTION_DURATION_S,
+  UI_MOTION_EASE
+} from '../../utils/transitionConfig';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card } from '../../components/ui/Card';
 import { TextArea } from '../../components/ui/TextArea';
@@ -44,7 +50,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { FeedAttachment, FeedComment, FeedPostAggregate, FeedPostReactionUser, ReactionType } from '../../types/feed';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { floatingModalContentClass } from '../../utils/modalStyles';
 import { resolveAssetUrl } from '../../utils/media';
 import { compressImageForUpload } from '../../utils/imageCompress';
 
@@ -90,7 +95,7 @@ function ImageWithFallback({ src, alt, className }: { src: string; alt?: string;
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.15 }}
+        transition={{ duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE }}
         className={classNames('flex min-h-[120px] items-center justify-center rounded-2xl bg-white/10 dark:bg-neutral-700/30 p-4 text-center', className)}
       >
         <p className="text-xs text-[var(--color-muted)]">No se pudo cargar la imagen</p>
@@ -282,6 +287,7 @@ export const HomePage = () => {
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const pendingFocusPostIdRef = useRef<string | null>(null);
   const userDisplayName = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'FlorteApp';
 
   const appendEmoji = (value: string, emoji: string) => {
@@ -633,6 +639,27 @@ export const HomePage = () => {
     refetchOnMount: false,
     refetchOnWindowFocus: false
   });
+
+  useEffect(() => {
+    const state = location.state as { focusPostId?: string } | null;
+    if (state?.focusPostId) {
+      pendingFocusPostIdRef.current = state.focusPostId;
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
+
+  useEffect(() => {
+    const id = pendingFocusPostIdRef.current;
+    if (!id || isLoadingFeed) return;
+    const t = window.setTimeout(() => {
+      const el = document.querySelector(`[data-post-id="${id}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      pendingFocusPostIdRef.current = null;
+    }, 220);
+    return () => window.clearTimeout(t);
+  }, [isLoadingFeed, feedPosts]);
 
   const { data: reactionUsers = [], isLoading: isLoadingReactionUsers } = useQuery<FeedPostReactionUser[]>({
     queryKey: ['feed', 'post-reactions', reactionUsersPost?.id],
@@ -1246,12 +1273,17 @@ export const HomePage = () => {
     const hasComments = post.commentCount > 0;
     const hasShares = post.shareCount > 0;
     const showStatsRow = hasReactions || hasComments || hasShares;
+    const reactionZoneActive = reactionPickerPost === post.id;
+
+    const postCardSurfaceClass = isModal
+      ? 'relative overflow-visible space-y-3 glass-dialog-neutral p-4 sm:space-y-4 sm:p-5 lg:p-6'
+      : 'relative overflow-visible space-y-3 glass-liquid p-4 sm:space-y-4 sm:p-5 lg:p-6 post-card-shadow';
 
     return (
       <Card
         key={`${context}-${post.id}`}
         data-post-id={post.id}
-        className="relative overflow-visible space-y-3 glass-liquid p-4 sm:space-y-4 sm:p-5 lg:p-6 post-card-shadow"
+        className={postCardSurfaceClass}
       >
         <div className="flex items-start gap-2 sm:gap-3">
           <button
@@ -1297,7 +1329,11 @@ export const HomePage = () => {
                   initial={{ opacity: 0, y: -8, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  transition={{
+                    opacity: UI_MENU_TRANSITION.opacity,
+                    y: UI_MENU_TRANSITION.y,
+                    scale: UI_MENU_TRANSITION.scale
+                  }}
                   className="absolute right-0 top-9 z-20 w-48 rounded-2xl bg-white dark:bg-neutral-900 border border-slate-200/90 dark:border-neutral-700/90 shadow-[0_10px_28px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.45)] p-2 text-sm text-[var(--color-text)]"
                 >
                   {canManagePost && (
@@ -1440,7 +1476,11 @@ export const HomePage = () => {
               variant="ghost"
               className={classNames(
                 'post-action-btn w-full justify-center gap-2 text-xs sm:text-sm min-h-[38px] min-w-[110px] transition-colors',
-                viewerHasReaction && 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-neutral-800/70'
+                viewerHasReaction &&
+                  !reactionZoneActive &&
+                  'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-neutral-800/70',
+                reactionZoneActive &&
+                  'text-sena-green hover:text-sena-green hover:bg-sena-green/15 dark:text-sena-green dark:hover:text-sena-green dark:hover:bg-sena-green/20'
               )}
               onMouseEnter={() => handleReactionHover(post.id)}
               onClick={() => {
@@ -1457,20 +1497,27 @@ export const HomePage = () => {
                 <span
                   className={classNames(
                     'text-base leading-none transition-colors',
-                    selectedReaction?.color ?? 'text-sena-green'
+                    reactionZoneActive ? 'text-sena-green' : selectedReaction?.color ?? 'text-sena-green'
                   )}
                   aria-hidden
                 >
                   {reactionEmoji}
                 </span>
               ) : (
-                <Heart className="h-4 w-4 text-[var(--color-text)]" aria-hidden />
+                <Heart
+                  className={classNames('h-4 w-4', reactionZoneActive ? 'text-sena-green' : 'text-[var(--color-text)]')}
+                  aria-hidden
+                />
               )}
               <span
                 className={classNames(
-                  viewerHasReaction
-                    ? (selectedReaction?.type === 'love' ? 'text-rose-500' : 'text-sena-green')
-                    : 'text-[var(--color-text)]'
+                  reactionZoneActive
+                    ? 'text-sena-green'
+                    : viewerHasReaction
+                      ? selectedReaction?.type === 'love'
+                        ? 'text-rose-500'
+                        : 'text-sena-green'
+                      : 'text-[var(--color-text)]'
                 )}
               >
                 {reactionButtonLabel}
@@ -1486,7 +1533,7 @@ export const HomePage = () => {
                     <button
                       key={type}
                       type="button"
-                      className="flex h-8 w-8 items-center justify-center rounded-2xl border border-transparent bg-transparent shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:scale-105"
+                      className="flex h-8 w-8 items-center justify-center rounded-2xl border border-transparent bg-transparent shadow-none transition-all duration-ui hover:-translate-y-0.5 hover:scale-105"
                       onClick={() => handleReactionSelect(post.id, type, post.viewerReaction)}
                       title={label}
                     >
@@ -1521,7 +1568,7 @@ export const HomePage = () => {
           <Button
             variant="ghost"
             className={classNames(
-              'post-action-btn justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm min-h-[38px] min-w-[110px] transition-all duration-300',
+              'post-action-btn justify-center gap-2 text-xs sm:flex-1 sm:justify-center sm:text-sm min-h-[38px] min-w-[110px] transition-all duration-ui',
               post.isSaved 
                 ? 'text-sena-green hover:text-sena-green/90 hover:shadow-[0_4px_12px_rgba(57,169,0,0.2)]' 
                 : ''
@@ -1532,7 +1579,7 @@ export const HomePage = () => {
           >
             <Bookmark 
               className={classNames(
-                'h-4 w-4 transition-all duration-300',
+                'h-4 w-4 transition-all duration-ui',
                 post.isSaved && 'fill-sena-green text-sena-green drop-shadow-[0_2px_4px_rgba(57,169,0,0.3)]'
               )} 
             /> 
@@ -1575,10 +1622,11 @@ export const HomePage = () => {
                         {isEditingComment ? (
                           <div className="space-y-3">
                             <textarea
+                              data-feed-styled-textarea
                               rows={3}
                               value={editingCommentContent}
                               onChange={(event) => setEditingCommentContent(event.target.value)}
-                              className="w-full resize-none rounded-2xl glass-liquid px-3 py-2 text-xs text-[var(--color-text)] outline-none focus:ring-0 focus:border-white/25"
+                              className="composer-textarea-focus w-full resize-none rounded-2xl px-3 py-2 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:!border-white/25 focus:!ring-0 dark:focus:!border-white/15"
                             />
                             <div className="flex justify-end gap-2">
                               <Button
@@ -1773,11 +1821,12 @@ export const HomePage = () => {
 
               <div className="flex items-end gap-2">
                 <textarea
+                  data-feed-styled-textarea
                   rows={2}
                   value={commentInputValue}
                   onChange={(event) => handleCommentInputChange(post.id, event.target.value)}
                   placeholder="Escribe un comentario..."
-                  className="flex-1 resize-none rounded-2xl glass-liquid px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:ring-0 focus:border-white/25"
+                  className="composer-textarea-focus flex-1 resize-none rounded-2xl px-3 py-2 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:!border-white/25 focus:!ring-0 dark:focus:!border-white/15"
                   disabled={isCommenting}
                 />
                 <Button
@@ -1811,7 +1860,7 @@ export const HomePage = () => {
                             }
                           }}
                           className={classNames(
-                            "inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-sena-green transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] disabled:cursor-not-allowed disabled:opacity-50",
+                            "inline-flex h-9 w-9 items-center justify-center rounded-full glass-liquid text-sena-green transition-all duration-ui hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] disabled:cursor-not-allowed disabled:opacity-50",
                             isEmojiAction && isEmojiOpen && "ring-2 ring-sena-green/50 ring-offset-2 ring-offset-[var(--color-background)]"
                           )}
                           aria-label={`${label} comentario`}
@@ -1966,9 +2015,9 @@ export const HomePage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="top-highlights-card group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-300 hover:bg-white active:scale-[0.98]"
+                      className="top-highlights-card group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-neutral-700/60 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-neutral-600/70 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-neutral-700/60 text-black dark:text-white transition-all duration-ui group-hover:bg-white dark:group-hover:bg-neutral-600/70 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] dark:group-hover:shadow-[0_0_12px_rgba(255,255,255,0.08)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1996,9 +2045,9 @@ export const HomePage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="top-highlights-card group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-300 hover:bg-white active:scale-[0.98]"
+                      className="top-highlights-card group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white active:scale-[0.98]"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-neutral-700/60 text-sena-green transition-all duration-300 group-hover:bg-white dark:group-hover:bg-neutral-600/70 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-neutral-700/60 text-black dark:text-white transition-all duration-ui group-hover:bg-white dark:group-hover:bg-neutral-600/70 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] dark:group-hover:shadow-[0_0_12px_rgba(255,255,255,0.08)]">
                         <FolderKanban className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -2052,14 +2101,14 @@ export const HomePage = () => {
                     type="button"
                     onClick={() => handleStoryClick(story)}
                     className={classNames(
-                      'group relative z-[60] flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-300 active:scale-[0.98]',
+                      'group relative z-[60] flex w-16 flex-shrink-0 flex-col items-center gap-1.5 transition-all duration-ui active:scale-[0.98]',
                       story.id === 'create' && 'hover:scale-[1.02]'
                     )}
                     style={{ zIndex: 60, position: 'relative' }}
                   >
                     <div
                       className={classNames(
-                        'relative h-12 w-12 rounded-full transition-all duration-300',
+                        'relative h-12 w-12 rounded-full transition-all duration-ui',
                         isViewed
                           ? 'border border-black/70 p-0'
                           : story.id === 'create'
@@ -2071,7 +2120,7 @@ export const HomePage = () => {
                       style={{ zIndex: 61, position: 'relative' }}
                     >
                       <div className={classNames(
-                        'relative flex h-full w-full items-center justify-center rounded-full transition-all duration-300 overflow-hidden',
+                        'relative flex h-full w-full items-center justify-center rounded-full transition-all duration-ui overflow-hidden',
                         story.id === 'create' || !isViewed
                           ? 'bg-white dark:bg-neutral-900'
                           : 'border-0 bg-[var(--color-surface)]'
@@ -2081,10 +2130,10 @@ export const HomePage = () => {
                             <img
                               src={storyPreview}
                               alt="Vista previa"
-                              className="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              className="h-full w-full rounded-full object-cover transition-transform duration-ui group-hover:scale-105"
                             />
                           ) : (
-                            <Plus className="h-5 w-5 text-sena-green transition-all duration-300 group-hover:scale-110 group-hover:rotate-45 drop-shadow-[0_1px_2px_rgba(57,169,0,0.06)]" />
+                            <Plus className="h-5 w-5 text-sena-green transition-all duration-ui group-hover:scale-110 group-hover:rotate-45 drop-shadow-[0_1px_2px_rgba(57,169,0,0.06)]" />
                           )
                         ) : storyPreview ? (
                           <img
@@ -2104,7 +2153,7 @@ export const HomePage = () => {
                       </div>
                     </div>
                     <span className={classNames(
-                      'text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate transition-colors duration-300',
+                      'text-[10px] font-medium text-[var(--color-text)] text-center leading-tight max-w-[64px] truncate transition-colors duration-ui',
                       story.id === 'create' && 'group-hover:text-sena-green/80'
                     )}>
                       {story.id === 'create' 
@@ -2130,6 +2179,7 @@ export const HomePage = () => {
               <div className="flex-1 min-w-0 space-y-2 sm:space-y-3 overflow-visible">
                 <div className="relative z-[140] overflow-visible mr-2">
                   <TextArea
+                    data-feed-styled-textarea
                     placeholder="Comparte un nuevo avance, recurso o proyecto..."
                     rows={3}
                     value={composerContent}
@@ -2151,7 +2201,7 @@ export const HomePage = () => {
                           <button
                             type="button"
                             className={classNames(
-                              'composer-icon-btn relative z-[150] inline-flex h-9 w-9 items-center justify-center rounded-full bg-white dark:bg-neutral-800/90 text-sena-green border border-transparent transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50',
+                              'composer-icon-btn relative z-[150] inline-flex h-9 w-9 items-center justify-center rounded-full bg-white dark:bg-neutral-800/90 text-sena-green border border-transparent transition-all duration-ui disabled:cursor-not-allowed disabled:opacity-50',
                               index === 0 && 'ml-0.5'
                             )}
                             aria-label={label}
@@ -2174,7 +2224,7 @@ export const HomePage = () => {
                     variant="primary"
                     leftIcon={<Sparkles className="h-4 w-4" />}
                     className={classNames(
-                      'composer-publish-btn-shadow relative z-[150] !rounded-full px-3 py-2 text-xs transition-all duration-200 mr-2',
+                      'composer-publish-btn-shadow relative z-[150] !rounded-full px-3 py-2 text-xs transition-all duration-ui mr-2',
                       composerContent.trim()
                         ? 'composer-publish-btn-active !text-white !border-transparent hover:!bg-white hover:!text-sena-green hover:!border-transparent'
                         : '!bg-white dark:!bg-neutral-800/90 !text-sena-green dark:!text-sena-green !border-transparent !opacity-100'
@@ -2294,7 +2344,7 @@ export const HomePage = () => {
                           initial={{ opacity: 0.2, scale: 0.98 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.98 }}
-                          transition={{ duration: 0.4 }}
+                          transition={{ duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE }}
                         >
                           <img
                             src={slide.image}
@@ -2314,7 +2364,7 @@ export const HomePage = () => {
                     type="button"
                     onClick={() => setActiveAnnouncement(index)}
                     className={classNames(
-                      'h-2 w-8 rounded-2xl transition-all duration-200 bg-[var(--color-surface)]/40 hover:bg-[var(--color-surface)]/70',
+                      'h-2 w-8 rounded-2xl transition-all duration-ui bg-[var(--color-surface)]/40 hover:bg-[var(--color-surface)]/70',
                       index === activeAnnouncement && 'shadow-sm'
                     )}
                     aria-label={`Mostrar anuncio ${index + 1}`}
@@ -2413,7 +2463,7 @@ export const HomePage = () => {
                                       initial={{ '--diffuse-radius': 0 } as unknown as Record<string, number>}
                                       animate={{ '--diffuse-radius': 100 } as unknown as Record<string, number>}
                                       exit={{ '--diffuse-radius': 0 } as unknown as Record<string, number>}
-                                      transition={{ type: 'spring', damping: 26, stiffness: 180, mass: 0.9 }}
+                                      transition={UI_DIALOG_CONTENT_TRANSITION}
                                       className="absolute inset-0 z-30 flex flex-col rounded-2xl bg-black/85 backdrop-blur-md overflow-hidden"
                                       style={{
                                         maskImage: `radial-gradient(circle at ${storyPanelOriginRef.current.x}% ${storyPanelOriginRef.current.y}%, black 0%, black calc(var(--diffuse-radius, 0) * 0.45%), rgba(0,0,0,0.6) calc(var(--diffuse-radius, 0) * 0.7%), rgba(0,0,0,0.2) calc(var(--diffuse-radius, 0) * 0.9%), transparent calc(var(--diffuse-radius, 0) * 1.1%))`,
@@ -2591,37 +2641,30 @@ export const HomePage = () => {
             open={Boolean(shareTarget)}
             onClose={handleCloseShareModal}
             size="lg"
+            frameless
             preventCloseOnBackdrop={isSharing}
-            contentClassName={floatingModalContentClass}
+            overlayClassName="report-post-overlay-bw"
+            contentClassName="relative mx-auto w-full max-w-2xl !overflow-visible px-3 sm:px-4"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-semibold text-[var(--color-text)]">Compartir publicacion</h3>
-                <p className="text-sm text-[var(--color-muted)]">
-                  Elige un amigo y añade un mensaje para compartir la publicación en el chat.
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                onClick={handleCloseShareModal}
-                disabled={isSharing}
-                className="self-start rounded-2xl glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
-              >
-                <X className="h-4 w-4" /> Cerrar
-              </Button>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-[var(--color-text)]">Compartir publicación</h3>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Elige un amigo y añade un mensaje para compartir la publicación en el chat.
+              </p>
             </div>
 
-            <div className="space-y-4">
+            <div className="glass-dialog-neutral rounded-2xl p-5 sm:p-6 space-y-4">
               <TextArea
+                data-feed-styled-textarea
                 rows={3}
                 placeholder="Di algo a tu comunidad..."
                 value={shareMessage}
                 onChange={(event) => setShareMessage(event.target.value)}
                 disabled={isSharing}
-                className="focus:!border-white/25 focus:!ring-0"
+                className="composer-textarea-focus focus:!border-white/25 focus:!ring-0 dark:focus:!border-white/15"
               />
 
-              <div className="rounded-2xl glass-liquid px-4 py-4 text-sm text-[var(--color-text)]">
+              <div className="rounded-2xl border border-slate-200/85 bg-slate-50/95 px-4 py-4 text-sm text-[var(--color-text)] dark:border-white/12 dark:bg-neutral-800/55">
                 <div className="flex items-start gap-3">
                   <UserAvatar
                     fullName={shareTarget.author.fullName}
@@ -2637,7 +2680,7 @@ export const HomePage = () => {
                   <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">{shareTarget.content}</p>
                 )}
                 {shareTarget.mediaUrl && (
-                  <div className="mt-3 overflow-hidden rounded-2xl glass-liquid">
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200/70 dark:border-white/10">
                     <img src={shareTarget.mediaUrl} alt="Vista previa" className="max-h-40 w-full object-cover" />
                   </div>
                 )}
@@ -2657,7 +2700,7 @@ export const HomePage = () => {
                           type="button"
                           onClick={() => setShareToFriendId((id) => (id === friend.id ? null : friend.id))}
                           className={classNames(
-                            'flex flex-col items-center gap-1.5 rounded-2xl p-2 transition-all duration-200',
+                            'flex flex-col items-center gap-1.5 rounded-2xl p-2 transition-all duration-ui',
                             isSelected
                               ? 'ring-2 ring-sena-green bg-sena-green/10'
                               : 'hover:bg-white/10 dark:hover:bg-white/5'
@@ -2680,11 +2723,21 @@ export const HomePage = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={handleCloseShareModal} disabled={isSharing}>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleCloseShareModal}
+                  disabled={isSharing}
+                >
                   Cancelar
                 </Button>
-                <Button onClick={handleShareSubmit} loading={isSharing} disabled={isSharing || !shareToFriendId}>
+                <Button
+                  type="button"
+                  onClick={handleShareSubmit}
+                  loading={isSharing}
+                  disabled={isSharing || !shareToFriendId}
+                >
                   Compartir
                 </Button>
               </div>
@@ -2698,27 +2751,19 @@ export const HomePage = () => {
             onClose={handleCloseReportModal}
             size="md"
             preventCloseOnBackdrop={reportMutation.isPending}
-            contentClassName={floatingModalContentClass}
+            overlayClassName="report-post-overlay-bw"
+            contentClassName="glass-dialog-neutral"
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-[var(--color-text)]">Reportar publicacion</h3>
-                <p className="text-sm text-[var(--color-muted)]">
-                  Cuéntanos qué sucede para alertar al equipo de moderacion.
+                <h3 className="text-lg font-semibold text-[var(--color-text)]">Reportar publicación</h3>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">
+                  Cuéntanos qué sucede para alertar al equipo de moderación.
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                onClick={handleCloseReportModal}
-                disabled={reportMutation.isPending}
-                className="self-start rounded-2xl glass-liquid px-3 py-1.5 text-xs text-[var(--color-muted)] hover:text-sena-green"
-              >
-                <X className="h-4 w-4" /> Cerrar
-              </Button>
-            </div>
 
-            <div className="mt-4 space-y-4">
-              <div className="rounded-2xl glass-liquid border-rose-200/40 bg-rose-50/80 px-3 py-3 text-xs text-rose-900 dark:border-rose-500/20 dark:bg-rose-900/20">
+              <div className="space-y-4">
+              <div className="rounded-2xl border border-rose-200/40 bg-rose-50/80 px-3 py-3 text-xs text-rose-900 dark:border-rose-500/20 dark:bg-rose-900/20">
                 <p className="text-sm font-semibold text-rose-600">
                   {reportTarget?.type === 'comment' ? 'Estás reportando un comentario de' : 'Estás reportando una publicación de'}
                 </p>
@@ -2743,8 +2788,10 @@ export const HomePage = () => {
                       setReportError(null);
                     }}
                     className={classNames(
-                      'rounded-2xl px-3 py-1 text-xs font-semibold transition',
-                      reportReason === reason ? 'bg-rose-500 text-white' : 'glass-liquid text-[var(--color-text)]'
+                      'rounded-2xl border px-3 py-1 text-xs font-semibold transition',
+                      reportReason === reason
+                        ? 'border-rose-500 bg-rose-500 text-white'
+                        : 'border-slate-200/85 bg-slate-50/95 text-[var(--color-text)] dark:border-white/12 dark:bg-neutral-800/55'
                     )}
                   >
                     {reason}
@@ -2761,12 +2808,23 @@ export const HomePage = () => {
                 className="focus:!border-white/25 focus:!ring-0"
               />
               {reportError && <p className="text-xs font-semibold text-rose-500">{reportError}</p>}
+              </div>
 
-              <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={handleCloseReportModal} disabled={reportMutation.isPending}>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleCloseReportModal}
+                  disabled={reportMutation.isPending}
+                >
                   Cancelar
                 </Button>
-                <Button onClick={handleSubmitReport} loading={reportMutation.isPending} disabled={reportMutation.isPending}>
+                <Button
+                  type="button"
+                  onClick={handleSubmitReport}
+                  loading={reportMutation.isPending}
+                  disabled={reportMutation.isPending}
+                >
                   Enviar reporte
                 </Button>
               </div>
@@ -2780,27 +2838,21 @@ export const HomePage = () => {
             onClose={handleCloseCommentsModal}
             size="xl"
             frameless
+            overlayClassName="report-post-overlay-bw"
             contentClassName="relative mx-auto max-w-5xl overflow-visible border-none bg-transparent p-0 shadow-none"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.94, y: 32 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 28 }}
-              transition={{ type: 'spring', stiffness: 170, damping: 24 }}
+              transition={UI_DIALOG_CONTENT_TRANSITION}
               className="relative mx-auto w-full max-w-3xl overflow-visible rounded-2xl p-6"
             >
-              <div className="relative flex flex-col items-center gap-1 pb-4 text-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCloseCommentsModal}
-                  className="absolute right-0 top-0"
-                  aria-label="Cerrar comentarios"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                <p className="text-sm uppercase tracking-[0.35em] text-sena-green">Comentarios</p>
-                <h3 className="text-xl font-semibold text-[var(--color-text)]">{activeModalPost.author.fullName}</h3>
+              <div className="pb-4 text-center">
+                <h3 className="text-lg font-semibold text-black dark:text-white">Comentarios</h3>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">
+                  Publicación de {activeModalPost.author.fullName}
+                </p>
               </div>
               {renderPostCard(activeModalPost, 'modal')}
             </motion.div>
@@ -2813,12 +2865,13 @@ export const HomePage = () => {
             onClose={handleCancelEditPost}
             size="md"
             preventCloseOnBackdrop={updatePostMutation.isPending}
-            contentClassName={floatingModalContentClass}
+            overlayClassName="report-post-overlay-bw"
+            contentClassName="glass-dialog-neutral"
           >
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold text-[var(--color-text)]">Editar publicación</h3>
-                <p className="text-sm text-[var(--color-muted)]">
+                <p className="mt-1 text-sm text-[var(--color-muted)]">
                   Ajusta el contenido antes de compartir el cambio con tu comunidad.
                 </p>
               </div>
@@ -2828,11 +2881,21 @@ export const HomePage = () => {
                 onChange={(event) => setEditingPostContent(event.target.value)}
                 disabled={updatePostMutation.isPending}
               />
-              <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={handleCancelEditPost} disabled={updatePostMutation.isPending}>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleCancelEditPost}
+                  disabled={updatePostMutation.isPending}
+                >
                   Cancelar
                 </Button>
-                <Button onClick={handleConfirmEditPost} loading={updatePostMutation.isPending} disabled={updatePostMutation.isPending}>
+                <Button
+                  type="button"
+                  onClick={handleConfirmEditPost}
+                  loading={updatePostMutation.isPending}
+                  disabled={updatePostMutation.isPending}
+                >
                   Guardar cambios
                 </Button>
               </div>
@@ -2843,38 +2906,40 @@ export const HomePage = () => {
         {/* Modal de confirmación eliminar publicación */}
         <GlassDialog
           open={Boolean(deletePostTarget)}
-          onClose={() => setDeletePostTarget(null)}
+          onClose={() => {
+            if (deletePostMutation.isPending) return;
+            setDeletePostTarget(null);
+          }}
           size="sm"
           preventCloseOnBackdrop={deletePostMutation.isPending}
           overlayClassName="delete-post-overlay-warning"
           contentClassName="glass-dialog-delete"
         >
-          <div className="space-y-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
-                  ¿Eliminar publicación? 🗑️
-                </h2>
-                <p className="text-base leading-relaxed text-[var(--color-text)]">
-                  Esta acción no se puede deshacer. ¿Estás seguro de que quieres eliminar esta publicación?
-                </p>
-              </div>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-text)]">Eliminar publicación</h3>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Esta acción no se puede deshacer. La publicación se eliminará del feed.
+              </p>
             </div>
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-2 pt-2">
               <Button
+                type="button"
                 variant="ghost"
-                onClick={() => setDeletePostTarget(null)}
-                disabled={deletePostMutation.isPending}
+                onClick={() => {
+                  if (deletePostMutation.isPending) return;
+                  setDeletePostTarget(null);
+                }}
               >
                 Cancelar
               </Button>
               <Button
-                onClick={handleConfirmDeletePost}
+                type="button"
+                className="!bg-red-500 !text-white !border-red-500/60 !shadow-[0_2px_8px_rgba(0,0,0,0.14)] hover:!bg-red-600 hover:!shadow-[0_4px_14px_rgba(0,0,0,0.2)] focus:!ring-red-400/60"
                 loading={deletePostMutation.isPending}
-                disabled={deletePostMutation.isPending}
-                className="!bg-red-700 hover:!bg-red-800 !text-white focus:!ring-red-700/55 active:!bg-red-900 !shadow-[0_5px_16px_rgba(127,29,29,0.55)] hover:!shadow-[0_8px_24px_rgba(127,29,29,0.7)] active:!shadow-[0_3px_10px_rgba(127,29,29,0.5)] !border-red-500/45"
+                onClick={handleConfirmDeletePost}
               >
-                Sí, eliminar
+                Eliminar publicación
               </Button>
             </div>
           </div>
@@ -2887,6 +2952,7 @@ export const HomePage = () => {
             onClose={() => setDeleteCommentTarget(null)}
             size="sm"
             preventCloseOnBackdrop={deleteCommentMutation.isPending}
+            overlayClassName="delete-post-overlay-warning"
             contentClassName="glass-dialog-delete"
           >
             <div className="space-y-5">
