@@ -28,29 +28,20 @@ export const PublicProfilePage = () => {
   const { user } = useAuth();
   const toast = useToast();
 
-  useEffect(() => {
-    if (userId && user?.id === userId) {
-      navigate('/profile', { replace: true });
-    }
-  }, [userId, user, navigate]);
-
   const { data: profile, isLoading, isError } = useQuery({
     queryKey: ['profile', userId],
     queryFn: () => profileService.getPublicProfile(userId ?? ''),
     enabled: Boolean(userId)
   });
 
-  if (!userId) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   const { data: friendRequests = [] } = useQuery({
     queryKey: ['friendRequests'],
-    queryFn: friendService.listRequests
+    queryFn: friendService.listRequests,
+    enabled: Boolean(userId)
   });
 
   const sendRequestMutation = useMutation({
-    mutationFn: () => friendService.sendRequest(userId),
+    mutationFn: () => friendService.sendRequest(userId ?? ''),
     onSuccess: () => {
       toast.success('Solicitud de amistad enviada');
     },
@@ -69,6 +60,31 @@ export const PublicProfilePage = () => {
     }
   });
 
+  const startChatMutation = useMutation({
+    mutationFn: async () =>
+      await chatService.createChat({
+        isGroup: false,
+        memberIds: [userId ?? ''],
+        name: profile ? `${profile.firstName} ${profile.lastName}` : undefined
+      }),
+    onSuccess: (chat) => {
+      navigate(`/chats?chatId=${chat.id}`);
+    },
+    onError: () => {
+      toast.error('No se pudo iniciar el chat. Intenta nuevamente.');
+    }
+  });
+
+  useEffect(() => {
+    if (userId && user?.id === userId) {
+      navigate('/profile', { replace: true });
+    }
+  }, [userId, user, navigate]);
+
+  if (!userId) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const existingRequest = friendRequests.find((req) => {
     if (!user) return false;
     return (
@@ -81,21 +97,6 @@ export const PublicProfilePage = () => {
     !!existingRequest && existingRequest.sender.id === user?.id && existingRequest.status === 'pending';
   const isFriend =
     !!existingRequest && existingRequest.status === 'accepted';
-
-  const startChatMutation = useMutation({
-    mutationFn: async () =>
-      await chatService.createChat({
-        isGroup: false,
-        memberIds: [userId],
-        name: profile ? `${profile.firstName} ${profile.lastName}` : undefined
-      }),
-    onSuccess: (chat) => {
-      navigate(`/chats?chatId=${chat.id}`);
-    },
-    onError: () => {
-      toast.error('No se pudo iniciar el chat. Intenta nuevamente.');
-    }
-  });
 
   return (
     <DashboardLayout
