@@ -8,6 +8,7 @@ const mapProject = (row: RowDataPacket): Project => ({
   title: row.title,
   description: row.description,
   repositoryUrl: row.repository_url,
+  coverImage: row.cover_image ?? null,
   status: row.status,
   ownerId: row.owner_id,
   createdAt: row.created_at,
@@ -151,5 +152,20 @@ export const projectRepository = {
       // In this context, if we want to be strict:
       // throw new Error('Project not found or already deleted');
     }
+  },
+
+  async updateCover(projectId: string, coverUrl: string): Promise<Project> {
+    const [result] = await getPool().execute<ResultSetHeader>(
+      `UPDATE projects
+       SET cover_image = :coverUrl, updated_at = CURRENT_TIMESTAMP
+       WHERE id = :id`,
+      { id: projectId, coverUrl }
+    );
+    if (result.affectedRows !== 1) {
+      throw new Error('No fue posible actualizar la imagen del proyecto');
+    }
+    const project = await this.findById(projectId);
+    if (!project) throw new Error('Proyecto no encontrado tras actualizar la imagen');
+    return project;
   }
 };

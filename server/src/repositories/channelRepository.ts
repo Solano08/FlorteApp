@@ -60,7 +60,9 @@ const mapChannelMessage = (row: RowDataPacket): ChannelMessage => ({
   createdAt: row.created_at,
   isPinned: Boolean(row.is_pinned),
   pinnedAt: row.pinned_at ?? undefined,
-  pinnedBy: row.pinned_by ?? undefined
+  pinnedBy: row.pinned_by ?? undefined,
+  threadRootId: row.thread_root_id ?? undefined,
+  threadTitle: row.thread_title ?? undefined
 });
 
 export const channelRepository = {
@@ -159,14 +161,16 @@ export const channelRepository = {
   async createMessage(input: CreateChannelMessageInput): Promise<ChannelMessage> {
     const id = crypto.randomUUID();
     await getPool().execute<ResultSetHeader>(
-      `INSERT INTO channel_messages (id, channel_id, sender_id, content, attachment_url)
-       VALUES (:id, :channelId, :senderId, :content, :attachmentUrl)`,
+      `INSERT INTO channel_messages (id, channel_id, sender_id, content, attachment_url, thread_root_id, thread_title)
+       VALUES (:id, :channelId, :senderId, :content, :attachmentUrl, :threadRootId, :threadTitle)`,
       {
         id,
         channelId: input.channelId,
         senderId: input.senderId,
         content: input.content ?? '',
-        attachmentUrl: input.attachmentUrl ?? null
+        attachmentUrl: input.attachmentUrl ?? null,
+        threadRootId: input.threadRootId ?? null,
+        threadTitle: input.threadTitle ?? null
       }
     );
 
@@ -334,6 +338,53 @@ export const channelRepository = {
       );
     }
     return await this.findMessageById(messageId);
+  },
+
+  async getPollVoteCountsByMessage(
+    messageIds: string[]
+  ): Promise<Map<string, { optionIndex: number; count: number }[]>> {
+    if (messageIds.length === 0) return new Map();
+    const placeholders = messageIds.map(() => '?').join(',');
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      `SELECT message_id AS messageId, option_index AS optionIndex, COUNT(*) AS cnt
+       FROM channel_message_poll_votes
+       WHERE message_id IN (${placeholders})
+       GROUP BY message_id, option_index`,
+      messageIds
+    );
+    const map = new Map<string, { optionIndex: number; count: number }[]>();
+    for (const r of rows) {
+      const mid = String(r.messageId);
+      const arr = map.get(mid) ?? [];
+      arr.push({ optionIndex: Number(r.optionIndex), count: Number(r.cnt) });
+      map.set(mid, arr);
+    }
+    return map;
+  },
+
+  async getViewerPollVoteIndexes(messageIds: string[], userId: string): Promise<Map<string, number>> {
+    if (messageIds.length === 0) return new Map();
+    const placeholders = messageIds.map(() => '?').join(',');
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      `SELECT message_id AS messageId, option_index AS optionIndex
+       FROM channel_message_poll_votes
+       WHERE user_id = ? AND message_id IN (${placeholders})`,
+      [userId, ...messageIds]
+    );
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      map.set(String(r.messageId), Number(r.optionIndex));
+    }
+    return map;
+  },
+
+  async upsertPollVote(messageId: string, userId: string, optionIndex: number): Promise<void> {
+    await getPool().execute<ResultSetHeader>(
+      `INSERT INTO channel_message_poll_votes (message_id, user_id, option_index)
+       VALUES (:messageId, :userId, :optionIndex)
+       ON DUPLICATE KEY UPDATE option_index = VALUES(option_index)`,
+      { messageId, userId, optionIndex }
+    );
   }
 };
 

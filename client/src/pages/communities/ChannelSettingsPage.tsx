@@ -13,6 +13,8 @@ import { z } from 'zod';
 import { useToast } from '../../hooks/useToast';
 import { groupService } from '../../services/groupService';
 import { CommunitySidebar } from '../../components/communities/CommunitySidebar';
+import { motion } from 'framer-motion';
+import { UI_DIALOG_CONTENT_TRANSITION } from '../../utils/transitionConfig';
 
 const channelSettingsSchema = z.object({
   name: z.string().min(1, 'El nombre del canal es obligatorio'),
@@ -152,6 +154,12 @@ export const ChannelSettingsPage = () => {
               onExploreCommunities={() => toast.info('Explorar comunidades estará disponible próximamente')}
             />
 
+            <motion.div
+              className="flex min-h-0 flex-1 overflow-hidden"
+              initial={{ opacity: 0, y: 12, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={UI_DIALOG_CONTENT_TRANSITION}
+            >
             {/* Sidebar izquierdo ajustes de canal */}
             <aside className="flex w-72 flex-col border-r border-white/10 dark:border-white/5 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-2xl shadow-[12px_0_40px_rgba(15,23,42,0.04)] dark:shadow-[12px_0_40px_rgba(0,0,0,0.6)]">
               <div className="px-4 py-3 border-b border-white/10 dark:border-white/5">
@@ -426,6 +434,7 @@ export const ChannelSettingsPage = () => {
                 )}
               </div>
             </div>
+            </motion.div>
           </div>
         </div>
       </div>

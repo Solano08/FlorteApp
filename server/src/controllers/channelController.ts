@@ -24,11 +24,28 @@ const reportMessageSchema = z.object({
 });
 
 const dataUrlSchema = z.string().refine((v) => v.startsWith('data:'), 'Debe ser data URL');
-const createMessageSchema = z.object({
-  content: z.string().min(1).optional(),
-  attachmentUrl: z.union([z.string().url(), dataUrlSchema]).optional()
-}).refine(data => data.content || data.attachmentUrl, {
-  message: 'El mensaje debe tener contenido o un archivo adjunto'
+const createMessageSchema = z
+  .object({
+    content: z.string().min(1).optional(),
+    attachmentUrl: z.union([z.string().url(), dataUrlSchema]).optional(),
+    threadRootId: z.string().uuid().optional(),
+    threadTitle: z.string().max(120).optional()
+  })
+  .refine((data) => data.content || data.attachmentUrl, {
+    message: 'El mensaje debe tener contenido o un archivo adjunto'
+  })
+  .refine(
+    (data) =>
+      !(
+        data.threadRootId &&
+        data.threadTitle !== undefined &&
+        String(data.threadTitle).trim() !== ''
+      ),
+    { message: 'No puedes crear un hilo y responder al mismo tiempo' }
+  );
+
+const pollVoteSchema = z.object({
+  optionIndex: z.number().int().min(0)
 });
 
 export const channelController = {
@@ -94,9 +111,22 @@ export const channelController = {
     const message = await channelService.createMessage({
       channelId,
       senderId: userId,
-      ...data
+      content: data.content,
+      attachmentUrl: data.attachmentUrl,
+      threadRootId: data.threadRootId,
+      threadTitle: data.threadTitle
     });
     res.status(201).json({ success: true, message });
+  },
+
+  votePoll: async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Autenticación requerida', 401);
+
+    const { id } = req.params;
+    const body = pollVoteSchema.parse(req.body);
+    const poll = await channelService.voteChannelPoll(id, userId, body.optionIndex);
+    res.json({ success: true, poll });
   },
 
   listMessages: async (req: Request, res: Response) => {

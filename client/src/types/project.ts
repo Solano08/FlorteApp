@@ -5,6 +5,7 @@ export interface Project {
   title: string;
   description?: string | null;
   repositoryUrl?: string | null;
+  coverImage?: string | null;
   status: ProjectStatus;
   ownerId: string;
   createdAt: string;

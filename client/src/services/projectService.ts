@@ -24,5 +24,15 @@ export const projectService = {
 
   async deleteProject(projectId: string): Promise<void> {
     await apiClient.delete(`/projects/${projectId}`);
+  },
+
+  async uploadProjectCover(projectId: string, file: File): Promise<Project> {
+    const formData = new FormData();
+    formData.append('cover', file);
+    const { data } = await apiClient.post<{ success: boolean; project: Project }>(
+      `/projects/${projectId}/cover`,
+      formData
+    );
+    return data.project;
   }
 };

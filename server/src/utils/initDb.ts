@@ -260,6 +260,7 @@ export const initDb = async (): Promise<void> => {
         title VARCHAR(255) NOT NULL,
         description TEXT NULL,
         repository_url VARCHAR(500) NULL,
+        cover_image VARCHAR(500) NULL,
         status ENUM('draft', 'in_progress', 'completed') NOT NULL DEFAULT 'draft',
         owner_id CHAR(36) NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -267,6 +268,13 @@ export const initDb = async (): Promise<void> => {
         FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+        try {
+            await pool.execute('ALTER TABLE projects ADD COLUMN cover_image VARCHAR(500) NULL');
+        } catch (err: unknown) {
+            const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
+            if (msg !== 'ER_DUP_FIELDNAME') throw err;
+        }
 
         // Project members table
         await pool.execute(`
@@ -473,6 +481,59 @@ export const initDb = async (): Promise<void> => {
             `);
             } else {
                 logger.warn('Skipping channel_message_reports initialization because channel_messages table is missing');
+            }
+        } catch (err: unknown) {
+            const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
+            if (msg !== 'ER_NO_SUCH_TABLE' && msg !== 'ER_FK_NO_INDEX_PARENT' && msg !== 'ER_FK_CANNOT_OPEN_PARENT') throw err;
+        }
+
+        // Hilos en canales (respuestas ancladas a un mensaje raíz)
+        for (const sql of [
+            'ALTER TABLE channel_messages ADD COLUMN thread_root_id CHAR(36) NULL',
+            'ALTER TABLE channel_messages ADD COLUMN thread_title VARCHAR(120) NULL',
+        ]) {
+            try {
+                if (hasChannelMessagesTable) {
+                    await pool.execute(sql);
+                }
+            } catch (err: unknown) {
+                const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
+                if (msg !== 'ER_DUP_FIELDNAME' && msg !== 'ER_NO_SUCH_TABLE') throw err;
+            }
+        }
+
+        try {
+            if (hasChannelMessagesTable) {
+                await pool.execute(`
+                ALTER TABLE channel_messages
+                ADD CONSTRAINT fk_channel_messages_thread_root
+                FOREIGN KEY (thread_root_id) REFERENCES channel_messages(id) ON DELETE CASCADE
+            `);
+            }
+        } catch (err: unknown) {
+            const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
+            const ok =
+                msg === 'ER_DUP_KEYNAME' ||
+                msg === 'ER_FK_DUP_NAME' ||
+                msg === 'ER_NO_SUCH_TABLE' ||
+                msg === 'ER_CANT_CREATE_TABLE';
+            if (!ok) throw err;
+        }
+
+        // Votos de encuestas en mensajes de canal (__POLL__:…)
+        try {
+            if (hasChannelMessagesTable) {
+                await pool.execute(`
+                CREATE TABLE IF NOT EXISTS channel_message_poll_votes (
+                    message_id CHAR(36) NOT NULL,
+                    user_id CHAR(36) NOT NULL,
+                    option_index INT NOT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (message_id, user_id),
+                    FOREIGN KEY (message_id) REFERENCES channel_messages(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
             }
         } catch (err: unknown) {
             const msg = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';

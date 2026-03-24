@@ -18,6 +18,12 @@ export interface CreateChannelInput {
   createdBy: string;
 }
 
+export interface ChannelPollSummary {
+  tallies: number[];
+  viewerVoteIndex: number | null;
+  totalVotes: number;
+}
+
 export interface ChannelMessage {
   id: string;
   channelId: string;
@@ -35,13 +41,18 @@ export interface ChannelMessage {
   pinnedAt?: Date | null;
   pinnedBy?: string | null;
   viewerStarred?: boolean;
+  threadRootId?: string | null;
+  threadTitle?: string | null;
+  poll?: ChannelPollSummary;
 }
 
 export interface CreateChannelMessageInput {
   channelId: string;
   senderId: string;
   content?: string;
-  attachmentUrl?: string;
+  attachmentUrl?: string | null;
+  threadRootId?: string | null;
+  threadTitle?: string | null;
 }
 
 export interface ChannelMessageReport {

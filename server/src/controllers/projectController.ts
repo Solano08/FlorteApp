@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { projectService } from '../services/projectService';
+import { uploadBuffer } from '../services/cloudinaryService';
 import { createProjectSchema, updateProjectSchema } from '../validators/projectValidators';
 import { AppError } from '../utils/appError';
 
@@ -40,5 +41,21 @@ export const projectController = {
     const { projectId } = req.params;
     await projectService.deleteProject(userId, projectId);
     res.status(204).send();
+  },
+
+  uploadCover: async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Autenticación requerida', 401);
+    const { projectId } = req.params;
+    const file = req.file;
+    if (!file?.buffer) {
+      throw new AppError('No se proporcionó ningún archivo', 400);
+    }
+    const coverUrl = await uploadBuffer(file.buffer, 'projects', {
+      mimetype: file.mimetype,
+      filename: file.originalname
+    });
+    const project = await projectService.updateProjectCover(userId, projectId, coverUrl);
+    res.json({ success: true, project });
   }
 };

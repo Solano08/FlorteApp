@@ -1,7 +1,26 @@
 import { FC, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Hash, Send, MoreVertical, Plus, Smile, Info, Users, Pin, X, Reply, Copy, Forward, Star, Flag, Trash2 } from 'lucide-react';
+import {
+  Hash,
+  Send,
+  MoreVertical,
+  Plus,
+  Smile,
+  Info,
+  Users,
+  Pin,
+  X,
+  Reply,
+  Copy,
+  Forward,
+  Star,
+  Flag,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  MessageCircle
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChannelMessage } from '../../types/channel';
@@ -12,7 +31,13 @@ import { EmojiPicker } from '../ui/EmojiPicker';
 import { resolveAssetUrl } from '../../utils/media';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
-import { UI_MOTION_SLIDE_TWEEN, UI_OVERLAY_TRANSITION } from '../../utils/transitionConfig';
+import {
+  UI_MENU_TRANSITION,
+  UI_MOTION_SLIDE_TWEEN,
+  UI_OVERLAY_TRANSITION,
+  UI_MOTION_DURATION_S,
+  UI_MOTION_EASE
+} from '../../utils/transitionConfig';
 
 interface ChannelChatProps {
   channelId: string;
@@ -20,7 +45,12 @@ interface ChannelChatProps {
   channelDescription?: string | null;
   messages: ChannelMessage[];
   isLoadingMessages?: boolean;
-  onSendMessage: (payload: { content?: string; attachmentUrl?: string }) => Promise<void> | void;
+  onSendMessage: (payload: {
+    content?: string;
+    attachmentUrl?: string;
+    threadRootId?: string;
+    threadTitle?: string;
+  }) => Promise<void> | void;
 }
 
 export const ChannelChat: FC<ChannelChatProps> = ({
@@ -109,6 +139,20 @@ export const ChannelChat: FC<ChannelChatProps> = ({
       toast.error('No se pudo actualizar el mensaje');
     }
   });
+
+  const votePollMutation = useMutation({
+    mutationFn: ({ messageId, optionIndex }: { messageId: string; optionIndex: number }) =>
+      channelService.voteChannelPoll(messageId, optionIndex),
+    onSuccess: (poll, { messageId }) => {
+      queryClient.setQueryData<ChannelMessage[]>(['channelMessages', channelId], (old) => {
+        if (!old) return old;
+        return old.map((m) => (m.id === messageId ? { ...m, poll } : m));
+      });
+    },
+    onError: () => {
+      toast.error('No se pudo registrar el voto');
+    }
+  });
   const navigate = useNavigate();
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
@@ -125,10 +169,17 @@ export const ChannelChat: FC<ChannelChatProps> = ({
   const [pollTitle, setPollTitle] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [pollSubmitting, setPollSubmitting] = useState(false);
-  const [pollVotes, setPollVotes] = useState<Record<string, string | null>>({});
+  const [threadDialogOpen, setThreadDialogOpen] = useState(false);
+  const [threadFormTitle, setThreadFormTitle] = useState('');
+  const [threadFormBody, setThreadFormBody] = useState('');
+  const [threadSubmitting, setThreadSubmitting] = useState(false);
+  const [replyingThreadRootId, setReplyingThreadRootId] = useState<string | null>(null);
+  const [replyingThreadTitle, setReplyingThreadTitle] = useState('');
+  const [expandedThreads, setExpandedThreads] = useState<Record<string, boolean>>({});
   const messageMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
   const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
+  const plusMenuRef = useRef<HTMLDivElement | null>(null);
 
   // Cerrar menú de mensajes al hacer clic fuera
   useEffect(() => {
@@ -168,6 +219,18 @@ export const ChannelChat: FC<ChannelChatProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [emojiPickerOpen]);
+
+  useEffect(() => {
+    if (!plusMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (plusMenuRef.current && !plusMenuRef.current.contains(target)) {
+        setPlusMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [plusMenuOpen]);
 
   const getAvatarColorClasses = (id?: string | null) => {
     const palette = [
@@ -243,13 +306,34 @@ export const ChannelChat: FC<ChannelChatProps> = ({
 
   const pinnedMessages = useMemo(() => messages.filter((m) => m.isPinned), [messages]);
 
+  const repliesByRoot = useMemo(() => {
+    const map = new Map<string, ChannelMessage[]>();
+    messages.forEach((m) => {
+      if (!m.threadRootId) return;
+      const arr = map.get(m.threadRootId) ?? [];
+      arr.push(m);
+      map.set(m.threadRootId, arr);
+    });
+    map.forEach((arr) => {
+      arr.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    });
+    return map;
+  }, [messages]);
+
+  const timelineMessages = useMemo(() => messages.filter((m) => !m.threadRootId), [messages]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!content.trim() || sending) return;
     try {
       setSending(true);
-      await onSendMessage({ content: content.trim() });
+      await onSendMessage({
+        content: content.trim(),
+        threadRootId: replyingThreadRootId ?? undefined
+      });
       setContent('');
+      setReplyingThreadRootId(null);
+      setReplyingThreadTitle('');
     } finally {
       setSending(false);
     }
@@ -269,8 +353,14 @@ export const ChannelChat: FC<ChannelChatProps> = ({
       if (!result) return;
       try {
         setSending(true);
-        await onSendMessage({ attachmentUrl: result, content: content.trim() || undefined });
+        await onSendMessage({
+          attachmentUrl: result,
+          content: content.trim() || undefined,
+          threadRootId: replyingThreadRootId ?? undefined
+        });
         setContent('');
+        setReplyingThreadRootId(null);
+        setReplyingThreadTitle('');
       } finally {
         setSending(false);
         if (fileInputRef.current) {
@@ -321,17 +411,42 @@ export const ChannelChat: FC<ChannelChatProps> = ({
       setPollDialogOpen(false);
       setPollTitle('');
       setPollOptions(['', '']);
+      toast.success('Encuesta publicada');
+    } catch {
+      toast.error('No se pudo publicar la encuesta');
     } finally {
       setPollSubmitting(false);
     }
   };
 
-  const handleVote = (messageId: string, option: string) => {
-    setPollVotes((prev) => ({
-      ...prev,
-      [messageId]: option
-    }));
+  const handleCreateThread = async (e: FormEvent) => {
+    e.preventDefault();
+    const title = threadFormTitle.trim() || 'Nuevo hilo';
+    const body = threadFormBody.trim();
+    if (!body || threadSubmitting) return;
+    try {
+      setThreadSubmitting(true);
+      await onSendMessage({ content: body, threadTitle: title });
+      setThreadDialogOpen(false);
+      setThreadFormTitle('');
+      setThreadFormBody('');
+      setPlusMenuOpen(false);
+      toast.success('Hilo publicado');
+    } catch {
+      toast.error('No se pudo crear el hilo');
+    } finally {
+      setThreadSubmitting(false);
+    }
   };
+
+  const openThreadDialog = () => {
+    setThreadFormTitle('');
+    setThreadFormBody('');
+    setThreadDialogOpen(true);
+    setPlusMenuOpen(false);
+  };
+
+  const pollBarTransition = { duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE };
 
   return (
     <section className="chat-ios flex h-full min-h-0 flex-1 flex-col glass-liquid">
@@ -349,7 +464,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-ui hover:text-sena-green"
+            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-ui ease-ui hover:text-sena-green"
             onClick={() => setPinnedMenuOpen(true)}
             aria-label="Ver mensajes fijados"
           >
@@ -357,7 +472,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           </button>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-ui hover:text-sena-green"
+            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-ui ease-ui hover:text-sena-green"
             onClick={() => setMembersOpen(true)}
             aria-label="Ver miembros del canal"
           >
@@ -365,7 +480,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           </button>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-ui hover:text-sena-green"
+            className="flex h-8 w-8 items-center justify-center rounded-2xl glass-liquid text-[var(--color-muted)] transition-all duration-ui ease-ui hover:text-sena-green"
             onClick={() => setInfoOpen(true)}
             aria-label="Información del canal"
           >
@@ -395,17 +510,17 @@ export const ChannelChat: FC<ChannelChatProps> = ({
               </div>
             </div>
           ) : (
-            messages.map((message, index) => {
+            timelineMessages.map((message, index) => {
               const isOwn = message.senderId === user?.id;
               const initials = `${message.sender?.firstName?.[0] ?? ''}${
                 message.sender?.lastName?.[0] ?? ''
               }`.trim() || 'U';
-              const isLast = index === messages.length - 1;
+              const isLast = index === timelineMessages.length - 1;
 
               return (
                 <div
                   key={message.id}
-                  className={`group flex gap-3 w-full transition-all duration-ui ${
+                  className={`group flex gap-3 w-full transition-all duration-ui ease-ui ${
                     isOwn ? 'justify-end' : 'justify-start'
                   } ${isLast ? 'chat-message-enter' : ''}`}
                   onMouseEnter={() => setHoveredMessageId(message.id)}
@@ -416,7 +531,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                       <button
                         type="button"
                         onClick={() => message.sender?.id && navigate(`/profile/${message.sender.id}`)}
-                        className="h-10 w-10 flex-shrink-0 rounded-2xl ring-1 ring-white/40 dark:ring-white/15 shadow-sm overflow-hidden transition-transform hover:scale-110 cursor-pointer"
+                        className="h-10 w-10 flex-shrink-0 rounded-2xl ring-1 ring-white/40 dark:ring-white/15 shadow-sm overflow-hidden transition-transform duration-ui ease-ui hover:scale-110 cursor-pointer"
                       >
                         <img
                           src={resolveAssetUrl(message.sender.avatarUrl) ?? ''}
@@ -428,7 +543,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                       <button
                         type="button"
                         onClick={() => message.sender?.id && navigate(`/profile/${message.sender.id}`)}
-                        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ring-1 ring-white/40 dark:ring-white/15 shadow-sm transition-transform hover:scale-110 cursor-pointer ${getAvatarColorClasses(
+                        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ring-1 ring-white/40 dark:ring-white/15 shadow-sm transition-transform duration-ui ease-ui hover:scale-110 cursor-pointer ${getAvatarColorClasses(
                           message.sender?.id
                         )}`}
                       >
@@ -444,7 +559,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                         <button
                           type="button"
                           onClick={() => message.sender?.id && navigate(`/profile/${message.sender.id}`)}
-                          className="text-xs font-semibold text-[var(--color-text)] hover:text-sena-green transition-colors cursor-pointer"
+                          className="text-xs font-semibold text-[var(--color-text)] hover:text-sena-green transition-colors duration-ui ease-ui cursor-pointer"
                         >
                           {message.sender?.firstName} {message.sender?.lastName}
                         </button>
@@ -462,58 +577,107 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                     {parsePollContent(message.content) ? (
                       (() => {
                         const poll = parsePollContent(message.content)!;
-                        const currentVote = pollVotes[message.id] ?? null;
-                        const counts = poll.options.reduce<Record<string, number>>((acc, opt) => {
-                          acc[opt] = 0;
-                          return acc;
-                        }, {});
-                        Object.entries(pollVotes).forEach(([msgId, opt]) => {
-                          if (msgId === message.id && opt && counts[opt] !== undefined) {
-                            counts[opt] += 1;
-                          }
-                        });
-                        const totalVotes = Object.values(counts).reduce((a, b) => a + b, 0);
+                        const summary = message.poll;
+                        const tallies =
+                          summary?.tallies && summary.tallies.length === poll.options.length
+                            ? summary.tallies
+                            : poll.options.map(() => 0);
+                        const totalVotes = summary?.totalVotes ?? tallies.reduce((a, b) => a + b, 0);
+                        const viewerIdx = summary?.viewerVoteIndex ?? null;
+                        const votingThis =
+                          votePollMutation.isPending && votePollMutation.variables?.messageId === message.id;
 
                         return (
-                          <div className="inline-flex max-w-full flex-col rounded-2xl bg-white/95 px-3.5 py-3 text-[13px] leading-relaxed tracking-tight text-[var(--color-text)] shadow-sm ring-1 ring-white/40 dark:bg-neutral-800/95 dark:ring-white/10">
-                            <p className="text-xs font-semibold text-[var(--color-text)] mb-2">
-                              Encuesta: {poll.title}
-                            </p>
-                            <div className="space-y-1.5">
-                              {poll.options.map((opt) => {
-                                const isSelected = currentVote === opt;
-                                const count = counts[opt] ?? 0;
+                          <motion.div
+                            layout
+                            className="inline-flex max-w-full flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/98 to-white/90 px-3.5 py-3 text-[13px] leading-relaxed tracking-tight text-[var(--color-text)] shadow-md ring-1 ring-white/50 dark:from-neutral-800/98 dark:to-neutral-900/90 dark:ring-white/10"
+                            transition={pollBarTransition}
+                          >
+                            <div className="mb-2 flex items-center gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-sena-green">
+                                Encuesta
+                              </span>
+                              <span
+                                className="h-1.5 w-1.5 shrink-0 rounded-full bg-sena-green/80 shadow-[0_0_8px_rgba(57,169,0,0.6)]"
+                                aria-hidden
+                              />
+                              <span className="text-[10px] text-[var(--color-muted)]">En vivo</span>
+                            </div>
+                            <p className="text-sm font-semibold text-[var(--color-text)]">{poll.title}</p>
+                            <div className="mt-2.5 space-y-2">
+                              {poll.options.map((opt, idx) => {
+                                const count = tallies[idx] ?? 0;
                                 const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                                const isSelected = viewerIdx === idx;
                                 return (
-                                  <button
-                                    key={opt}
+                                  <motion.button
+                                    key={`${message.id}-opt-${idx}`}
                                     type="button"
-                                    onClick={() => handleVote(message.id, opt)}
-                                    className={`flex w-full items-center justify-between rounded-2xl px-2.5 py-1.5 text-[11px] transition-all duration-ui border ${
+                                    layout
+                                    disabled={votingThis}
+                                    onClick={() =>
+                                      votePollMutation.mutate({ messageId: message.id, optionIndex: idx })
+                                    }
+                                    whileTap={{ scale: 0.98 }}
+                                    transition={pollBarTransition}
+                                    className={`relative w-full overflow-hidden rounded-2xl border px-2.5 py-2 text-left text-[11px] transition-all duration-ui ease-ui disabled:opacity-60 ${
                                       isSelected
-                                        ? 'border-sena-green/70 bg-sena-green/10 text-sena-green'
-                                        : 'border-white/60 bg-white/60 text-[var(--color-text)] hover:border-sena-green/40 hover:bg-sena-green/5 dark:border-white/10 dark:bg-neutral-800/80'
+                                        ? 'border-sena-green/60 bg-sena-green/8 text-sena-green ring-1 ring-sena-green/25'
+                                        : 'border-white/55 bg-white/50 text-[var(--color-text)] hover:border-sena-green/35 hover:bg-sena-green/5 dark:border-white/10 dark:bg-neutral-800/70 dark:hover:bg-neutral-800'
                                     }`}
                                   >
-                                    <span className="truncate text-left flex-1">{opt}</span>
-                                    <span className="ml-2 flex items-center gap-1 text-[10px] text-[var(--color-muted)]">
-                                      {totalVotes > 0 && <span>{percentage}%</span>}
-                                      <span>{count}</span>
-                                    </span>
-                                  </button>
+                                    <div className="relative min-h-[1.25rem]">
+                                      <motion.div
+                                        className="absolute inset-y-0 left-0 rounded-xl bg-gradient-to-r from-sena-green/30 via-sena-green/15 to-transparent dark:from-sena-green/25 dark:via-sena-green/10"
+                                        initial={false}
+                                        animate={{ width: `${percentage}%` }}
+                                        transition={pollBarTransition}
+                                      />
+                                      <div className="relative z-10 flex items-center justify-between gap-2">
+                                        <span className="truncate font-medium">{opt}</span>
+                                        <span className="flex shrink-0 items-center gap-1.5 text-[10px] text-[var(--color-muted)]">
+                                          {totalVotes > 0 ? (
+                                            <span className="tabular-nums">{percentage}%</span>
+                                          ) : null}
+                                          <span className="tabular-nums font-semibold text-[var(--color-text)]">
+                                            {count}
+                                          </span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </motion.button>
                                 );
                               })}
                             </div>
-                            {totalVotes > 0 && (
-                              <p className="mt-2 text-[10px] text-[var(--color-muted)]">
-                                {totalVotes} {totalVotes === 1 ? 'voto' : 'votos'}
-                              </p>
+                            {totalVotes > 0 ? (
+                              <motion.p
+                                className="mt-2 text-[10px] text-[var(--color-muted)]"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={pollBarTransition}
+                              >
+                                {totalVotes} {totalVotes === 1 ? 'voto' : 'votos'} en la comunidad
+                              </motion.p>
+                            ) : (
+                              <p className="mt-2 text-[10px] text-[var(--color-muted)]">Sé el primero en votar</p>
                             )}
-                          </div>
+                          </motion.div>
                         );
                       })()
                     ) : (
+                      <>
                       <div className="relative inline-flex max-w-full flex-col rounded-2xl bg-white/95 px-3.5 py-2.5 text-[13px] leading-relaxed tracking-tight text-[var(--color-text)] shadow-sm ring-1 ring-white/40 dark:bg-neutral-800/95 dark:ring-white/10">
+                        {message.threadTitle ? (
+                          <div className="mb-2 flex min-w-0 items-center gap-2">
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sena-green/12 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-sena-green">
+                              <MessageCircle className="h-3 w-3" aria-hidden />
+                              Hilo
+                            </span>
+                            <span className="truncate text-[11px] font-semibold text-[var(--color-muted)]">
+                              {message.threadTitle}
+                            </span>
+                          </div>
+                        ) : null}
                         <div className="flex items-start gap-2">
                           <p className="flex-1 break-words">
                             {message.content}
@@ -521,7 +685,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                           <div className="relative">
                             <button
                               type="button"
-                              className={`ml-2 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-2xl text-[var(--color-muted)] transition-all duration-ui hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 ${
+                              className={`ml-2 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-2xl text-[var(--color-muted)] transition-all duration-ui ease-ui hover:bg-white/70 hover:text-[var(--color-text)] dark:hover:bg-neutral-700/80 ${
                                 hoveredMessageId === message.id || openMessageMenuId === message.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                               }`}
                               onClick={(e) => {
@@ -545,10 +709,24 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     setContent(`@${message.sender?.firstName || 'Usuario'} `);
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition-colors duration-ui ease-ui hover:bg-sena-green/10"
                                 >
                                   <Reply className="h-4 w-4 text-sena-green" /> Responder
                                 </button>
+                                {message.threadTitle ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setReplyingThreadRootId(message.id);
+                                      setReplyingThreadTitle(message.threadTitle || 'Hilo');
+                                      setOpenMessageMenuId(null);
+                                      setExpandedThreads((prev) => ({ ...prev, [message.id]: true }));
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition-colors duration-ui ease-ui hover:bg-sena-green/10"
+                                  >
+                                    <MessageCircle className="h-4 w-4 text-sena-green" /> Responder en el hilo
+                                  </button>
+                                ) : null}
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -557,7 +735,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     }
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition-colors duration-ui ease-ui hover:bg-sena-green/10"
                                 >
                                   <Copy className="h-4 w-4 text-sena-green" /> Copiar
                                 </button>
@@ -569,7 +747,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     }
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition-colors duration-ui ease-ui hover:bg-sena-green/10"
                                 >
                                   <Forward className="h-4 w-4 text-sena-green" /> Reenviar
                                 </button>
@@ -579,7 +757,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     pinMessageMutation.mutate(message.id);
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition-colors duration-ui ease-ui hover:bg-sena-green/10"
                                 >
                                   <Pin className="h-4 w-4 text-sena-green" /> {message.isPinned ? 'Desfijar' : 'Fijar'}
                                 </button>
@@ -589,7 +767,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     starMessageMutation.mutate(message.id);
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-sena-green/10"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition-colors duration-ui ease-ui hover:bg-sena-green/10"
                                 >
                                   <Star className={`h-4 w-4 ${message.viewerStarred ? 'fill-amber-400 text-amber-500' : 'text-sena-green'}`} /> {message.viewerStarred ? 'Quitar destacado' : 'Destacar'}
                                 </button>
@@ -601,7 +779,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                     setReportDetails('');
                                     setOpenMessageMenuId(null);
                                   }}
-                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition-colors duration-ui ease-ui hover:bg-rose-50/80"
                                 >
                                   <Flag className="h-4 w-4 text-rose-500" /> Reportar
                                 </button>
@@ -612,7 +790,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                                       setDeleteTarget(message);
                                       setOpenMessageMenuId(null);
                                     }}
-                                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition hover:bg-rose-50/80"
+                                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition-colors duration-ui ease-ui hover:bg-rose-50/80"
                                   >
                                     <Trash2 className="h-4 w-4 text-rose-500" /> Eliminar
                                   </button>
@@ -633,6 +811,104 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                           </span>
                         </div>
                       </div>
+                      {message.threadTitle ? (
+                        <div className="mt-2 w-full max-w-[min(100%,420px)]">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedThreads((prev) => ({
+                                ...prev,
+                                [message.id]: !prev[message.id]
+                              }))
+                            }
+                            className="flex w-full items-center justify-between gap-2 rounded-2xl border border-white/35 bg-white/55 px-3 py-2 text-left text-[11px] font-medium text-[var(--color-text)] shadow-sm transition-all duration-ui ease-ui hover:bg-white/75 dark:border-white/10 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/85"
+                          >
+                            <span className="flex items-center gap-2 text-[var(--color-muted)]">
+                              <MessageCircle className="h-3.5 w-3.5 text-sena-green" />
+                              {(repliesByRoot.get(message.id) ?? []).length}{' '}
+                              {(repliesByRoot.get(message.id) ?? []).length === 1 ? 'respuesta' : 'respuestas'}
+                            </span>
+                            {expandedThreads[message.id] ? (
+                              <ChevronUp className="h-4 w-4 shrink-0 text-[var(--color-muted)]" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 shrink-0 text-[var(--color-muted)]" />
+                            )}
+                          </button>
+                          <AnimatePresence initial={false}>
+                            {expandedThreads[message.id] ? (
+                              <motion.div
+                                key={`thread-${message.id}`}
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={pollBarTransition}
+                                className="overflow-hidden"
+                              >
+                                <div className="mt-2 space-y-2 rounded-2xl border border-white/25 bg-white/40 px-2.5 py-2 dark:border-white/10 dark:bg-neutral-900/40">
+                                  {(repliesByRoot.get(message.id) ?? []).length === 0 ? (
+                                    <p className="px-1 py-2 text-center text-[11px] text-[var(--color-muted)]">
+                                      Aún no hay respuestas. ¡Sé el primero!
+                                    </p>
+                                  ) : (
+                                    (repliesByRoot.get(message.id) ?? []).map((reply) => {
+                                      const rInitials = `${reply.sender?.firstName?.[0] ?? ''}${
+                                        reply.sender?.lastName?.[0] ?? ''
+                                      }`.trim() || 'U';
+                                      return (
+                                        <div
+                                          key={reply.id}
+                                          className="flex gap-2 rounded-xl bg-white/70 px-2 py-1.5 dark:bg-neutral-800/70"
+                                        >
+                                          {reply.sender?.avatarUrl ? (
+                                            <img
+                                              src={resolveAssetUrl(reply.sender.avatarUrl) ?? ''}
+                                              alt=""
+                                              className="h-7 w-7 shrink-0 rounded-lg object-cover"
+                                            />
+                                          ) : (
+                                            <div
+                                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[9px] font-semibold ${getAvatarColorClasses(
+                                                reply.sender?.id
+                                              )}`}
+                                            >
+                                              {rInitials.slice(0, 2)}
+                                            </div>
+                                          )}
+                                          <div className="min-w-0 flex-1">
+                                            <p className="text-[10px] font-semibold text-[var(--color-text)]">
+                                              {reply.sender?.firstName} {reply.sender?.lastName}
+                                            </p>
+                                            <p className="text-[11px] leading-snug text-[var(--color-text)] break-words">
+                                              {reply.content}
+                                            </p>
+                                            <p className="mt-0.5 text-[9px] text-[var(--color-muted)]">
+                                              {new Date(reply.createdAt).toLocaleTimeString('es-CO', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setReplyingThreadRootId(message.id);
+                                      setReplyingThreadTitle(message.threadTitle || 'Hilo');
+                                    }}
+                                    className="mt-1 w-full rounded-xl bg-sena-green/12 py-2 text-center text-[11px] font-semibold text-sena-green transition-all duration-ui ease-ui hover:bg-sena-green/18"
+                                  >
+                                    Responder en el hilo
+                                  </button>
+                                </div>
+                              </motion.div>
+                            ) : null}
+                          </AnimatePresence>
+                        </div>
+                      ) : null}
+                      </>
                     )}
                     {message.attachmentUrl && (
                       <div className="mt-2 rounded-2xl overflow-hidden shadow-md border border-white/30 dark:border-white/10">
@@ -654,62 +930,85 @@ export const ChannelChat: FC<ChannelChatProps> = ({
 
         {/* Input de mensaje pegado abajo y ocupando todo el ancho */}
         <div className="px-5 pb-5 pt-3 border-t border-white/20 dark:border-white/5">
+          {replyingThreadRootId ? (
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl border border-sena-green/35 bg-sena-green/10 px-3 py-2 text-[11px] text-sena-green dark:bg-sena-green/15">
+              <span className="min-w-0 truncate">
+                En el hilo: <span className="font-semibold">{replyingThreadTitle}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setReplyingThreadRootId(null);
+                  setReplyingThreadTitle('');
+                }}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-sena-green transition-all duration-ui ease-ui hover:bg-sena-green/20"
+                aria-label="Dejar de responder en el hilo"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : null}
           <form
             onSubmit={handleSubmit}
-            className="w-full h-16 rounded-2xl border border-white/50 dark:border-white/15 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl px-4 shadow-[0_4px_20px_rgba(15,23,42,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-ui focus-within:border-sena-green/40 dark:focus-within:border-sena-green/30 focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.15)] dark:focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.25)]"
+            className="w-full h-16 rounded-2xl border border-white/50 dark:border-white/15 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl px-4 shadow-[0_4px_20px_rgba(15,23,42,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-ui ease-ui focus-within:border-sena-green/40 dark:focus-within:border-sena-green/30 focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.15)] dark:focus-within:shadow-[0_4px_24px_rgba(57,169,0,0.25)]"
           >
             <div className="relative flex h-full items-center gap-3">
-              <div className="relative">
+              <div className="relative" ref={plusMenuRef}>
                 <button
                   type="button"
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-neutral-800/70 text-[var(--color-muted)] transition-all duration-ui hover:bg-white/90 dark:hover:bg-neutral-700/90 hover:text-sena-green hover:scale-105"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-neutral-800/70 text-[var(--color-muted)] transition-all duration-ui ease-ui hover:bg-white/90 dark:hover:bg-neutral-700/90 hover:text-sena-green hover:scale-105"
                   onClick={() => setPlusMenuOpen((prev) => !prev)}
                   aria-label="Más opciones"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
-                {plusMenuOpen && (
-                  <div className="absolute bottom-full mb-2 left-0 z-30 w-52 rounded-2xl border border-white/40 bg-white/98 p-2 text-[12px] text-[var(--color-text)] shadow-[0_18px_40px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-neutral-900/98">
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 hover:bg-slate-50 dark:hover:bg-neutral-800/80"
-                      onClick={handleAttachFileClick}
+                <AnimatePresence>
+                  {plusMenuOpen && (
+                    <motion.div
+                      key="channel-plus-menu"
+                      role="menu"
+                      initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.96 }}
+                      transition={UI_MENU_TRANSITION}
+                      className="absolute bottom-full mb-2 left-0 z-30 w-52 origin-bottom-left rounded-2xl border border-white/40 bg-white/98 p-2 text-[12px] text-[var(--color-text)] shadow-[0_18px_40px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-neutral-900/98"
                     >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-2xl bg-slate-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
-                        📎
-                      </span>
-                      <span className="text-left">Adjuntar archivo</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="mt-1 flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 hover:bg-slate-50 dark:hover:bg-neutral-800/80"
-                      onClick={openPollDialog}
-                    >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-2xl bg-slate-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
-                        📊
-                      </span>
-                      <span className="text-left">Crear encuesta</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="mt-1 flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 hover:bg-slate-50 dark:hover:bg-neutral-800/80"
-                      onClick={() => {
-                        setPlusMenuOpen(false);
-                        // Hilo simple: solo etiqueta el mensaje como inicio de hilo
-                        if (!content.trim()) {
-                          setContent('[HILO] ');
-                        } else if (!content.startsWith('[HILO]')) {
-                          setContent((prev) => `[HILO] ${prev}`);
-                        }
-                      }}
-                    >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-2xl bg-slate-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
-                        🧵
-                      </span>
-                      <span className="text-left">Crear hilo</span>
-                    </button>
-                  </div>
-                )}
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 transition-colors duration-ui ease-ui hover:bg-slate-50 dark:hover:bg-neutral-800/80"
+                        onClick={handleAttachFileClick}
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-2xl bg-slate-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+                          📎
+                        </span>
+                        <span className="text-left">Adjuntar archivo</span>
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="mt-1 flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 transition-colors duration-ui ease-ui hover:bg-slate-50 dark:hover:bg-neutral-800/80"
+                        onClick={openPollDialog}
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-2xl bg-slate-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+                          📊
+                        </span>
+                        <span className="text-left">Crear encuesta</span>
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="mt-1 flex w-full items-center gap-2 rounded-2xl px-2.5 py-1.5 transition-colors duration-ui ease-ui hover:bg-slate-50 dark:hover:bg-neutral-800/80"
+                        onClick={openThreadDialog}
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-2xl bg-slate-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+                          🧵
+                        </span>
+                        <span className="text-left">Crear hilo</span>
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -728,7 +1027,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                 <button
                   type="button"
                   ref={emojiButtonRef}
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-neutral-800/70 text-[var(--color-muted)] transition-all duration-ui hover:bg-white/90 dark:hover:bg-neutral-700/90 hover:text-sena-green hover:scale-105"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-neutral-800/70 text-[var(--color-muted)] transition-all duration-ui ease-ui hover:bg-white/90 dark:hover:bg-neutral-700/90 hover:text-sena-green hover:scale-105"
                   onClick={() => setEmojiPickerOpen((prev) => !prev)}
                 >
                   <Smile className="h-4 w-4" />
@@ -750,7 +1049,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
               <Button
                 type="submit"
                 size="sm"
-                className="h-11 w-11 rounded-2xl px-0 bg-gradient-to-br from-sena-green to-emerald-600 hover:from-sena-green/95 hover:to-emerald-600/95 shadow-[0_4px_12px_rgba(57,169,0,0.3)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.4)] transition-all duration-ui disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-11 w-11 rounded-2xl px-0 bg-gradient-to-br from-sena-green to-emerald-600 hover:from-sena-green/95 hover:to-emerald-600/95 shadow-[0_4px_12px_rgba(57,169,0,0.3)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.4)] transition-all duration-ui ease-ui disabled:opacity-50 disabled:cursor-not-allowed"
                 loading={sending}
                 disabled={!content.trim()}
               >
@@ -794,7 +1093,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                     <button
                       type="button"
                       onClick={() => setInfoOpen(false)}
-                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors duration-ui ease-ui hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
                       aria-label="Cerrar panel"
                     >
                       <X className="h-5 w-5" />
@@ -853,7 +1152,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                           setInfoOpen(false);
                           setMembersOpen(true);
                         }}
-                        className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] text-neutral-800 transition-colors hover:bg-neutral-100/90 dark:text-neutral-100 dark:hover:bg-white/5"
+                        className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] text-neutral-800 transition-colors duration-ui ease-ui hover:bg-neutral-100/90 dark:text-neutral-100 dark:hover:bg-white/5"
                       >
                         <Users className="h-5 w-5 shrink-0 text-neutral-500 dark:text-neutral-400" />
                         Ver miembros del canal
@@ -900,7 +1199,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                     <button
                       type="button"
                       onClick={() => setMembersOpen(false)}
-                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors duration-ui ease-ui hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
                       aria-label="Cerrar panel"
                     >
                       <X className="h-5 w-5" />
@@ -1000,7 +1299,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                     <button
                       type="button"
                       onClick={() => setPinnedMenuOpen(false)}
-                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors duration-ui ease-ui hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
                       aria-label="Cerrar panel"
                     >
                       <X className="h-5 w-5" />
@@ -1042,8 +1341,10 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                           const poll = parsePollContent(message.content);
                           const preview = poll
                             ? `Encuesta: ${poll.title}`
-                            : message.content?.trim() ||
-                              (message.attachmentUrl ? 'Archivo adjunto' : 'Sin texto');
+                            : message.threadTitle
+                              ? `Hilo: ${message.threadTitle}`
+                              : message.content?.trim() ||
+                                (message.attachmentUrl ? 'Archivo adjunto' : 'Sin texto');
                           const sender = message.sender
                             ? `${message.sender.firstName} ${message.sender.lastName}`.trim()
                             : 'Usuario';
@@ -1068,6 +1369,144 @@ export const ChannelChat: FC<ChannelChatProps> = ({
           </AnimatePresence>,
           document.body
         )}
+
+      <GlassDialog
+        open={pollDialogOpen}
+        onClose={() => (!pollSubmitting ? setPollDialogOpen(false) : undefined)}
+        size="md"
+        preventCloseOnBackdrop={pollSubmitting}
+      >
+        <form onSubmit={handleCreatePoll} className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--color-text)]">Nueva encuesta</h2>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Los votos se guardan en el servidor y se actualizan en tiempo casi real para todos.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="poll-question" className="text-xs font-semibold text-[var(--color-muted)]">
+              Pregunta
+            </label>
+            <input
+              id="poll-question"
+              value={pollTitle}
+              onChange={(e) => setPollTitle(e.target.value)}
+              placeholder="¿Qué quieres preguntar al canal?"
+              className="mt-1 w-full rounded-2xl border border-white/30 bg-white/80 px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition-all duration-ui ease-ui focus:border-sena-green/50 dark:border-white/10 dark:bg-neutral-900/80"
+            />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-[var(--color-muted)] mb-2">Opciones (mínimo 2, máximo 6)</p>
+            <div className="space-y-2">
+              {pollOptions.map((opt, i) => (
+                <div key={`poll-opt-${i}`} className="flex gap-2">
+                  <input
+                    value={opt}
+                    onChange={(e) => {
+                      const next = [...pollOptions];
+                      next[i] = e.target.value;
+                      setPollOptions(next);
+                    }}
+                    placeholder={`Opción ${i + 1}`}
+                    className="min-w-0 flex-1 rounded-2xl border border-white/30 bg-white/80 px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-all duration-ui ease-ui focus:border-sena-green/50 dark:border-white/10 dark:bg-neutral-900/80"
+                  />
+                  {pollOptions.length > 2 ? (
+                    <button
+                      type="button"
+                      onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[var(--color-muted)] transition-all duration-ui ease-ui hover:bg-rose-500/10 hover:text-rose-600"
+                      aria-label="Quitar opción"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            {pollOptions.length < 6 ? (
+              <button
+                type="button"
+                onClick={() => setPollOptions([...pollOptions, ''])}
+                className="mt-2 text-xs font-semibold text-sena-green transition-colors duration-ui ease-ui hover:underline"
+              >
+                + Añadir opción
+              </button>
+            ) : null}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setPollDialogOpen(false)}
+              disabled={pollSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={pollSubmitting}
+              disabled={!pollTitle.trim() || pollOptions.filter((o) => o.trim()).length < 2}
+            >
+              Publicar encuesta
+            </Button>
+          </div>
+        </form>
+      </GlassDialog>
+
+      <GlassDialog
+        open={threadDialogOpen}
+        onClose={() => (!threadSubmitting ? setThreadDialogOpen(false) : undefined)}
+        size="md"
+        preventCloseOnBackdrop={threadSubmitting}
+      >
+        <form onSubmit={handleCreateThread} className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--color-text)]">Nuevo hilo</h2>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Publica un tema y las respuestas se agrupan aquí. El canal sigue ordenado por mensajes raíz.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="thread-title" className="text-xs font-semibold text-[var(--color-muted)]">
+              Título del hilo (opcional)
+            </label>
+            <input
+              id="thread-title"
+              value={threadFormTitle}
+              onChange={(e) => setThreadFormTitle(e.target.value)}
+              placeholder="Ej. Ideas para el proyecto"
+              className="mt-1 w-full rounded-2xl border border-white/30 bg-white/80 px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition-all duration-ui ease-ui focus:border-sena-green/50 dark:border-white/10 dark:bg-neutral-900/80"
+            />
+          </div>
+          <div>
+            <label htmlFor="thread-body" className="text-xs font-semibold text-[var(--color-muted)]">
+              Primer mensaje
+            </label>
+            <textarea
+              id="thread-body"
+              value={threadFormBody}
+              onChange={(e) => setThreadFormBody(e.target.value)}
+              placeholder="Escribe el primer mensaje del hilo…"
+              rows={4}
+              className="mt-1 w-full resize-none rounded-2xl border border-white/30 bg-white/80 px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition-all duration-ui ease-ui focus:border-sena-green/50 dark:border-white/10 dark:bg-neutral-900/80"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setThreadDialogOpen(false)}
+              disabled={threadSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" loading={threadSubmitting} disabled={!threadFormBody.trim()}>
+              Publicar hilo
+            </Button>
+          </div>
+        </form>
+      </GlassDialog>
 
       {/* Diálogo reportar mensaje */}
       <GlassDialog
@@ -1099,7 +1538,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
                   key={reason}
                   type="button"
                   onClick={() => setReportReason(reason)}
-                  className={`rounded-2xl px-3 py-1.5 text-xs transition ${
+                  className={`rounded-2xl px-3 py-1.5 text-xs transition-all duration-ui ease-ui ${
                     reportReason === reason
                       ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-400/40'
                       : 'bg-white/60 dark:bg-neutral-800/60 text-[var(--color-text)] hover:bg-white/80 dark:hover:bg-neutral-700/80'
@@ -1117,7 +1556,7 @@ export const ChannelChat: FC<ChannelChatProps> = ({
               onChange={(e) => setReportDetails(e.target.value)}
               placeholder="Explica brevemente..."
               rows={2}
-              className="w-full rounded-2xl border border-white/30 dark:border-white/10 bg-white/80 dark:bg-neutral-900/80 px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-sena-green/50 resize-none"
+              className="w-full rounded-2xl border border-white/30 dark:border-white/10 bg-white/80 dark:bg-neutral-900/80 px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none transition-colors duration-ui ease-ui focus:border-sena-green/50 resize-none"
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">

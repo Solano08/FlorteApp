@@ -58,3 +58,17 @@ export const communityCoverUpload = multer({
     cb(null, true);
   }
 });
+
+export const projectCoverUpload = multer({
+  storage: memoryStorage,
+  limits: {
+    fileSize: 8 * 1024 * 1024 // 8MB
+  },
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      cb(new Error('Solo se permiten imágenes'));
+      return;
+    }
+    cb(null, true);
+  }
+});

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { groupService } from '../../services/groupService';
 import { channelService } from '../../services/channelService';
@@ -20,6 +19,21 @@ import { CreateCommunityDialog } from '../../components/communities/CreateCommun
 import { ExploreCommunitiesView } from '../../components/communities/ExploreCommunitiesView';
 import { resolveAssetUrl } from '../../utils/media';
 import type { Group } from '../../types/group';
+import { motion, useReducedMotion } from 'framer-motion';
+import { UI_MOTION_DURATION_S, UI_MOTION_EASE } from '../../utils/transitionConfig';
+
+/**
+ * Transición del shell (explorar / workspace de comunidad): tween 0.62s, solo opacity + translateY
+ * (compositor GPU, sin scale ni translateX para evitar solapamiento con scroll y capas extra).
+ */
+const COMMUNITIES_SHELL_TRANSITION = {
+  type: 'tween' as const,
+  duration: UI_MOTION_DURATION_S,
+  ease: UI_MOTION_EASE
+};
+
+const COMMUNITIES_SHELL_INITIAL = { opacity: 0, y: 8 } as const;
+const COMMUNITIES_SHELL_ANIMATE = { opacity: 1, y: 0 } as const;
 
 export const CommunitiesPage = () => {
   const { communityId, channelId } = useParams<{ communityId?: string; channelId?: string }>();
@@ -35,6 +49,7 @@ export const CommunitiesPage = () => {
   const toast = useToast();
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   // Comunidades del usuario (sidebar tipo Discord)
   const { data: myCommunities = [], isLoading: isLoadingMyCommunities } = useQuery({
@@ -66,11 +81,13 @@ export const CommunitiesPage = () => {
     enabled: !!communityId
   });
 
-  // Query para listar mensajes de un canal
+  // Query para listar mensajes de un canal (refetch periódico ≈ tiempo real en el canal abierto)
   const { data: messages = [], isLoading: isLoadingMessages } = useQuery({
     queryKey: ['channelMessages', channelId],
     queryFn: () => channelService.listMessages(channelId!),
-    enabled: !!channelId
+    enabled: !!channelId,
+    refetchInterval: () =>
+      typeof document !== 'undefined' && document.visibilityState === 'hidden' ? false : 4000
   });
 
   // Lista de amigos para invitar
@@ -264,9 +281,11 @@ export const CommunitiesPage = () => {
   );
 
   let content: ReactElement;
+  let contentViewKey: string;
 
   // Mostrar vista de estado vacío sólo cuando no se está explorando
   if (!communityId && !isExploring && !isLoadingMyCommunities && myCommunities.length === 0) {
+    contentViewKey = 'empty';
     content = (
       <EmptyCommunitiesView
         onCreateCommunity={handleCreateCommunity}
@@ -274,6 +293,7 @@ export const CommunitiesPage = () => {
       />
     );
   } else if (!communityId && (isLoadingMyCommunities || myCommunities.length > 0)) {
+    contentViewKey = 'bootstrap';
     // Si está cargando o redirigiendo, mostrar loading
     content = (
       <div className="flex h-full w-full items-center justify-center">
@@ -281,6 +301,7 @@ export const CommunitiesPage = () => {
       </div>
     );
   } else if (isExploring) {
+    contentViewKey = 'explore';
     content = (
       <div className="flex h-full w-full min-h-0 overflow-hidden communities-shell">
         <div className="flex h-full w-full min-h-0 overflow-hidden bg-transparent">
@@ -312,6 +333,7 @@ export const CommunitiesPage = () => {
       </div>
     );
   } else if (isLoadingCommunity) {
+    contentViewKey = 'loading-community';
     content = (
       <div className="flex h-full w-full items-center justify-center">
         <Card className="glass-liquid p-6 text-sm text-[var(--color-muted)]">
@@ -320,6 +342,7 @@ export const CommunitiesPage = () => {
       </div>
     );
   } else if (!community) {
+    contentViewKey = 'community-not-found';
     content = (
       <div className="flex h-full w-full items-center justify-center">
         <Card className="glass-liquid p-6 text-sm text-[var(--color-muted)]">
@@ -328,6 +351,7 @@ export const CommunitiesPage = () => {
       </div>
     );
   } else {
+    contentViewKey = `community-${communityId}`;
     content = (
       <div className="flex h-full w-full min-h-0 overflow-hidden communities-shell">
         <div className="flex h-full w-full min-h-0 overflow-hidden bg-transparent">
@@ -386,7 +410,12 @@ export const CommunitiesPage = () => {
                 onSendMessage={(payload) =>
                   new Promise<void>((resolve, reject) => {
                     createMessageMutation.mutate(
-                      { content: payload.content, attachmentUrl: payload.attachmentUrl },
+                      {
+                        content: payload.content,
+                        attachmentUrl: payload.attachmentUrl,
+                        threadRootId: payload.threadRootId,
+                        threadTitle: payload.threadTitle
+                      },
                       {
                         onSuccess: () => {
                           resolve();
@@ -439,9 +468,27 @@ export const CommunitiesPage = () => {
     );
   }
 
+  const isCommunityWorkspace =
+    contentViewKey.startsWith('community-') && contentViewKey !== 'community-not-found';
+
+  const shellShouldEnterAnimate =
+    (contentViewKey === 'explore' || isCommunityWorkspace) && prefersReducedMotion !== true;
+
+  const shellInitial = shellShouldEnterAnimate ? COMMUNITIES_SHELL_INITIAL : false;
+  const shellTransition =
+    prefersReducedMotion === true ? { duration: 0 } : COMMUNITIES_SHELL_TRANSITION;
+
   return (
     <DashboardLayout contentClassName="flex h-full w-full overflow-hidden p-0 communities-shell">
-      {content}
+      <motion.div
+        key={contentViewKey}
+        initial={shellInitial}
+        animate={COMMUNITIES_SHELL_ANIMATE}
+        transition={shellTransition}
+        className="flex h-full w-full min-h-0 flex-1 overflow-hidden transform-gpu [backface-visibility:hidden]"
+      >
+        {content}
+      </motion.div>
 
       {/* Diálogo para abandonar comunidad */}
       <GlassDialog

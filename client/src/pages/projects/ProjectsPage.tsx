@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { projectService } from '../../services/projectService';
-import { Project } from '../../types/project';
+import { Project, ProjectStatus } from '../../types/project';
+import { resolveAssetUrl } from '../../utils/media';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -27,7 +28,8 @@ import {
   X,
   MoreHorizontal,
   Edit,
-  Trash2
+  Trash2,
+  ImagePlus
 } from 'lucide-react';
 
 const TITLE_MAX_LENGTH = 60;
@@ -89,6 +91,25 @@ const statusDisplay: Record<
   }
 };
 
+/** Panel lateral: misma sombra que los Card del centro (`Card` ya aplica glass-liquid) */
+const sidebarPanelClass =
+  'shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]';
+
+/** Filas dentro del panel (elevación suave; el panel ya aporta la sombra principal) */
+const sidebarRowClass =
+  'glass-liquid shadow-[0_2px_10px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.25)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.28)] dark:hover:shadow-[0_6px_18px_rgba(57,169,0,0.22)]';
+
+const projectCardShadow =
+  'shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]';
+
+type InlineDraftState = {
+  title: string;
+  description: string;
+  status: ProjectStatus;
+  coverFile: File | null;
+  coverPreviewUrl: string | null;
+};
+
 export const ProjectsPage = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -97,7 +118,10 @@ export const ProjectsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<ProjectCategory>('all');
   const [showFiltersMenu, setShowFiltersMenu] = useState(false);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [inlineDraft, setInlineDraft] = useState<InlineDraftState | null>(null);
+  const [draftTitleError, setDraftTitleError] = useState<string | null>(null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const draftCoverInputRef = useRef<HTMLInputElement>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -113,8 +137,6 @@ export const ProjectsPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['projects', 'me'] }).catch(() => {});
-      reset();
-      setShowCreateDialog(false);
     }
   });
 
@@ -259,8 +281,6 @@ export const ProjectsPage = () => {
     [projects]
   );
 
-  const currentStatus = watch('status') ?? 'draft';
-  
   // Proyectos destacados para el sidebar
   const learningHighlights = useMemo(() => {
     return projects.slice(0, 3);
@@ -283,6 +303,74 @@ export const ProjectsPage = () => {
     setOpenMenuId(null);
   };
 
+  const discardInlineDraft = useCallback(() => {
+    setInlineDraft((prev) => {
+      if (prev?.coverPreviewUrl) URL.revokeObjectURL(prev.coverPreviewUrl);
+      return null;
+    });
+    setDraftTitleError(null);
+    if (draftCoverInputRef.current) draftCoverInputRef.current.value = '';
+  }, []);
+
+  const openInlineDraft = useCallback(() => {
+    setInlineDraft((prev) => {
+      if (prev?.coverPreviewUrl) URL.revokeObjectURL(prev.coverPreviewUrl);
+      return {
+        title: '',
+        description: '',
+        status: 'draft',
+        coverFile: null,
+        coverPreviewUrl: null
+      };
+    });
+    setDraftTitleError(null);
+    if (draftCoverInputRef.current) draftCoverInputRef.current.value = '';
+  }, []);
+
+  const saveInlineDraft = useCallback(async () => {
+    if (!inlineDraft) return;
+    const title = inlineDraft.title.trim();
+    if (title.length < 3) {
+      setDraftTitleError('El título debe tener al menos 3 caracteres');
+      return;
+    }
+    setDraftTitleError(null);
+    setIsSavingDraft(true);
+    try {
+      const created = await createProjectMutation.mutateAsync({
+        title,
+        description: inlineDraft.description.trim() || undefined,
+        status: inlineDraft.status
+      });
+      if (inlineDraft.coverFile) {
+        await projectService.uploadProjectCover(created.id, inlineDraft.coverFile);
+      }
+      if (inlineDraft.coverPreviewUrl) URL.revokeObjectURL(inlineDraft.coverPreviewUrl);
+      setInlineDraft(null);
+      if (draftCoverInputRef.current) draftCoverInputRef.current.value = '';
+      await queryClient.invalidateQueries({ queryKey: ['projects'] });
+      await queryClient.invalidateQueries({ queryKey: ['projects', 'me'] });
+    } catch {
+      // Errores de red / API: el usuario puede reintentar
+    } finally {
+      setIsSavingDraft(false);
+    }
+  }, [inlineDraft, createProjectMutation, queryClient]);
+
+  const handleDraftCoverChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    setInlineDraft((prev) => {
+      if (!prev) return prev;
+      if (prev.coverPreviewUrl) URL.revokeObjectURL(prev.coverPreviewUrl);
+      return {
+        ...prev,
+        coverFile: file,
+        coverPreviewUrl: URL.createObjectURL(file)
+      };
+    });
+  }, []);
+
   return (
     <DashboardLayout
       fluid
@@ -293,15 +381,15 @@ export const ProjectsPage = () => {
         <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)' }}>
           <div className="flex flex-col space-y-6 py-4">
             {/* Actividad Rápida */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 px-2">
+            <Card padded={false} className={`${sidebarPanelClass} space-y-3 p-3`}>
+              <div className="flex items-center gap-2 px-1">
                 <Sparkles className="h-4 w-4 text-brand" />
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Actividad rápida</h3>
               </div>
               <div className="space-y-1.5">
                 <button
                   onClick={() => navigate('/explore')}
-                  className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-ui hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                  className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white/10 active:scale-[0.98] ${sidebarRowClass}`}
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-ui group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                     <ArrowUpRight className="h-5 w-5" />
@@ -310,7 +398,7 @@ export const ProjectsPage = () => {
                 </button>
                 <button
                   onClick={() => navigate('/projects')}
-                  className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-ui hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                  className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white/10 active:scale-[0.98] ${sidebarRowClass}`}
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-ui group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                     <FolderKanban className="h-5 w-5" />
@@ -318,11 +406,11 @@ export const ProjectsPage = () => {
                   <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">Revisar mis proyectos</span>
                 </button>
               </div>
-            </div>
+            </Card>
 
             {/* Tus proyectos */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 px-2">
+            <Card padded={false} className={`${sidebarPanelClass} space-y-3 p-3`}>
+              <div className="flex items-center gap-2 px-1">
                 <FolderKanban className="h-4 w-4 text-brand" />
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Tus proyectos</h3>
               </div>
@@ -338,7 +426,7 @@ export const ProjectsPage = () => {
                     <button
                       key={project.id}
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left glass-liquid transition-all duration-ui hover:bg-white/10 hover:shadow-[0_4px_12px_rgba(57,169,0,0.15)] active:scale-[0.98]"
+                      className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-ui hover:bg-white/10 active:scale-[0.98] ${sidebarRowClass}`}
                     >
                       <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 dark:bg-white/10 text-brand transition-all duration-ui group-hover:bg-white dark:group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(57,169,0,0.3)]">
                         <FolderKanban className="h-5 w-5" />
@@ -351,26 +439,26 @@ export const ProjectsPage = () => {
                   ))
                 )}
               </div>
-            </div>
+            </Card>
           </div>
         </aside>
 
         {/* Contenido principal */}
         <section className="mx-auto flex min-w-0 w-full flex-col gap-3 sm:gap-4 lg:gap-5 pb-16 sm:pb-20 px-3 sm:px-4 relative z-10 hide-scrollbar" style={{ width: '100%', maxWidth: '100%', overflowX: 'visible', boxShadow: 'none', WebkitBoxShadow: 'none', overflowY: 'auto', height: 'calc(100vh - 56px)', alignSelf: 'flex-start' }}>
           {/* Barra de búsqueda */}
-          <Card className="glass-liquid shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center gap-3">
+          <Card className={projectCardShadow}>
+            <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
               <Input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Buscar proyectos, grupos o hashtags..."
-                className="flex-1 rounded-2xl border-white/50 dark:border-white/15 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+                className="w-full min-w-0 max-w-xl rounded-2xl border-white/50 dark:border-white/15 focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
               />
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => setShowFiltersMenu(!showFiltersMenu)}
-                className={`px-4 py-2 text-xs shadow-[0_4px_12px_rgba(57,169,0,0.2)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.3)] transition-all ${
+                className={`w-full max-w-xl shrink-0 px-4 py-2 text-xs shadow-[0_4px_12px_rgba(57,169,0,0.2)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.3)] transition-all sm:w-auto sm:max-w-none ${
                   categoryFilter !== 'all' ? 'bg-brand/20 ring-2 ring-brand/40' : ''
                 }`}
                 leftIcon={<Filter className="h-4 w-4" />}
@@ -411,7 +499,7 @@ export const ProjectsPage = () => {
           </Card>
 
           {/* Botón para crear nuevo proyecto */}
-          <Card className="glass-liquid shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+          <Card className={projectCardShadow}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-[var(--color-text)]">Tus proyectos</h2>
@@ -420,7 +508,7 @@ export const ProjectsPage = () => {
                 </p>
               </div>
               <Button
-                onClick={() => setShowCreateDialog(true)}
+                onClick={openInlineDraft}
                 leftIcon={<Plus className="h-4 w-4" />}
                 className="shadow-[0_4px_12px_rgba(57,169,0,0.2)] hover:shadow-[0_6px_16px_rgba(57,169,0,0.3)] transition-all hover:scale-105"
               >
@@ -440,30 +528,140 @@ export const ProjectsPage = () => {
             )}
 
             {isLoading && (
-              <Card>
+              <Card className={projectCardShadow}>
                 <p className="text-sm text-[var(--color-muted)]">Cargando proyectos...</p>
               </Card>
             )}
 
-            {!isLoading && filteredProjects.length === 0 && (
-              <Card>
+            {!isLoading && filteredProjects.length === 0 && !inlineDraft && (
+              <Card className={projectCardShadow}>
                 <p className="text-sm text-[var(--color-muted)]">
                   No hay proyectos en este estado todavia. Crea uno nuevo o cambia el filtro.
                 </p>
               </Card>
             )}
 
-            {!isLoading && filteredProjects.length > 0 && (
+            {!isLoading && (filteredProjects.length > 0 || inlineDraft) && (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {inlineDraft && (
+                  <Card className={`relative flex flex-col space-y-3 ${projectCardShadow} cursor-default`}>
+                    <input
+                      ref={draftCoverInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleDraftCoverChange}
+                    />
+                    <div className="relative -mx-4 -mt-4 overflow-hidden rounded-t-2xl border-b border-white/15 dark:border-white/10">
+                      <div className="relative flex h-36 w-full items-center justify-center bg-gradient-to-br from-brand/15 to-emerald-500/10">
+                        {inlineDraft.coverPreviewUrl ? (
+                          <img
+                            src={inlineDraft.coverPreviewUrl}
+                            alt=""
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="relative z-[1] shadow-md"
+                          leftIcon={<ImagePlus className="h-4 w-4" />}
+                          onClick={() => draftCoverInputRef.current?.click()}
+                        >
+                          Subir foto
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label htmlFor="inline-draft-title" className="text-xs font-medium text-[var(--color-text)]">
+                        Nombre del proyecto
+                      </label>
+                      <Input
+                        id="inline-draft-title"
+                        value={inlineDraft.title}
+                        onChange={(e) =>
+                          setInlineDraft((d) => (d ? { ...d, title: e.target.value } : d))
+                        }
+                        placeholder="Ej: App de inventarios"
+                        maxLength={TITLE_MAX_LENGTH}
+                        className="rounded-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      {draftTitleError ? (
+                        <p className="text-xs text-red-500">{draftTitleError}</p>
+                      ) : null}
+                    </div>
+
+                    <TextArea
+                      label="Descripción"
+                      rows={3}
+                      value={inlineDraft.description}
+                      onChange={(e) =>
+                        setInlineDraft((d) => (d ? { ...d, description: e.target.value } : d))
+                      }
+                      placeholder="Objetivo y alcance del proyecto..."
+                      maxLength={DESCRIPTION_MAX_LENGTH}
+                      className="text-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+
+                    <div className="space-y-1.5">
+                      <label htmlFor="inline-draft-status" className="text-xs font-medium text-[var(--color-text)]">
+                        Estado
+                      </label>
+                      <select
+                        id="inline-draft-status"
+                        value={inlineDraft.status}
+                        onChange={(e) =>
+                          setInlineDraft((d) =>
+                            d
+                              ? { ...d, status: e.target.value as ProjectStatus }
+                              : d
+                          )
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                      >
+                        <option value="draft">Planificación</option>
+                        <option value="in_progress">En progreso</option>
+                        <option value="completed">Completado</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 border-t border-white/20 dark:border-white/10 pt-3">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={discardInlineDraft}
+                        disabled={isSavingDraft}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        loading={isSavingDraft}
+                        disabled={isSavingDraft}
+                        onClick={() => void saveInlineDraft()}
+                      >
+                        Guardar proyecto
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+
                 {filteredProjects.map((project: Project) => {
                   const isOwner = user?.id === project.ownerId;
+                  const coverSrc = resolveAssetUrl(project.coverImage ?? null);
                   return (
                   <Card
                     key={project.id}
-                    className="group relative flex flex-col space-y-4 transition-all duration-ui hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:scale-[1.02] cursor-pointer"
+                    className={`group relative flex flex-col space-y-4 transition-all duration-ui hover:scale-[1.02] cursor-pointer ${projectCardShadow} hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)] overflow-hidden`}
                     onClick={() => navigate(`/projects/${project.id}`)}
                   >
-                    {/* Botón de menú en la esquina superior derecha */}
                     {isOwner && (
                       <div className="absolute right-2 top-2 z-10" ref={(el) => { menuRefs.current[project.id] = el; }}>
                         <button
@@ -495,10 +693,18 @@ export const ProjectsPage = () => {
                       </div>
                     )}
 
-                    <div className="flex items-start gap-3 pr-8">
-                      <div className="flex-shrink-0 rounded-2xl bg-gradient-to-br from-brand/20 to-emerald-500/20 p-3 text-brand transition-transform group-hover:scale-110">
-                        <FolderKanban className="h-6 w-6" />
+                    {coverSrc ? (
+                      <div className="relative -mx-4 -mt-4 h-36 w-[calc(100%+2rem)] overflow-hidden">
+                        <img src={coverSrc} alt="" className="h-full w-full object-cover" />
                       </div>
+                    ) : null}
+
+                    <div className="flex items-start gap-3 pr-8">
+                      {!coverSrc ? (
+                        <div className="flex-shrink-0 rounded-2xl bg-gradient-to-br from-brand/20 to-emerald-500/20 p-3 text-brand transition-transform group-hover:scale-110">
+                          <FolderKanban className="h-6 w-6" />
+                        </div>
+                      ) : null}
                       <div className="min-w-0 flex-1">
                         <h3 className="truncate text-lg font-semibold text-[var(--color-text)] group-hover:text-brand transition-colors">
                           {project.title}
@@ -562,42 +768,51 @@ export const ProjectsPage = () => {
         <aside className="hidden w-full flex-col lg:flex lg:z-10" style={{ position: 'sticky', top: '56px', height: 'calc(100vh - 56px)', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 56px)', overflow: 'hidden' }}>
           <div className="flex flex-col space-y-6 py-4 px-4">
             {/* Laboratorio */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 px-2">
+            <Card padded={false} className={`${sidebarPanelClass} space-y-3 p-3`}>
+              <div className="flex items-center gap-2 px-1">
                 <Rocket className="h-4 w-4 text-brand" />
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Laboratorio</h3>
               </div>
-              <p className="px-2 text-xs text-[var(--color-muted)]">
+              <p className="px-1 text-xs text-[var(--color-muted)]">
                 Visualiza el estado de cada iniciativa y cambia de fase con un clic.
               </p>
-              <div className="grid grid-cols-3 gap-2.5 px-2 pb-2">
+              <div className="grid grid-cols-3 gap-2.5 px-1 pb-1">
                 {statusOrder.map((status) => {
-                  const { icon: Icon, accent, helper, badge } = statusDisplay[status];
+                  const { icon: Icon, accent, badge } = statusDisplay[status];
                   const isActive = statusFilter === status;
                   const statusConfig = {
                     draft: {
                       gradient: 'from-amber-50/80 via-amber-100/60 to-orange-50/80 dark:from-amber-950/30 dark:via-amber-900/20 dark:to-orange-950/30',
                       border: 'border-amber-300/50 dark:border-amber-700/40',
                       borderHover: 'hover:border-amber-400/60 dark:hover:border-amber-600/50',
-                      shadow: 'shadow-[0_4px_16px_rgba(245,158,11,0.2)] dark:shadow-[0_4px_16px_rgba(245,158,11,0.15)]',
-                      shadowHover: 'hover:shadow-[0_6px_20px_rgba(245,158,11,0.3)] dark:hover:shadow-[0_6px_20px_rgba(245,158,11,0.2)]',
-                      activeShadow: 'shadow-[0_8px_24px_rgba(245,158,11,0.25)] dark:shadow-[0_8px_24px_rgba(245,158,11,0.2)]'
+                      shadow:
+                        'shadow-[0_3px_12px_rgba(0,0,0,0.06),0_4px_14px_rgba(245,158,11,0.22)] dark:shadow-[0_3px_14px_rgba(0,0,0,0.28),0_4px_14px_rgba(245,158,11,0.16)]',
+                      shadowHover:
+                        'hover:shadow-[0_5px_16px_rgba(0,0,0,0.08),0_6px_18px_rgba(245,158,11,0.32)] dark:hover:shadow-[0_5px_18px_rgba(0,0,0,0.32),0_6px_18px_rgba(245,158,11,0.24)]',
+                      activeShadow:
+                        'shadow-[0_5px_18px_rgba(0,0,0,0.08),0_8px_22px_rgba(245,158,11,0.3)] dark:shadow-[0_5px_22px_rgba(0,0,0,0.35),0_8px_22px_rgba(245,158,11,0.22)]'
                     },
                     in_progress: {
                       gradient: 'from-sena-green/10 via-sena-green/5 to-emerald-50/80 dark:from-sena-green/20 dark:via-sena-green/10 dark:to-emerald-950/30',
                       border: 'border-sena-green/30 dark:border-sena-green/40',
                       borderHover: 'hover:border-sena-green/50 dark:hover:border-sena-green/50',
-                      shadow: 'shadow-[0_4px_16px_rgba(57,169,0,0.2)] dark:shadow-[0_4px_16px_rgba(57,169,0,0.15)]',
-                      shadowHover: 'hover:shadow-[0_6px_20px_rgba(57,169,0,0.3)] dark:hover:shadow-[0_6px_20px_rgba(57,169,0,0.2)]',
-                      activeShadow: 'shadow-[0_8px_24px_rgba(57,169,0,0.25)] dark:shadow-[0_8px_24px_rgba(57,169,0,0.2)]'
+                      shadow:
+                        'shadow-[0_3px_12px_rgba(0,0,0,0.06),0_4px_14px_rgba(57,169,0,0.22)] dark:shadow-[0_3px_14px_rgba(0,0,0,0.28),0_4px_14px_rgba(57,169,0,0.16)]',
+                      shadowHover:
+                        'hover:shadow-[0_5px_16px_rgba(0,0,0,0.08),0_6px_18px_rgba(57,169,0,0.32)] dark:hover:shadow-[0_5px_18px_rgba(0,0,0,0.32),0_6px_18px_rgba(57,169,0,0.24)]',
+                      activeShadow:
+                        'shadow-[0_5px_18px_rgba(0,0,0,0.08),0_8px_22px_rgba(57,169,0,0.3)] dark:shadow-[0_5px_22px_rgba(0,0,0,0.35),0_8px_22px_rgba(57,169,0,0.22)]'
                     },
                     completed: {
                       gradient: 'from-brand/20 via-emerald-100/60 to-green-50/80 dark:from-brand/30 dark:via-emerald-900/20 dark:to-green-950/30',
                       border: 'border-brand/40 dark:border-emerald-700/40',
                       borderHover: 'hover:border-brand/50 dark:hover:border-emerald-600/50',
-                      shadow: 'shadow-[0_4px_16px_rgba(57,169,0,0.2)] dark:shadow-[0_4px_16px_rgba(57,169,0,0.15)]',
-                      shadowHover: 'hover:shadow-[0_6px_20px_rgba(57,169,0,0.3)] dark:hover:shadow-[0_6px_20px_rgba(57,169,0,0.2)]',
-                      activeShadow: 'shadow-[0_8px_24px_rgba(57,169,0,0.25)] dark:shadow-[0_8px_24px_rgba(57,169,0,0.2)]'
+                      shadow:
+                        'shadow-[0_3px_12px_rgba(0,0,0,0.06),0_4px_14px_rgba(57,169,0,0.22)] dark:shadow-[0_3px_14px_rgba(0,0,0,0.28),0_4px_14px_rgba(57,169,0,0.16)]',
+                      shadowHover:
+                        'hover:shadow-[0_5px_16px_rgba(0,0,0,0.08),0_6px_18px_rgba(57,169,0,0.32)] dark:hover:shadow-[0_5px_18px_rgba(0,0,0,0.32),0_6px_18px_rgba(57,169,0,0.24)]',
+                      activeShadow:
+                        'shadow-[0_5px_18px_rgba(0,0,0,0.08),0_8px_22px_rgba(57,169,0,0.3)] dark:shadow-[0_5px_22px_rgba(0,0,0,0.35),0_8px_22px_rgba(57,169,0,0.22)]'
                     }
                   };
                   const config = statusConfig[status];
@@ -639,145 +854,10 @@ export const ProjectsPage = () => {
                   );
                 })}
               </div>
-            </div>
+            </Card>
           </div>
         </aside>
       </div>
-
-      {/* Diálogo para crear nuevo proyecto */}
-      <GlassDialog
-        open={showCreateDialog}
-        onClose={() => {
-          setShowCreateDialog(false);
-          reset();
-        }}
-        size="md"
-      >
-        <div className="space-y-6">
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-2xl bg-brand/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
-              <Plus className="h-3 w-3" />
-              <span>Nuevo Proyecto</span>
-            </div>
-            <h2 className="text-xl font-semibold text-[var(--color-text)]">
-              Registrar nuevo proyecto
-            </h2>
-            <p className="text-sm text-[var(--color-muted)]">
-              Define objetivos, repositorio y estado para mantener a tu equipo enfocado.
-            </p>
-          </div>
-
-          <form
-            onSubmit={handleSubmit((values: ProjectValues) => {
-              createProjectMutation.mutate({
-                title: values.title,
-                description: values.description,
-                repositoryUrl: values.repositoryUrl || undefined,
-                status: values.status
-              });
-            })}
-            className="space-y-4"
-          >
-            <div className="space-y-2">
-              <label htmlFor="project-title" className="block text-xs font-medium text-[var(--color-text)]">
-                Título del proyecto
-              </label>
-              <Input
-                id="project-title"
-                placeholder="Ej: Sistema de gestión, App móvil, API REST"
-                error={errors.title?.message}
-                maxLength={TITLE_MAX_LENGTH}
-                {...register('title')}
-                className="text-base rounded-2xl"
-              />
-              <div className="flex justify-between text-[10px] text-[var(--color-muted)]">
-                <span>
-                  {watch('title')?.length || 0} / {TITLE_MAX_LENGTH} caracteres
-                </span>
-                {watch('title') && watch('title').length > 0 && (
-                  <span>
-                    {TITLE_MAX_LENGTH - (watch('title')?.length || 0)} restantes
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="project-description" className="block text-xs font-medium text-[var(--color-text)]">
-                Descripción (opcional)
-              </label>
-              <TextArea
-                id="project-description"
-                rows={4}
-                placeholder="Describe el objetivo y alcance del proyecto..."
-                error={errors.description?.message}
-                maxLength={DESCRIPTION_MAX_LENGTH}
-                {...register('description')}
-                className="text-sm rounded-2xl resize-none"
-              />
-              <div className="flex justify-between text-[10px] text-[var(--color-muted)]">
-                <span>
-                  {watch('description')?.length ?? 0} / {DESCRIPTION_MAX_LENGTH} caracteres
-                </span>
-                {(watch('description')?.length ?? 0) > 0 && (
-                  <span>
-                    {DESCRIPTION_MAX_LENGTH - (watch('description')?.length ?? 0)} restantes
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="project-repository" className="block text-xs font-medium text-[var(--color-text)]">
-                Repositorio (opcional)
-              </label>
-              <Input
-                id="project-repository"
-                placeholder="https://github.com/usuario/repositorio"
-                error={errors.repositoryUrl?.message}
-                {...register('repositoryUrl')}
-                className="text-sm rounded-2xl"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="project-status" className="block text-xs font-medium text-[var(--color-text)]">
-                Estado inicial
-              </label>
-              <select
-                id="project-status"
-                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-                {...register('status')}
-              >
-                <option value="draft">Planificación</option>
-                <option value="in_progress">En progreso</option>
-                <option value="completed">Completado</option>
-              </select>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  setShowCreateDialog(false);
-                  reset();
-                }}
-                disabled={isSubmitting || createProjectMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                loading={isSubmitting || createProjectMutation.isPending}
-                disabled={!watch('title')?.trim()}
-              >
-                Crear proyecto
-              </Button>
-            </div>
-          </form>
-        </div>
-      </GlassDialog>
 
       {/* Diálogo para editar proyecto */}
       <GlassDialog

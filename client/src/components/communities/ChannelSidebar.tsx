@@ -18,6 +18,13 @@ import { Channel } from '../../types/channel';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Group } from '../../types/group';
 import { useAuth } from '../../hooks/useAuth';
+import { AnimatePresence, motion } from 'framer-motion';
+import { UI_MENU_TRANSITION, UI_MOTION_DURATION_S, UI_MOTION_EASE } from '../../utils/transitionConfig';
+
+const CATEGORY_EXPAND_TRANSITION = {
+  duration: UI_MOTION_DURATION_S,
+  ease: UI_MOTION_EASE
+} as const;
 
 interface ChannelSidebarProps {
   channels: Channel[];
@@ -99,6 +106,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
   const [renameCategoryDraft, setRenameCategoryDraft] = useState('');
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const createTextChannelInFlightRef = useRef(false);
 
   const COMMUNITY_MENU_W = 224;
   const COMMUNITY_MENU_H = 110;
@@ -193,9 +201,17 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
   }, [channels]);
 
   const handleCreateTextChannelInline = async () => {
-    if (!onCreateChannel || !newTextChannelName.trim() || isSubmitting) return;
+    if (
+      !onCreateChannel ||
+      !newTextChannelName.trim() ||
+      isSubmitting ||
+      createTextChannelInFlightRef.current
+    ) {
+      return;
+    }
+    createTextChannelInFlightRef.current = true;
     try {
-      await onCreateChannel({ 
+      await onCreateChannel({
         name: newTextChannelName.trim(),
         categoryId: selectedCategoryId || undefined
       });
@@ -214,6 +230,8 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
       setIsCreatingTextChannel(false);
     } catch {
       // Error manejado por toast en CommunitiesPage
+    } finally {
+      createTextChannelInFlightRef.current = false;
     }
   };
 
@@ -857,14 +875,14 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                           e.stopPropagation();
                           toggleCategoryCollapse(category.id);
                         }}
-                        className="flex items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 transition-all"
+                        className="flex items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 transition-all duration-ui ease-ui"
                         aria-label={isCollapsed ? 'Expandir categoría' : 'Colapsar categoría'}
                       >
-                        {isCollapsed ? (
-                          <ChevronRight className="h-3 w-3 text-[var(--color-muted)]" />
-                        ) : (
-                          <ChevronDown className="h-3 w-3 text-[var(--color-muted)]" />
-                        )}
+                        <ChevronDown
+                          className={`h-3 w-3 text-[var(--color-muted)] transition-transform duration-ui ease-ui ${
+                            isCollapsed ? '-rotate-90' : ''
+                          }`}
+                        />
                       </button>
                       {renamingCategoryId === category.id ? (
                         <input
@@ -889,7 +907,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                           {category.name}
                         </p>
                       )}
-                      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
+                      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-all duration-ui ease-ui group-hover:opacity-100">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -903,7 +921,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             setIsCreatingTextChannel(true);
                             setNewTextChannelName('');
                           }}
-                          className="flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all"
+                          className="flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all duration-ui ease-ui"
                           aria-label={
                             category.id === 'texto' ? 'Crear canal en Texto' : 'Crear canal en categoría'
                           }
@@ -919,7 +937,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             e.stopPropagation();
                             setOpenCategoryMenuId((prev) => (prev === category.id ? null : category.id));
                           }}
-                          className={`flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all ${
+                          className={`flex h-4 w-4 items-center justify-center rounded hover:bg-white/50 dark:hover:bg-neutral-700/50 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-all duration-ui ease-ui ${
                             openCategoryMenuId === category.id ? 'opacity-100' : ''
                           }`}
                           aria-label="Opciones de categoría"
@@ -929,96 +947,122 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                         </button>
                       </div>
                     </div>
-                    {!isCollapsed && (
-                      <>
-                        {isCreatingTextChannel && selectedCategoryId === category.id && (
-                          <div className="ml-4 mb-2 flex items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm">
-                            <Hash className="h-4 w-4 text-[var(--color-muted)]" />
-                            <input
-                              autoFocus
-                              value={newTextChannelName}
-                              onChange={(e) => setNewTextChannelName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  void handleCreateTextChannelInline();
-                                }
-                                if (e.key === 'Escape') {
-                                  e.preventDefault();
+                    <AnimatePresence initial={false}>
+                      {!isCollapsed && (
+                        <motion.div
+                          key={`category-body-${category.id}`}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={CATEGORY_EXPAND_TRANSITION}
+                          className="overflow-hidden"
+                        >
+                        <AnimatePresence>
+                          {isCreatingTextChannel && selectedCategoryId === category.id && (
+                            <motion.div
+                              key={`create-inline-${category.id}-expanded`}
+                              initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                              transition={UI_MENU_TRANSITION}
+                              className="ml-4 mb-2 flex origin-top-left items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm"
+                            >
+                              <Hash className="h-4 w-4 text-[var(--color-muted)]" />
+                              <input
+                                autoFocus
+                                value={newTextChannelName}
+                                onChange={(e) => setNewTextChannelName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    void handleCreateTextChannelInline();
+                                  }
+                                  if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    setIsCreatingTextChannel(false);
+                                    setNewTextChannelName('');
+                                    setSelectedCategoryId(null);
+                                  }
+                                }}
+                                className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                                placeholder="nombre-del-canal"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => void handleCreateTextChannelInline()}
+                                disabled={!newTextChannelName.trim() || isSubmitting}
+                                className="flex h-6 w-6 items-center justify-center rounded-2xl bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                                aria-label="Crear canal"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
                                   setIsCreatingTextChannel(false);
                                   setNewTextChannelName('');
                                   setSelectedCategoryId(null);
-                                }
-                              }}
-                              className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
-                              placeholder="nombre-del-canal"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => void handleCreateTextChannelInline()}
-                              disabled={!newTextChannelName.trim() || isSubmitting}
-                              className="flex h-6 w-6 items-center justify-center rounded-2xl bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
-                              aria-label="Crear canal"
+                                }}
+                                className="flex h-6 w-6 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
+                                aria-label="Cancelar"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        <AnimatePresence>
+                          {isCreatingTextChannel && category.id === 'texto' && !selectedCategoryId && (
+                            <motion.div
+                              key="create-inline-texto"
+                              initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                              transition={UI_MENU_TRANSITION}
+                              className="ml-4 mb-2 flex origin-top-left items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm"
                             >
-                              <Check className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsCreatingTextChannel(false);
-                                setNewTextChannelName('');
-                                setSelectedCategoryId(null);
-                              }}
-                              className="flex h-6 w-6 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
-                              aria-label="Cancelar"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        )}
-                        {isCreatingTextChannel && category.id === 'texto' && !selectedCategoryId && (
-                          <div className="ml-4 mb-2 flex items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm">
-                            <Hash className="h-4 w-4 text-[var(--color-muted)]" />
-                            <input
-                              autoFocus
-                              value={newTextChannelName}
-                              onChange={(e) => setNewTextChannelName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  void handleCreateTextChannelInline();
-                                }
-                                if (e.key === 'Escape') {
-                                  e.preventDefault();
+                              <Hash className="h-4 w-4 text-[var(--color-muted)]" />
+                              <input
+                                autoFocus
+                                value={newTextChannelName}
+                                onChange={(e) => setNewTextChannelName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    void handleCreateTextChannelInline();
+                                  }
+                                  if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    setIsCreatingTextChannel(false);
+                                    setNewTextChannelName('');
+                                  }
+                                }}
+                                className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                                placeholder="nombre-del-canal"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => void handleCreateTextChannelInline()}
+                                disabled={!newTextChannelName.trim() || isSubmitting}
+                                className="flex h-6 w-6 items-center justify-center rounded-2xl bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                                aria-label="Crear canal"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
                                   setIsCreatingTextChannel(false);
                                   setNewTextChannelName('');
-                                }
-                              }}
-                              className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
-                              placeholder="nombre-del-canal"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => void handleCreateTextChannelInline()}
-                              disabled={!newTextChannelName.trim() || isSubmitting}
-                              className="flex h-6 w-6 items-center justify-center rounded-2xl bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
-                              aria-label="Crear canal"
-                            >
-                              <Check className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsCreatingTextChannel(false);
-                                setNewTextChannelName('');
-                              }}
-                              className="flex h-6 w-6 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
-                              aria-label="Cancelar"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        )}
+                                }}
+                                className="flex h-6 w-6 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
+                                aria-label="Cancelar"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                         <div 
                           className="ml-4 space-y-0"
                           onDragOver={(e) => {
@@ -1113,53 +1157,65 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                           );
                         })}
                       </div>
-                      </>
-                    )}
-                    {isCreatingTextChannel && selectedCategoryId === category.id && (
-                      <div className="ml-4 mb-2 flex items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm">
-                        <Hash className="h-4 w-4 text-[var(--color-muted)]" />
-                        <input
-                          autoFocus
-                          value={newTextChannelName}
-                          onChange={(e) => setNewTextChannelName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              void handleCreateTextChannelInline();
-                            }
-                            if (e.key === 'Escape') {
-                              e.preventDefault();
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <AnimatePresence>
+                      {isCreatingTextChannel &&
+                        selectedCategoryId === category.id &&
+                        isCollapsed && (
+                        <motion.div
+                          key={`create-inline-${category.id}-collapsed`}
+                          initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                          transition={UI_MENU_TRANSITION}
+                          className="ml-4 mb-2 flex origin-top-left items-center gap-2 rounded-2xl bg-white/50 dark:bg-neutral-800/60 px-2.5 py-2 shadow-sm"
+                        >
+                          <Hash className="h-4 w-4 text-[var(--color-muted)]" />
+                          <input
+                            autoFocus
+                            value={newTextChannelName}
+                            onChange={(e) => setNewTextChannelName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                void handleCreateTextChannelInline();
+                              }
+                              if (e.key === 'Escape') {
+                                e.preventDefault();
+                                setIsCreatingTextChannel(false);
+                                setNewTextChannelName('');
+                                setSelectedCategoryId(null);
+                              }
+                            }}
+                            className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                            placeholder="nombre-del-canal"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void handleCreateTextChannelInline()}
+                            disabled={!newTextChannelName.trim() || isSubmitting}
+                            className="flex h-6 w-6 items-center justify-center rounded-2xl bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
+                            aria-label="Crear canal"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
                               setIsCreatingTextChannel(false);
                               setNewTextChannelName('');
                               setSelectedCategoryId(null);
-                            }
-                          }}
-                          className="flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
-                          placeholder="nombre-del-canal"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void handleCreateTextChannelInline()}
-                          disabled={!newTextChannelName.trim() || isSubmitting}
-                          className="flex h-6 w-6 items-center justify-center rounded-2xl bg-sena-green/80 text-white hover:bg-sena-green disabled:opacity-60 disabled:cursor-not-allowed text-[10px]"
-                          aria-label="Crear canal"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsCreatingTextChannel(false);
-                            setNewTextChannelName('');
-                            setSelectedCategoryId(null);
-                          }}
-                          className="flex h-6 w-6 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
-                          aria-label="Cancelar"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    )}
+                            }}
+                            className="flex h-6 w-6 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-neutral-700/80 text-[var(--color-muted)] hover:bg-slate-200 dark:hover:bg-neutral-600 text-[10px]"
+                            aria-label="Cancelar"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                     {/* Indicador de posición después */}
                     {dragOverCategory === category.id && dragOverPosition === 'after' && draggedCategory && draggedCategory.id !== category.id && (
                       <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-sena-green rounded-2xl z-10" />
@@ -1194,14 +1250,14 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                     <p className="min-w-0 flex-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
                       Voz
                     </p>
-                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
+                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-all duration-ui ease-ui group-hover:opacity-100">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setIsCreatingTextChannel(true);
                         }}
-                        className="flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-ui"
+                        className="flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-ui ease-ui"
                         aria-label="Crear canal en Voz"
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -1217,7 +1273,7 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
                             prev === 'voice_channels_header' ? null : 'voice_channels_header'
                           );
                         }}
-                        className={`flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-ui ${
+                        className={`flex h-5 w-5 items-center justify-center rounded-2xl text-[var(--color-muted)] hover:bg-white/40 dark:hover:bg-white/10 hover:text-sena-green transition-all duration-ui ease-ui ${
                           openCategoryMenuId === 'voice_channels_header' ? 'opacity-100' : ''
                         }`}
                         aria-label="Opciones de categoría Voz"
@@ -1270,134 +1326,157 @@ export const ChannelSidebar: FC<ChannelSidebarProps> = ({
     </aside>
 
     {/* Menú de comunidad (portal → body; evita recorte por overflow del shell) */}
-    {isCommunityMenuOpen &&
-      communityMenuPos &&
-      typeof document !== 'undefined' &&
+    {typeof document !== 'undefined' &&
       createPortal(
-        <div
-          ref={communityMenuRef}
-          className="fixed z-[10060] w-56 rounded-2xl bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl py-1.5 text-[12px] leading-snug text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
-          style={{ top: communityMenuPos.top, left: communityMenuPos.left }}
-        >
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
-            onClick={() => {
-              setIsCommunityMenuOpen(false);
-              onCommunitySettings?.();
-            }}
-          >
-            <Settings className="h-3.5 w-3.5 shrink-0" />
-            <span className="min-w-0">Ajustes de la comunidad</span>
-          </button>
-          <div className="my-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-neutral-700 to-transparent" />
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-ui rounded-2xl mx-1"
-            onClick={() => {
-              setIsCommunityMenuOpen(false);
-              onLeaveCommunity?.();
-            }}
-          >
-            <span className="min-w-0">Abandonar comunidad</span>
-          </button>
-        </div>,
+        <AnimatePresence>
+          {isCommunityMenuOpen && communityMenuPos && (
+            <motion.div
+              ref={communityMenuRef}
+              key="community-menu-dropdown"
+              role="menu"
+              initial={{ opacity: 0, y: -10, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.96 }}
+              transition={UI_MENU_TRANSITION}
+              className="fixed z-[10060] w-56 origin-top-left rounded-2xl border border-white/20 bg-white/95 py-1.5 text-[12px] leading-snug text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] backdrop-blur-xl dark:border-white/10 dark:bg-neutral-800/95 dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
+              style={{ top: communityMenuPos.top, left: communityMenuPos.left }}
+            >
+              <button
+                type="button"
+                role="menuitem"
+                className="mx-1 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left transition-colors duration-ui ease-ui hover:bg-sena-green/10 dark:hover:bg-sena-green/20"
+                onClick={() => {
+                  setIsCommunityMenuOpen(false);
+                  onCommunitySettings?.();
+                }}
+              >
+                <Settings className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0">Ajustes de la comunidad</span>
+              </button>
+              <div className="my-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-neutral-700 to-transparent" />
+              <button
+                type="button"
+                role="menuitem"
+                className="mx-1 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-red-500 transition-colors duration-ui ease-ui hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                onClick={() => {
+                  setIsCommunityMenuOpen(false);
+                  onLeaveCommunity?.();
+                }}
+              >
+                <span className="min-w-0">Abandonar comunidad</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>,
         document.body
       )}
 
     {/* Menú de opciones por categoría (portal; mismo patrón que menú de comunidad) */}
-    {openCategoryMenuId &&
-      categoryMenuPos &&
-      typeof document !== 'undefined' &&
+    {typeof document !== 'undefined' &&
       createPortal(
-        <div
-          ref={categoryMenuDropdownRef}
-          className="fixed z-[10060] rounded-2xl bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl py-1.5 text-[12px] leading-snug text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-white/10"
-          style={{ top: categoryMenuPos.top, left: categoryMenuPos.left, width: CATEGORY_MENU_W }}
-        >
-          {openCategoryMenuId === 'voice_channels_header' ? (
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
-              onClick={() => {
-                setOpenCategoryMenuId(null);
-                setIsCreatingTextChannel(true);
-              }}
+        <AnimatePresence>
+          {openCategoryMenuId && categoryMenuPos && (
+            <motion.div
+              ref={categoryMenuDropdownRef}
+              key={`category-menu-${openCategoryMenuId}`}
+              role="menu"
+              initial={{ opacity: 0, y: -10, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.96 }}
+              transition={UI_MENU_TRANSITION}
+              className="fixed z-[10060] origin-top-right rounded-2xl border border-white/20 bg-white/95 py-1.5 text-[12px] leading-snug text-[var(--color-text)] shadow-[0_20px_60px_rgba(0,0,0,0.15)] backdrop-blur-xl dark:border-white/10 dark:bg-neutral-800/95 dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
+              style={{ top: categoryMenuPos.top, left: categoryMenuPos.left, width: CATEGORY_MENU_W }}
             >
-              <Plus className="h-3.5 w-3.5 shrink-0" />
-              <span className="min-w-0">Crear canal</span>
-            </button>
-          ) : (
-            (() => {
-              const cat = getOrderedCategories().find((c) => c.id === openCategoryMenuId);
-              if (!cat) return null;
-              const isCollapsed = collapsedCategories.has(cat.id);
-              const canAdminEdit = isAdmin && isCustomCategoryId(cat.id);
-              return (
-                <>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
-                    onClick={() => {
-                      toggleCategoryCollapse(cat.id);
-                      setOpenCategoryMenuId(null);
-                    }}
-                  >
-                    {isCollapsed ? (
-                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--color-muted)]" />
-                    ) : (
-                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--color-muted)]" />
-                    )}
-                    <span className="min-w-0">{isCollapsed ? 'Expandir categoría' : 'Colapsar categoría'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
-                    onClick={() => {
-                      setContextMenu(null);
-                      if (cat.id === 'texto') {
-                        setSelectedCategoryId(null);
-                      } else {
-                        setSelectedCategoryId(cat.id);
-                      }
-                      setIsCreatingTextChannel(true);
-                      setNewTextChannelName('');
-                      setOpenCategoryMenuId(null);
-                    }}
-                  >
-                    <Plus className="h-3.5 w-3.5 shrink-0" />
-                    <span className="min-w-0">Crear canal</span>
-                  </button>
-                  {canAdminEdit && (
+              {openCategoryMenuId === 'voice_channels_header' ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="mx-1 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left transition-colors duration-ui ease-ui hover:bg-sena-green/10 dark:hover:bg-sena-green/20"
+                  onClick={() => {
+                    setOpenCategoryMenuId(null);
+                    setIsCreatingTextChannel(true);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5 shrink-0" />
+                  <span className="min-w-0">Crear canal</span>
+                </button>
+              ) : (
+                (() => {
+                  const cat = getOrderedCategories().find((c) => c.id === openCategoryMenuId);
+                  if (!cat) return null;
+                  const isCollapsed = collapsedCategories.has(cat.id);
+                  const canAdminEdit = isAdmin && isCustomCategoryId(cat.id);
+                  return (
                     <>
-                      <div className="my-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-neutral-700 to-transparent" />
                       <button
                         type="button"
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sena-green/10 dark:hover:bg-sena-green/20 transition-colors duration-ui rounded-2xl mx-1"
+                        role="menuitem"
+                        className="mx-1 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left transition-colors duration-ui ease-ui hover:bg-sena-green/10 dark:hover:bg-sena-green/20"
                         onClick={() => {
-                          setRenameCategoryDraft(cat.name);
-                          setRenamingCategoryId(cat.id);
+                          toggleCategoryCollapse(cat.id);
                           setOpenCategoryMenuId(null);
                         }}
                       >
-                        <Pencil className="h-3.5 w-3.5 shrink-0" />
-                        <span className="min-w-0">Renombrar categoría</span>
+                        {isCollapsed ? (
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--color-muted)]" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--color-muted)]" />
+                        )}
+                        <span className="min-w-0">{isCollapsed ? 'Expandir categoría' : 'Colapsar categoría'}</span>
                       </button>
                       <button
                         type="button"
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-ui rounded-2xl mx-1"
-                        onClick={() => deleteCategoryById(cat.id)}
+                        role="menuitem"
+                        className="mx-1 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left transition-colors duration-ui ease-ui hover:bg-sena-green/10 dark:hover:bg-sena-green/20"
+                        onClick={() => {
+                          setContextMenu(null);
+                          if (cat.id === 'texto') {
+                            setSelectedCategoryId(null);
+                          } else {
+                            setSelectedCategoryId(cat.id);
+                          }
+                          setIsCreatingTextChannel(true);
+                          setNewTextChannelName('');
+                          setOpenCategoryMenuId(null);
+                        }}
                       >
-                        <Trash2 className="h-3.5 w-3.5 shrink-0" />
-                        <span className="min-w-0">Eliminar categoría</span>
+                        <Plus className="h-3.5 w-3.5 shrink-0" />
+                        <span className="min-w-0">Crear canal</span>
                       </button>
+                      {canAdminEdit && (
+                        <>
+                          <div className="my-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-neutral-700 to-transparent" />
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="mx-1 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left transition-colors duration-ui ease-ui hover:bg-sena-green/10 dark:hover:bg-sena-green/20"
+                            onClick={() => {
+                              setRenameCategoryDraft(cat.name);
+                              setRenamingCategoryId(cat.id);
+                              setOpenCategoryMenuId(null);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5 shrink-0" />
+                            <span className="min-w-0">Renombrar categoría</span>
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="mx-1 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-red-500 transition-colors duration-ui ease-ui hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                            onClick={() => deleteCategoryById(cat.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                            <span className="min-w-0">Eliminar categoría</span>
+                          </button>
+                        </>
+                      )}
                     </>
-                  )}
-                </>
-              );
-            })()
+                  );
+                })()
+              )}
+            </motion.div>
           )}
-        </div>,
+        </AnimatePresence>,
         document.body
       )}
 

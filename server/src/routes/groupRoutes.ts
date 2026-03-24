@@ -25,6 +25,7 @@ router.delete('/channels/:id', requireAuth, channelController.delete);
 router.get('/channels/:channelId/messages', attachUserIfPresent, channelController.listMessages);
 router.post('/channels/:channelId/messages', requireAuth, channelController.createMessage);
 router.post('/channels/messages/:id/report', requireAuth, channelController.reportMessage);
+router.post('/channels/messages/:id/poll-vote', requireAuth, channelController.votePoll);
 router.post('/channels/messages/:id/star', requireAuth, channelController.toggleStarMessage);
 router.patch('/channels/messages/:id/pin', requireAuth, channelController.togglePinMessage);
 router.delete('/channels/messages/:id', requireAuth, channelController.deleteMessage);

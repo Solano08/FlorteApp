@@ -1,5 +1,11 @@
 import { apiClient } from './apiClient';
-import { Channel, ChannelMessage, CreateChannelPayload, CreateChannelMessagePayload } from '../types/channel';
+import {
+  Channel,
+  ChannelMessage,
+  ChannelPollSummary,
+  CreateChannelPayload,
+  CreateChannelMessagePayload
+} from '../types/channel';
 import { mockDataService } from './mockDataService';
 
 export const channelService = {
@@ -100,6 +106,14 @@ export const channelService = {
 
   async deleteMessage(messageId: string): Promise<void> {
     await apiClient.delete(`/groups/channels/messages/${messageId}`);
+  },
+
+  async voteChannelPoll(messageId: string, optionIndex: number): Promise<ChannelPollSummary> {
+    const { data } = await apiClient.post<{ success: boolean; poll: ChannelPollSummary }>(
+      `/groups/channels/messages/${messageId}/poll-vote`,
+      { optionIndex }
+    );
+    return data.poll;
   }
 };
 
