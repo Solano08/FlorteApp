@@ -85,6 +85,10 @@ html {
 
 /* Panel flotante de mensajes (inicio): glassmorphism */
 .floating-messages-menu-shadow {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   background: linear-gradient(150deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.32) 45%, rgba(255, 255, 255, 0.22) 100%);
   border: 1px solid rgba(255, 255, 255, 0.45) !important;
   backdrop-filter: blur(22px) saturate(1.45);
