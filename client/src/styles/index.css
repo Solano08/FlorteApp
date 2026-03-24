@@ -83,7 +83,8 @@ html {
     inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Panel flotante de mensajes (inicio): glassmorphism */
+/* Panel flotante de mensajes (inicio): glassmorphism
+ * Chrome: sin backdrop-filter durante el movimiento del panel; el blur entra después (ver --ui-motion-duration). */
 .floating-messages-menu-shadow {
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -91,12 +92,40 @@ html {
   -webkit-backface-visibility: hidden;
   background: linear-gradient(150deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.32) 45%, rgba(255, 255, 255, 0.22) 100%);
   border: 1px solid rgba(255, 255, 255, 0.45) !important;
-  backdrop-filter: blur(22px) saturate(1.45);
-  -webkit-backdrop-filter: blur(22px) saturate(1.45);
+  backdrop-filter: blur(0px) saturate(1.45);
+  -webkit-backdrop-filter: blur(0px) saturate(1.45);
+  transition: backdrop-filter var(--ui-motion-duration, 0.62s) cubic-bezier(0.22, 0.61, 0.36, 1),
+    -webkit-backdrop-filter var(--ui-motion-duration, 0.62s) cubic-bezier(0.22, 0.61, 0.36, 1);
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14), 0 4px 16px rgba(15, 23, 42, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
   -webkit-box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14), 0 4px 16px rgba(15, 23, 42, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+}
+.floating-messages-menu-shadow.floating-messages-menu-shadow--glass-active {
+  backdrop-filter: blur(22px) saturate(1.45);
+  -webkit-backdrop-filter: blur(22px) saturate(1.45);
+}
+
+/* Subzonas del menú: mismo ritmo que el vidrio principal (0 → blur tras la entrada). */
+.floating-messages-submenu-blur {
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: backdrop-filter var(--ui-motion-duration, 0.62s) cubic-bezier(0.22, 0.61, 0.36, 1),
+    -webkit-backdrop-filter var(--ui-motion-duration, 0.62s) cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+[data-floating-messages-menu][data-floating-glass-phase='ready'] .floating-messages-submenu-blur {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.floating-messages-submenu-blur-sm {
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: backdrop-filter var(--ui-motion-duration, 0.62s) cubic-bezier(0.22, 0.61, 0.36, 1),
+    -webkit-backdrop-filter var(--ui-motion-duration, 0.62s) cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+[data-floating-messages-menu][data-floating-glass-phase='ready'] .floating-messages-submenu-blur-sm {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .dark .floating-messages-menu-shadow {
   background: linear-gradient(150deg, rgba(32, 32, 36, 0.82) 0%, rgba(22, 22, 26, 0.68) 100%);

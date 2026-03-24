@@ -10,7 +10,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { UserAvatar } from './UserAvatar';
 import type { Chat, Message } from '../../types/chat';
 import type { Profile } from '../../types/profile';
-import { UI_DIALOG_CONTENT_TRANSITION, UI_MENU_TRANSITION } from '../../utils/transitionConfig';
+import {
+  UI_DIALOG_CONTENT_TRANSITION,
+  UI_MENU_TRANSITION,
+  UI_MOTION_DURATION_S
+} from '../../utils/transitionConfig';
 
 const floatingMsgsPanelTransition = UI_DIALOG_CONTENT_TRANSITION;
 
@@ -52,6 +56,8 @@ export const FloatingMessagesButton = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  /** Tras la entrada del panel (0.62s), activa el backdrop-filter para evitar glitches en Chrome. */
+  const [menuGlassBlurActive, setMenuGlassBlurActive] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState('');
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -172,6 +178,17 @@ export const FloatingMessagesButton = () => {
   }, [open]);
 
   useEffect(() => {
+    if (!open) {
+      setMenuGlassBlurActive(false);
+      return;
+    }
+    setMenuGlassBlurActive(false);
+    const delayMs = UI_MOTION_DURATION_S * 1000;
+    const id = window.setTimeout(() => setMenuGlassBlurActive(true), delayMs);
+    return () => window.clearTimeout(id);
+  }, [open]);
+
+  useEffect(() => {
     if (selectedChatId && messageListRef.current) {
       requestAnimationFrame(() => {
         if (messageListRef.current) {
@@ -248,15 +265,23 @@ export const FloatingMessagesButton = () => {
     <AnimatePresence>
       <motion.div
         data-floating-messages-menu
+        data-floating-glass-phase={menuGlassBlurActive ? 'ready' : 'entering'}
         key="messages-menu"
         initial={{ y: 10 }}
         animate={{ y: 0 }}
         exit={{ y: 10 }}
         transition={UI_MENU_TRANSITION.y}
         className="fixed z-[9999] flex h-[min(60vh,400px)] w-[320px] max-w-[calc(100vw-32px)] flex-col"
-        style={menuStyle}
+        style={{
+          ...menuStyle,
+          ['--ui-motion-duration' as string]: `${UI_MOTION_DURATION_S}s`
+        }}
       >
-        <div className="floating-messages-menu-shadow flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl">
+        <div
+          className={`floating-messages-menu-shadow flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl${
+            menuGlassBlurActive ? ' floating-messages-menu-shadow--glass-active' : ''
+          }`}
+        >
           <div className="relative min-h-0 flex-1">
           <AnimatePresence mode="wait" initial={false}>
             {!selectedChat ? (
@@ -268,7 +293,7 @@ export const FloatingMessagesButton = () => {
                 transition={floatingMsgsPanelTransition}
                 className="absolute inset-0 flex min-h-0 flex-col bg-white/[0.06] dark:bg-black/[0.1]"
               >
-                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/35 px-4 py-3 backdrop-blur-md dark:border-white/10 bg-white/25 dark:bg-white/[0.06]">
+                <div className="floating-messages-submenu-blur flex shrink-0 items-center justify-between gap-2 border-b border-white/35 px-4 py-3 dark:border-white/10 bg-white/25 dark:bg-white/[0.06]">
                   <h3 className="min-w-0 flex-1 text-sm font-semibold text-[var(--color-text)]">Mensajes</h3>
                   <button
                     type="button"
@@ -354,7 +379,7 @@ export const FloatingMessagesButton = () => {
                 transition={floatingMsgsPanelTransition}
                 className="absolute inset-0 flex min-h-0 flex-col overflow-hidden [overflow-anchor:none]"
               >
-                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/35 px-4 py-3 backdrop-blur-md dark:border-white/10 bg-white/25 dark:bg-white/[0.06]">
+                <div className="floating-messages-submenu-blur flex shrink-0 items-center justify-between gap-2 border-b border-white/35 px-4 py-3 dark:border-white/10 bg-white/25 dark:bg-white/[0.06]">
                   <div className="min-w-0 flex-1 overflow-hidden">
                     {selectedChat.isGroup ? (
                       <button
@@ -464,7 +489,7 @@ export const FloatingMessagesButton = () => {
                                     {`${senderProfile.firstName} ${senderProfile.lastName}`.trim()}
                                   </button>
                                 )}
-                                <div className="rounded-2xl border border-white/35 bg-white/50 px-3 py-2 text-xs leading-relaxed text-[var(--color-text)] backdrop-blur-sm dark:border-white/10 dark:bg-neutral-800/55">
+                                <div className="floating-messages-submenu-blur-sm rounded-2xl border border-white/35 bg-white/50 px-3 py-2 text-xs leading-relaxed text-[var(--color-text)] dark:border-white/10 dark:bg-neutral-800/55">
                                   {message.content || '...'}
                                 </div>
                               </div>
@@ -477,7 +502,7 @@ export const FloatingMessagesButton = () => {
                 </div>
                 <form
                   onSubmit={handleSendMessage}
-                  className="shrink-0 border-t border-white/35 bg-white/25 p-3 backdrop-blur-md dark:border-white/10 dark:bg-white/[0.06]"
+                  className="floating-messages-submenu-blur shrink-0 border-t border-white/35 bg-white/25 p-3 dark:border-white/10 dark:bg-white/[0.06]"
                 >
                   <div className="flex items-end gap-2">
                     <div className="chat-message-compose-glass min-w-0 flex-1 rounded-2xl glass-liquid px-3 py-1.5 transition-shadow duration-ui">
