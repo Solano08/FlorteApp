@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -247,19 +247,16 @@ export const FloatingMessagesButton = () => {
   };
 
   const isBrowser = typeof document !== 'undefined';
-  const [menuPosition, setMenuPosition] = useState({ bottom: 0, right: 0 });
+  const [menuPosition, setMenuPosition] = useState({ bottom: 104, right: 32 });
 
-  useEffect(() => {
-    if (open && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setMenuPosition({
-        bottom: window.innerHeight - rect.top + 8,
-        right: window.innerWidth - rect.right
-      });
-    }
+  useLayoutEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setMenuPosition({
+      bottom: window.innerHeight - rect.top + 8,
+      right: window.innerWidth - rect.right
+    });
   }, [open]);
-
-  const menuStyle = { bottom: menuPosition.bottom, right: menuPosition.right, left: 'auto' };
 
   const menuContent = open && (
     <AnimatePresence>
@@ -267,21 +264,23 @@ export const FloatingMessagesButton = () => {
         data-floating-messages-menu
         data-floating-glass-phase={menuGlassBlurActive ? 'ready' : 'entering'}
         key="messages-menu"
-        initial={{ y: 10 }}
-        animate={{ y: 0 }}
-        exit={{ y: 10 }}
-        transition={UI_MENU_TRANSITION.y}
+        initial={{ bottom: menuPosition.bottom - 10 }}
+        animate={{ bottom: menuPosition.bottom }}
+        exit={{ bottom: menuPosition.bottom - 10 }}
+        transition={UI_MENU_TRANSITION.bottom}
         className="fixed z-[9999] flex h-[min(60vh,400px)] w-[320px] max-w-[calc(100vw-32px)] flex-col"
         style={{
-          ...menuStyle,
+          right: menuPosition.right,
+          left: 'auto',
           ['--ui-motion-duration' as string]: `${UI_MOTION_DURATION_S}s`
         }}
       >
         <div
-          className={`floating-messages-menu-shadow flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl${
+          className={`floating-messages-menu-shadow flex min-h-0 flex-1 flex-col rounded-2xl${
             menuGlassBlurActive ? ' floating-messages-menu-shadow--glass-active' : ''
           }`}
         >
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl">
           <div className="relative min-h-0 flex-1">
           <AnimatePresence mode="wait" initial={false}>
             {!selectedChat ? (
@@ -533,6 +532,7 @@ export const FloatingMessagesButton = () => {
               </motion.div>
             )}
           </AnimatePresence>
+          </div>
           </div>
         </div>
       </motion.div>

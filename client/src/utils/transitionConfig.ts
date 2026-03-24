@@ -37,6 +37,8 @@ export const UI_DIALOG_CONTENT_TRANSITION = {
 export const UI_MENU_TRANSITION = {
   opacity: { duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE },
   y: { duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE },
+  /** Sin `transform` en el antepasado: Chrome aplica mal `backdrop-filter` bajo `translateY`. */
+  bottom: { duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE },
   scale: { duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE },
   x: { duration: UI_MOTION_DURATION_S, ease: UI_MOTION_EASE }
 };

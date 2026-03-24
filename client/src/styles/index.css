@@ -84,8 +84,11 @@ html {
 }
 
 /* Panel flotante de mensajes (inicio): glassmorphism
- * Chrome: sin backdrop-filter durante el movimiento del panel; el blur entra después (ver --ui-motion-duration). */
+ * Chrome: (1) sin transform en el antepasado del vidrio — animar bottom, no translateY.
+ * (2) overflow-hidden en otro nodo: border-radius + overflow en el mismo elemento rompe backdrop en WebKit/Chromium.
+ * (3) sin backdrop-filter durante el movimiento: el blur entra después (ver --ui-motion-duration). */
 .floating-messages-menu-shadow {
+  isolation: isolate;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;
@@ -126,6 +129,12 @@ html {
 [data-floating-messages-menu][data-floating-glass-phase='ready'] .floating-messages-submenu-blur-sm {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* Chrome: `filter` en un ancestro del contenido de fondo rompe o anula el muestreo de backdrop-filter (p. ej. saturate en .app-main > div). */
+body:has([data-floating-messages-menu][data-floating-glass-phase='ready']) .app-main > div {
+  filter: none;
+  transition: filter var(--ui-motion-duration, 0.62s) cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 .dark .floating-messages-menu-shadow {
   background: linear-gradient(150deg, rgba(32, 32, 36, 0.82) 0%, rgba(22, 22, 26, 0.68) 100%);
