@@ -1,7 +1,7 @@
 import { chatRepository } from '../repositories/chatRepository';
 import { uploadDataUrl } from './cloudinaryService';
 import { AppError } from '../utils/appError';
-import { Chat, CreateChatInput, CreateMessageInput, Message } from '../types/chat';
+import { Chat, ChatPeerPreview, CreateChatInput, CreateMessageInput, Message } from '../types/chat';
 
 const processAttachmentUrl = async (url?: string | null): Promise<string | null> => {
   if (!url) return null;
@@ -27,8 +27,18 @@ export const chatService = {
     return await chatRepository.createChat(input);
   },
 
-  async listUserChats(userId: string): Promise<Array<Chat & { lastMessageAt?: Date; lastMessage?: string }>> {
-    return await chatRepository.findUserChats(userId);
+  async listUserChats(
+    userId: string
+  ): Promise<
+    Array<Chat & { lastMessageAt?: Date; lastMessage?: string; peer?: ChatPeerPreview | null }>
+  > {
+    const chats = await chatRepository.findUserChats(userId);
+    const directIds = chats.filter((c) => !c.isGroup).map((c) => c.id);
+    const peers = await chatRepository.findDirectChatPeers(directIds, userId);
+    return chats.map((chat) => ({
+      ...chat,
+      peer: chat.isGroup ? null : (peers.get(chat.id) ?? null)
+    }));
   },
 
   async getMessages(chatId: string, userId: string): Promise<Message[]> {

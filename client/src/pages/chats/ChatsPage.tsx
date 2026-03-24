@@ -666,6 +666,38 @@ export const ChatsPage = () => {
     return map;
   }, [allChatMessages.data, authUser, chats, friendsById, friendsByNormalizedName]);
 
+  /** Interlocutor en chat 1 a 1: prioriza `peer` del API (foto/nombre reales en BD), luego heurística con amigos/mensajes. */
+  const getDirectChatPeer = useMemo(() => {
+    return (
+      chat: Chat
+    ): {
+      id: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl?: string | null;
+    } | null => {
+      if (chat.isGroup) return null;
+      if (chat.peer) {
+        return {
+          id: chat.peer.id,
+          firstName: chat.peer.firstName,
+          lastName: chat.peer.lastName,
+          avatarUrl: chat.peer.avatarUrl
+        };
+      }
+      const f = directChatFriendByChatId[chat.id];
+      if (f) {
+        return {
+          id: f.id,
+          firstName: f.firstName,
+          lastName: f.lastName,
+          avatarUrl: f.avatarUrl
+        };
+      }
+      return null;
+    };
+  }, [directChatFriendByChatId]);
+
   // Función helper para obtener el nombre del chat, incluyendo el nombre del usuario en chats directos
   const getChatDisplayName = useMemo(() => {
     const selfLabel = authUser
@@ -678,7 +710,7 @@ export const ChatsPage = () => {
 
       // Chat directo: `chat.name` en BD suele ser el nombre del otro según quien abrió el chat;
       // para el interlocutor puede ser su propio nombre. Priorizar siempre al otro miembro resuelto.
-      const otherUser = directChatFriendByChatId[chat.id];
+      const otherUser = getDirectChatPeer(chat);
       if (otherUser) {
         return `${otherUser.firstName} ${otherUser.lastName}`.trim() || otherUser.firstName || 'Usuario';
       }
@@ -690,14 +722,14 @@ export const ChatsPage = () => {
 
       return 'Chat privado';
     };
-  }, [directChatFriendByChatId, authUser]);
+  }, [getDirectChatPeer, authUser]);
 
   const getChatAvatarUrl = useMemo(() => {
     return (chat: Chat) => {
       if (chat.isGroup) return null;
-      return directChatFriendByChatId[chat.id]?.avatarUrl ?? null;
+      return getDirectChatPeer(chat)?.avatarUrl ?? null;
     };
-  }, [directChatFriendByChatId]);
+  }, [getDirectChatPeer]);
 
   // Función helper para obtener el nombre del remitente de un mensaje
   const getSenderName = useMemo(() => {
@@ -1148,6 +1180,7 @@ export const ChatsPage = () => {
   /** En chat privado, usuario con el que hablas (para abrir su perfil público). */
   const activeChatOtherUserId = useMemo(() => {
     if (!activeChat?.id || activeChat.isGroup) return null;
+    if (activeChat.peer?.id) return activeChat.peer.id;
     const fromFriend = directChatFriendByChatId[activeChat.id];
     if (fromFriend?.id) return fromFriend.id;
     if (selectedChatId === activeChat.id && messages.length > 0) {
@@ -1988,9 +2021,18 @@ export const ChatsPage = () => {
 
                         {!isSelectionMode && openMenuId === chat.id && menuPosition && (
                           createPortal(
-                            <div
+                            <motion.div
+                              key={`chat-row-menu-${chat.id}`}
                               ref={(el) => {
                                 menuRefs.current[chat.id] = el;
+                              }}
+                              role="menu"
+                              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              transition={{
+                                opacity: UI_MENU_TRANSITION.opacity,
+                                y: UI_MENU_TRANSITION.y,
+                                scale: UI_MENU_TRANSITION.scale
                               }}
                               className="fixed w-[220px] rounded-2xl bg-white dark:bg-neutral-900 border border-slate-200/90 dark:border-neutral-700/90 shadow-[0_10px_28px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.45)] p-2 text-sm text-[var(--color-text)]"
                               style={{
@@ -2112,7 +2154,7 @@ export const ChatsPage = () => {
                                 <span className="text-left font-medium">Eliminar chat</span>
                               </button>
                             </div>
-                            </div>,
+                            </motion.div>,
                             document.body
                           )
                         )}
@@ -2259,9 +2301,18 @@ export const ChatsPage = () => {
 
                                   {openMenuId === chat.id && menuPosition && (
                                     createPortal(
-                                      <div
+                                      <motion.div
+                                        key={`chat-archived-menu-${chat.id}`}
                                         ref={(el) => {
                                           menuRefs.current[chat.id] = el;
+                                        }}
+                                        role="menu"
+                                        initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        transition={{
+                                          opacity: UI_MENU_TRANSITION.opacity,
+                                          y: UI_MENU_TRANSITION.y,
+                                          scale: UI_MENU_TRANSITION.scale
                                         }}
                                         className="fixed w-[220px] rounded-2xl bg-white dark:bg-neutral-900 border border-slate-200/90 dark:border-neutral-700/90 shadow-[0_10px_28px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.45)] p-2 text-sm text-[var(--color-text)]"
                                         style={{
@@ -2328,7 +2379,7 @@ export const ChatsPage = () => {
                                           <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0" />
                                           <span className="text-left font-medium">Eliminar chat</span>
                                         </button>
-                                      </div>,
+                                      </motion.div>,
                                       document.body
                                     )
                                   )}
@@ -3012,8 +3063,12 @@ export const ChatsPage = () => {
                       </p>
                       <p className="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400">
                         {(() => {
-                          const peer = directChatFriendByChatId[activeChat.id];
-                          if (!activeChat.isGroup && peer?.email) return peer.email;
+                          const resolved = getDirectChatPeer(activeChat);
+                          const email =
+                            resolved && friendsById[resolved.id]?.email
+                              ? friendsById[resolved.id].email
+                              : directChatFriendByChatId[activeChat.id]?.email;
+                          if (!activeChat.isGroup && email) return email;
                           if (activeChat.isGroup) return 'Chat grupal';
                           return 'Chat privado';
                         })()}

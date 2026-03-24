@@ -986,10 +986,27 @@ export const mockDataService = {
     await delay(150);
     const currentUserId = userId ?? this.getCurrentUserId();
     // Filtrar chats donde el usuario es miembro
-    return mockChats.filter((chat) => {
-      const members = chatMembersMap[chat.id] ?? [];
-      return members.includes(currentUserId);
-    });
+    return mockChats
+      .filter((chat) => {
+        const members = chatMembersMap[chat.id] ?? [];
+        return members.includes(currentUserId);
+      })
+      .map((chat) => {
+        if (chat.isGroup) return { ...chat, peer: undefined };
+        const members = chatMembersMap[chat.id] ?? [];
+        const otherId = members.find((id) => id !== currentUserId);
+        const other = otherId ? mockUsers.find((u) => u.id === otherId) : undefined;
+        if (!other) return { ...chat };
+        return {
+          ...chat,
+          peer: {
+            id: other.id,
+            firstName: other.firstName,
+            lastName: other.lastName,
+            avatarUrl: other.avatarUrl ?? null
+          }
+        };
+      });
   },
 
   // Obtener mensajes de un chat

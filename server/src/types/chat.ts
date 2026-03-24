@@ -1,3 +1,11 @@
+/** Otro participante en un chat 1 a 1 (desde BD, para foto y nombre). */
+export interface ChatPeerPreview {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+}
+
 export interface Chat {
   id: string;
   name?: string | null;

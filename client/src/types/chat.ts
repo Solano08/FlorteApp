@@ -1,3 +1,11 @@
+/** Otro usuario en un chat directo (viene del API con datos de perfil). */
+export interface ChatPeerPreview {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string | null;
+}
+
 export interface Chat {
   id: string;
   name?: string | null;
@@ -6,6 +14,8 @@ export interface Chat {
   createdAt: string;
   lastMessageAt?: string | null;
   lastMessage?: string | null;
+  /** Solo chats 1 a 1: interlocutor con foto real desde el servidor. */
+  peer?: ChatPeerPreview | null;
 }
 
 export interface Message {

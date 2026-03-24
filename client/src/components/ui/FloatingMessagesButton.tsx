@@ -21,6 +21,10 @@ const getChatDisplayName = (
 ): string => {
   if (chat.name?.trim() && chat.name.trim().length > 0) return chat.name.trim();
   if (chat.isGroup) return 'Grupo sin título';
+  if (chat.peer) {
+    const p = chat.peer;
+    return `${p.firstName} ${p.lastName}`.trim() || p.firstName || 'Usuario';
+  }
   const otherId = chat.createdBy !== currentUserId ? chat.createdBy : null;
   if (otherId) {
     const friend = friends.find((f) => f.id === otherId);
@@ -89,6 +93,9 @@ export const FloatingMessagesButton = () => {
 
   const selectedChatTargetId = useMemo(() => {
     if (!selectedChat) return null;
+    if (!selectedChat.isGroup && selectedChat.peer?.id) {
+      return selectedChat.peer.id;
+    }
     if (selectedChat.createdBy && selectedChat.createdBy !== user?.id) {
       return selectedChat.createdBy;
     }
@@ -96,10 +103,20 @@ export const FloatingMessagesButton = () => {
     return otherSender?.senderId ?? null;
   }, [selectedChat, selectedMessages, user?.id]);
 
-  const selectedChatTargetProfile = useMemo(
-    () => friends.find((friend) => friend.id === selectedChatTargetId) ?? null,
-    [friends, selectedChatTargetId]
-  );
+  const selectedChatTargetProfile = useMemo(() => {
+    if (!selectedChat) return null;
+    if (selectedChat.isGroup) {
+      return friends.find((friend) => friend.id === selectedChatTargetId) ?? null;
+    }
+    if (selectedChat.peer) {
+      return {
+        firstName: selectedChat.peer.firstName,
+        lastName: selectedChat.peer.lastName,
+        avatarUrl: selectedChat.peer.avatarUrl ?? null
+      };
+    }
+    return friends.find((friend) => friend.id === selectedChatTargetId) ?? null;
+  }, [friends, selectedChat, selectedChatTargetId]);
 
   const lastIncomingMessageIdBySender = useMemo(() => {
     const lastBySender: Record<string, string> = {};
@@ -276,11 +293,17 @@ export const FloatingMessagesButton = () => {
                         const label = getChatDisplayName(chat, friends, user?.id);
                         const chatProfile = chat.isGroup
                           ? null
-                          : friends.find((friend) => {
-                              if (friend.id === chat.createdBy && friend.id !== user?.id) return true;
-                              const fullName = `${friend.firstName} ${friend.lastName}`.trim().toLowerCase();
-                              return fullName.length > 0 && fullName === label.trim().toLowerCase();
-                            }) ?? null;
+                          : chat.peer
+                            ? {
+                                firstName: chat.peer.firstName,
+                                lastName: chat.peer.lastName,
+                                avatarUrl: chat.peer.avatarUrl ?? null
+                              }
+                            : friends.find((friend) => {
+                                if (friend.id === chat.createdBy && friend.id !== user?.id) return true;
+                                const fullName = `${friend.firstName} ${friend.lastName}`.trim().toLowerCase();
+                                return fullName.length > 0 && fullName === label.trim().toLowerCase();
+                              }) ?? null;
                         const initials = getInitials(label);
                         const time = formatTime(chat.lastMessageAt ?? chat.createdAt);
 

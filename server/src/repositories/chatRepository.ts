@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { getConnection, getPool } from '../config/database';
-import { Chat, CreateChatInput, CreateMessageInput, Message } from '../types/chat';
+import { Chat, ChatPeerPreview, CreateChatInput, CreateMessageInput, Message } from '../types/chat';
 
 const mapChat = (row: RowDataPacket): Chat => ({
   id: row.id,
@@ -109,6 +109,34 @@ export const chatRepository = {
       lastMessageAt: row.last_message_at,
       lastMessage: row.last_message || null
     }));
+  },
+
+  /** Para cada chat directo, el otro miembro (foto y nombre en `users`). */
+  async findDirectChatPeers(chatIds: string[], currentUserId: string): Promise<Map<string, ChatPeerPreview>> {
+    const map = new Map<string, ChatPeerPreview>();
+    if (chatIds.length === 0) {
+      return map;
+    }
+    const placeholders = chatIds.map(() => '?').join(',');
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      `SELECT c.id AS chat_id, u.id AS user_id, u.first_name, u.last_name, u.avatar_url
+       FROM chats c
+       INNER JOIN chat_members cm ON cm.chat_id = c.id AND cm.user_id <> ?
+       INNER JOIN users u ON u.id = cm.user_id
+       WHERE c.is_group = 0 AND c.id IN (${placeholders})`,
+      [currentUserId, ...chatIds]
+    );
+    for (const row of rows) {
+      const chatId = row.chat_id as string;
+      if (map.has(chatId)) continue;
+      map.set(chatId, {
+        id: row.user_id as string,
+        firstName: row.first_name as string,
+        lastName: row.last_name as string,
+        avatarUrl: row.avatar_url != null ? String(row.avatar_url) : null
+      });
+    }
+    return map;
   },
 
   async listChatMembers(chatId: string): Promise<string[]> {
